@@ -6,6 +6,7 @@
  * @license MIT
  */
 define([
+  "skylark-utils/skylark",
   "skylark-utils/langx",
   "skylark-utils/browser",
   "skylark-utils/eventer",
@@ -13,9 +14,13 @@ define([
   "skylark-utils/geom",
   "skylark-utils/velm",
   "skylark-utils/query",
-  "skylark-ui-swt/sbswt",
-  "skylark-ui-swt/loader"
-],function(langx,browser,eventer,noder,geom,velm,$,sbswt){
+  "skylark-utils/widgets",
+  "skylark-fuelux/loader",
+  "skylark-fuelux/selectlist",
+  "skylark-fuelux/combobox"  
+],function(skylark,langx,browser,eventer,noder,geom,velm,$,widgets){
+
+	var ui = skylark.ui = skylark.ui || {};
 
 	/*
 	 * Repeater
@@ -29,8 +34,8 @@ define([
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
-	var Repeater = sbswt.Repeater = sbswt.WidgetBase.inherit({
-		Repeater: "Affix",
+	var Repeater = ui.Repeater = widgets.Widget.inherit({
+		klassName: "Repeater",
 
 		init : function(element,options) {
 			var self = this;

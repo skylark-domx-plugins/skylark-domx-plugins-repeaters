@@ -59,7 +59,7 @@
 
   if (!isAmd) { 
     if (isCmd) {
-      exports = require("skylark-ui-repeater/main");
+      exports = require("skylark-langx/skylark");
     } else {
       if (!globals.skylarkjs) {
          globals.skylarkjs = require("skylark-langx/skylark");

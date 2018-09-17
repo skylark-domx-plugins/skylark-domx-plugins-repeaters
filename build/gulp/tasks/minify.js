@@ -12,9 +12,9 @@ var gulp = require('gulp'),
      fs = require('fs');
 
 
-var src = [util.src +  "js/**/*.js"];
+var src = [util.src +  "**/*.js"];
 
-var dest = util.dest + "js/";
+var dest = util.dest;
 
 var requireConfig = {
     baseUrl: util.src,
@@ -32,12 +32,16 @@ var requireConfig = {
        location :  util.lib_utils_interact+"uncompressed/skylark-utils-interact"
     },
     {
-       name : "skylark-ui-swt" ,
-       location :  util.lib_ui_swt+"uncompressed/skylark-ui-swt"
+       name : "skylark-fuelux" ,
+       location :  util.lib_ui_fuelux+"uncompressed/skylark-fuelux"
+    },
+    {
+       name : "skylark-ui-repeater" ,
+       location :  util.lib_ui_repeater+"uncompressed/skylark-ui-repeater"
     },
     {
        name : util.pkg.name ,
-       location :  util.src +"js/",
+       location :  util.src,
        main : "main"
 
     }],
