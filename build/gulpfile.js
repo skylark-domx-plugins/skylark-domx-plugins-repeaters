@@ -1,9 +1,0 @@
-require('./gulp')([
-    'default',
-    'clean',
-    'style',
-    'script',
-    'minify',
-    'script-all',
-    'minify-all'
-  ]);

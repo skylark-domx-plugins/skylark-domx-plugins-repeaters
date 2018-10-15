@@ -14,6 +14,7 @@
   "homepage": "https://github.com/skylarkui/skylark-ui-repeater/",
   "author": "Hudaokeji, Inc.",
   "scripts": {
+    "build": "sbundle build .",
     "change-version": "node grunt/change-version.js",
     "update-shrinkwrap": "npm shrinkwrap --dev && shx mv ./npm-shrinkwrap.json ./grunt/npm-shrinkwrap.json",
     "test": "grunt test"
@@ -30,30 +31,11 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "del": "^1.2.1",
-    "gulp": "^3.9.0",
-    "gulp-amd-optimizer": "^0.3.4",
-    "gulp-autoprefixer": "^2.3.1",
-    "gulp-concat": "^2.6.0",
-    "gulp-footer": "^1.0.5",
-    "gulp-header": "^1.7.1",
-    "gulp-rename": "~1.2.2",
-    "gulp-replace": "^0.6.1",
-    "gulp-requirejs": "^1.0.0",
-    "gulp-sourcemaps": "^1.5.2",
-    "gulp-uglify": "^1.5.4",
-    "gulp-usemin": "^0.3.11",
-    "gulp-util": "^3.0.6",
-    "run-sequence": "^2.1.0",
     "skylark-langx": "https://github.com/skylarklangx/skylark-langx#master",
     "skylark-utils": "https://github.com/skylarkutils/skylark-utils#master",
     "skylark-bootstrap3": "https://github.com/skylarkui/skylark-bootstrap3#master",
     "skylark-fuelux": "https://github.com/skylarkui/skylark-fuelux#master",
-    "btoa": "~1.1.2",
-    "glob": "~7.0.3",
-    "markdown-it": "^7.0.0",
-    "shelljs": "^0.7.0",
-    "shx": "^0.1.2"
+    "skylark-utils-dom": "https://github.com/skylarkutils/skylark-utils-dom#master"
   },
   "engines": {
     "node": ">=0.10.1"
