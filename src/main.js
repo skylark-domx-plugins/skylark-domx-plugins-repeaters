@@ -1,5 +1,5 @@
 define([
-    "skylark-utils/query",
+    "skylark-utils-dom/query",
     "./repeater",
     "./repeater-list",
     "./repeater-thumbnail"

@@ -1,17 +1,17 @@
 define([
-  "skylark-utils/skylark",
-  "skylark-utils/langx",
-  "skylark-utils/browser",
-  "skylark-utils/eventer",
-  "skylark-utils/noder",
-  "skylark-utils/geom",
-  "skylark-utils/velm",
-  "skylark-utils/query",
-  "skylark-utils/widgets",
+  "skylark-langx/skylark",
+  "skylark-langx/langx",
+  "skylark-utils-dom/browser",
+  "skylark-utils-dom/eventer",
+  "skylark-utils-dom/noder",
+  "skylark-utils-dom/geom",
+  "skylark-utils-dom/elmx",
+  "skylark-utils-dom/query",
+  "skylark-utils-dom/plugins",
   "skylark-fuelux/loader",
   "skylark-fuelux/selectlist",
   "skylark-fuelux/combobox"  
-],function(skylark,langx,browser,eventer,noder,geom,velm,$,widgets){
+],function(skylark,langx,browser,eventer,noder,geom,elmx,$,plugins){
 
 	var ui = skylark.ui = skylark.ui || {};
 
@@ -27,7 +27,7 @@ define([
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
-	var Repeater = ui.Repeater = widgets.Widget.inherit({
+	var Repeater = ui.Repeater = plugins.Plugin.inherit({
 		klassName: "Repeater",
 
 		init : function(element,options) {

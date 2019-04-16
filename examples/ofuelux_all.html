@@ -1018,6 +1018,21 @@
       waitSeconds: 600,
       packages: [
          {
+            name: 'skylark-langx',
+            location: '../node_modules/skylark-langx/dist/uncompressed/skylark-langx',
+            main: 'main'
+          },
+         {
+            name: 'skylark-utils-dom',
+            location: '../node_modules/skylark-utils-dom/dist/uncompressed/skylark-utils-dom',
+            main: 'main'
+          },
+         {
+            name: 'skylark-bootstrap3',
+            location: '../node_modules/skylark-bootstrap3/dist/uncompressed/skylark-bootstrap3',
+            main: 'main'
+          },
+         {
             name: 'skylark-fuelux',
             location: '../node_modules/skylark-fuelux/dist/uncompressed/skylark-fuelux',
             main: 'main'
@@ -1029,7 +1044,6 @@
           }
       ],      
       paths: {
-        "skylark-utils" : "../node_modules/skylark-utils/dist/uncompressed/skylark-utils-all",
         "skylark-utils-interact" : "../node_modules/skylark-utils-interact/dist/uncompressed/skylark-utils-interact",
         //        "skylark-fuelux": "../dist/js/uncompressed/skylark-fuelux",
 
@@ -1059,7 +1073,7 @@
   })();
 </script>
 <script>
-  require(['skylark-utils'],function(){
+  require(['skylark-utils-dom'],function(){
     require(['skylark-fuelux'],function(){
       require(['skylark-ui-repeater', 'moment'],function(){
         require(['ofuelux_all/js/application'], function($){

@@ -37,11 +37,16 @@
                 deps: deps.map(function(dep){
                   return absolute(dep,id);
                 }),
+                resolved: false,
                 exports: null
             };
             require(id);
         } else {
-            map[id] = factory;
+            map[id] = {
+                factory : null,
+                resolved : true,
+                exports : factory
+            };
         }
     };
     require = globals.require = function(id) {
@@ -49,14 +54,15 @@
             throw new Error('Module ' + id + ' has not been defined');
         }
         var module = map[id];
-        if (!module.exports) {
+        if (!module.resolved) {
             var args = [];
 
             module.deps.forEach(function(dep){
                 args.push(require(dep));
             })
 
-            module.exports = module.factory.apply(window, args);
+            module.exports = module.factory.apply(globals, args) || null;
+            module.resolved = true;
         }
         return module.exports;
     };
@@ -72,7 +78,7 @@
     var skylarkjs = require("skylark-langx/skylark");
 
     if (isCmd) {
-      exports = skylarkjs;
+      module.exports = skylarkjs;
     } else {
       globals.skylarkjs  = skylarkjs;
     }
@@ -91,13 +97,19 @@ define('skylark-utils-dom/skylark',["skylark-langx/skylark"], function(skylark) 
     return skylark;
 });
 
+define('skylark-utils-dom/dom',["./skylark"], function(skylark) {
+	return skylark.dom = {};
+});
+
 define('skylark-langx/types',[
 ],function(){
+    var toString = {}.toString;
+    
     var type = (function() {
         var class2type = {};
 
         // Populate the class2type map
-        "Boolean Number String Function Array Date RegExp Object Error".split(" ").forEach(function(name) {
+        "Boolean Number String Function Array Date RegExp Object Error Symbol".split(" ").forEach(function(name) {
             class2type["[object " + name + "]"] = name.toLowerCase();
         });
 
@@ -111,10 +123,46 @@ define('skylark-langx/types',[
         return object && object.constructor === Array;
     }
 
+
+    /**
+     * Checks if `value` is array-like. A value is considered array-like if it's
+     * not a function/string/element and has a `value.length` that's an integer greater than or
+     * equal to `0` and less than or equal to `Number.MAX_SAFE_INTEGER`.
+     *
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is array-like, else `false`.
+     * @example
+     *
+     * isArrayLike([1, 2, 3])
+     * // => true
+     *
+     * isArrayLike(document.body.children)
+     * // => false
+     *
+     * isArrayLike('abc')
+     * // => true
+     *
+     * isArrayLike(Function)
+     * // => false
+     */    
     function isArrayLike(obj) {
         return !isString(obj) && !isHtmlNode(obj) && typeof obj.length == 'number' && !isFunction(obj);
     }
 
+    /**
+     * Checks if `value` is classified as a boolean primitive or object.
+     *
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a boolean, else `false`.
+     * @example
+     *
+     * isBoolean(false)
+     * // => true
+     *
+     * isBoolean(null)
+     * // => false
+     */
     function isBoolean(obj) {
         return typeof(obj) === "boolean";
     }
@@ -137,6 +185,20 @@ define('skylark-langx/types',[
         return true;
     }
 
+
+    /**
+     * Checks if `value` is classified as a `Function` object.
+     *
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a function, else `false`.
+     * @example
+     *
+     * isFunction(parseInt)
+     * // => true
+     *
+     * isFunction(/abc/)
+     * // => false
+     */
     function isFunction(value) {
         return type(value) == "function";
     }
@@ -162,6 +224,10 @@ define('skylark-langx/types',[
         } else {
             return (value instanceof type) || (value && value.isInstanceOf ? value.isInstanceOf(type) : false);
         }
+    }
+
+    function isNull(value) {
+      return type(value) === "null";
     }
 
     function isNumber(obj) {
@@ -194,6 +260,28 @@ define('skylark-langx/types',[
         }
     }
 
+    /**
+     * Checks if `value` is classified as a `Symbol` primitive or object.
+     *
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a symbol, else `false`.
+     * @example
+     *
+     * _.isSymbol(Symbol.iterator);
+     * // => true
+     *
+     * _.isSymbol('abc');
+     * // => false
+     */
+    function isSymbol(value) {
+      return typeof value == 'symbol' ||
+        (isObjectLike(value) && objectToString.call(value) == symbolTag);
+    }
+
+    function isUndefined(value) {
+      return value === undefined
+    }
+
     return {
 
         isArray: isArray,
@@ -206,13 +294,19 @@ define('skylark-langx/types',[
 
         isDocument: isDocument,
 
+        isEmpty : isEmptyObject,
+
         isEmptyObject: isEmptyObject,
 
         isFunction: isFunction,
 
         isHtmlNode: isHtmlNode,
 
+        isNull: isNull,
+
         isNumber: isNumber,
+
+        isNumeric: isNumber,
 
         isObject: isObject,
 
@@ -222,6 +316,10 @@ define('skylark-langx/types',[
 
         isSameOrigin: isSameOrigin,
 
+        isSymbol : isSymbol,
+
+        isUndefined: isUndefined,
+
         isWindow: isWindow,
 
         type: type
@@ -230,44 +328,71 @@ define('skylark-langx/types',[
 });
 define('skylark-langx/arrays',[
 	"./types"
-],function(types){
+],function(types,objects){
 	var filter = Array.prototype.filter,
 		isArrayLike = types.isArrayLike;
+
+    /**
+     * The base implementation of `_.findIndex` and `_.findLastIndex` without
+     * support for iteratee shorthands.
+     *
+     * @param {Array} array The array to inspect.
+     * @param {Function} predicate The function invoked per iteration.
+     * @param {number} fromIndex The index to search from.
+     * @param {boolean} [fromRight] Specify iterating from right to left.
+     * @returns {number} Returns the index of the matched value, else `-1`.
+     */
+    function baseFindIndex(array, predicate, fromIndex, fromRight) {
+      var length = array.length,
+          index = fromIndex + (fromRight ? 1 : -1);
+
+      while ((fromRight ? index-- : ++index < length)) {
+        if (predicate(array[index], index, array)) {
+          return index;
+        }
+      }
+      return -1;
+    }
+
+    /**
+     * The base implementation of `_.indexOf` without `fromIndex` bounds checks.
+     *
+     * @param {Array} array The array to inspect.
+     * @param {*} value The value to search for.
+     * @param {number} fromIndex The index to search from.
+     * @returns {number} Returns the index of the matched value, else `-1`.
+     */
+    function baseIndexOf(array, value, fromIndex) {
+      if (value !== value) {
+        return baseFindIndex(array, baseIsNaN, fromIndex);
+      }
+      var index = fromIndex - 1,
+          length = array.length;
+
+      while (++index < length) {
+        if (array[index] === value) {
+          return index;
+        }
+      }
+      return -1;
+    }
+
+    /**
+     * The base implementation of `isNaN` without support for number objects.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is `NaN`, else `false`.
+     */
+    function baseIsNaN(value) {
+      return value !== value;
+    }
+
 
     function compact(array) {
         return filter.call(array, function(item) {
             return item != null;
         });
-    }
-
-    function each(obj, callback) {
-        var length, key, i, undef, value;
-
-        if (obj) {
-            length = obj.length;
-
-            if (length === undef) {
-                // Loop object items
-                for (key in obj) {
-                    if (obj.hasOwnProperty(key)) {
-                        value = obj[key];
-                        if (callback.call(value, key, value) === false) {
-                            break;
-                        }
-                    }
-                }
-            } else {
-                // Loop array items
-                for (i = 0; i < length; i++) {
-                    value = obj[i];
-                    if (callback.call(value, i, value) === false) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        return this;
     }
 
     function flatten(array) {
@@ -331,6 +456,12 @@ define('skylark-langx/arrays',[
       return [ obj ];             
     }
 
+
+    function forEach (arr, fn) {
+      if (arr.forEach) return arr.forEach(fn)
+      for (var i = 0; i < arr.length; i++) fn(arr[i], i);
+    }
+
     function map(elements, callback) {
         var value, values = [],
             i, key
@@ -354,6 +485,10 @@ define('skylark-langx/arrays',[
     }
 
     return {
+        baseFindIndex: baseFindIndex,
+
+        baseIndexOf : baseIndexOf,
+        
         compact: compact,
 
         first : function(items,n) {
@@ -364,13 +499,13 @@ define('skylark-langx/arrays',[
             }
         },
 
-	    each: each,
-
         flatten: flatten,
 
         inArray: inArray,
 
         makeArray: makeArray,
+
+        forEach : forEach,
 
         map : map,
         
@@ -378,16 +513,165 @@ define('skylark-langx/arrays',[
 
     }
 });
-define('skylark-langx/objects',[
+define('skylark-langx/numbers',[
 	"./types"
 ],function(types){
+	var isObject = types.isObject,
+		isSymbol = types.isSymbol;
+
+	var INFINITY = 1 / 0,
+	    MAX_SAFE_INTEGER = 9007199254740991,
+	    MAX_INTEGER = 1.7976931348623157e+308,
+	    NAN = 0 / 0;
+
+	/** Used to match leading and trailing whitespace. */
+	var reTrim = /^\s+|\s+$/g;
+
+	/** Used to detect bad signed hexadecimal string values. */
+	var reIsBadHex = /^[-+]0x[0-9a-f]+$/i;
+
+	/** Used to detect binary string values. */
+	var reIsBinary = /^0b[01]+$/i;
+
+	/** Used to detect octal string values. */
+	var reIsOctal = /^0o[0-7]+$/i;
+
+	/** Used to detect unsigned integer values. */
+	var reIsUint = /^(?:0|[1-9]\d*)$/;
+
+	/** Built-in method references without a dependency on `root`. */
+	var freeParseInt = parseInt;
+
+	/**
+	 * Converts `value` to a finite number.
+	 *
+	 * @static
+	 * @memberOf _
+	 * @since 4.12.0
+	 * @category Lang
+	 * @param {*} value The value to convert.
+	 * @returns {number} Returns the converted number.
+	 * @example
+	 *
+	 * _.toFinite(3.2);
+	 * // => 3.2
+	 *
+	 * _.toFinite(Number.MIN_VALUE);
+	 * // => 5e-324
+	 *
+	 * _.toFinite(Infinity);
+	 * // => 1.7976931348623157e+308
+	 *
+	 * _.toFinite('3.2');
+	 * // => 3.2
+	 */
+	function toFinite(value) {
+	  if (!value) {
+	    return value === 0 ? value : 0;
+	  }
+	  value = toNumber(value);
+	  if (value === INFINITY || value === -INFINITY) {
+	    var sign = (value < 0 ? -1 : 1);
+	    return sign * MAX_INTEGER;
+	  }
+	  return value === value ? value : 0;
+	}
+
+	/**
+	 * Converts `value` to an integer.
+	 *
+	 * **Note:** This method is loosely based on
+	 * [`ToInteger`](http://www.ecma-international.org/ecma-262/7.0/#sec-tointeger).
+	 *
+	 * @static
+	 * @memberOf _
+	 * @param {*} value The value to convert.
+	 * @returns {number} Returns the converted integer.
+	 * @example
+	 *
+	 * _.toInteger(3.2);
+	 * // => 3
+	 *
+	 * _.toInteger(Number.MIN_VALUE);
+	 * // => 0
+	 *
+	 * _.toInteger(Infinity);
+	 * // => 1.7976931348623157e+308
+	 *
+	 * _.toInteger('3.2');
+	 * // => 3
+	 */
+	function toInteger(value) {
+	  var result = toFinite(value),
+	      remainder = result % 1;
+
+	  return result === result ? (remainder ? result - remainder : result) : 0;
+	}	
+
+	/**
+	 * Converts `value` to a number.
+	 *
+	 * @static
+	 * @memberOf _
+	 * @since 4.0.0
+	 * @category Lang
+	 * @param {*} value The value to process.
+	 * @returns {number} Returns the number.
+	 * @example
+	 *
+	 * _.toNumber(3.2);
+	 * // => 3.2
+	 *
+	 * _.toNumber(Number.MIN_VALUE);
+	 * // => 5e-324
+	 *
+	 * _.toNumber(Infinity);
+	 * // => Infinity
+	 *
+	 * _.toNumber('3.2');
+	 * // => 3.2
+	 */
+	function toNumber(value) {
+	  if (typeof value == 'number') {
+	    return value;
+	  }
+	  if (isSymbol(value)) {
+	    return NAN;
+	  }
+	  if (isObject(value)) {
+	    var other = typeof value.valueOf == 'function' ? value.valueOf() : value;
+	    value = isObject(other) ? (other + '') : other;
+	  }
+	  if (typeof value != 'string') {
+	    return value === 0 ? value : +value;
+	  }
+	  value = value.replace(reTrim, '');
+	  var isBinary = reIsBinary.test(value);
+	  return (isBinary || reIsOctal.test(value))
+	    ? freeParseInt(value.slice(2), isBinary ? 2 : 8)
+	    : (reIsBadHex.test(value) ? NAN : +value);
+	}
+
+	return  {
+		toFinite : toFinite,
+		toNumber : toNumber,
+		toInteger : toInteger
+	}
+});
+define('skylark-langx/objects',[
+	"./types",
+    "./numbers"
+],function(types,numbers){
 	var hasOwnProperty = Object.prototype.hasOwnProperty,
         slice = Array.prototype.slice,
         isBoolean = types.isBoolean,
         isFunction = types.isFunction,
 		isObject = types.isObject,
 		isPlainObject = types.isPlainObject,
-		isArray = types.isArray;
+		isArray = types.isArray,
+        isArrayLike = types.isArrayLike,
+        isString = types.isString,
+        toInteger = numbers.toInteger;
 
      // An internal function for creating assigner functions.
     function createAssigner(keysFunc, defaults) {
@@ -523,6 +807,52 @@ define('skylark-langx/objects',[
         return keys;
     }
 
+    function each(obj, callback) {
+        var length, key, i, undef, value;
+
+        if (obj) {
+            length = obj.length;
+
+            if (length === undef) {
+                // Loop object items
+                for (key in obj) {
+                    if (obj.hasOwnProperty(key)) {
+                        value = obj[key];
+                        if (callback.call(value, key, value) === false) {
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // Loop array items
+                for (i = 0; i < length; i++) {
+                    value = obj[i];
+                    if (callback.call(value, i, value) === false) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return this;
+    }
+
+    function extend(target) {
+        var deep, args = slice.call(arguments, 1);
+        if (typeof target == 'boolean') {
+            deep = target
+            target = args.shift()
+        }
+        if (args.length == 0) {
+            args = [target];
+            target = this;
+        }
+        args.forEach(function(arg) {
+            mixin(target, arg, deep);
+        });
+        return target;
+    }
+
     // Retrieve the names of an object's own properties.
     // Delegates to **ECMAScript 5**'s native `Object.keys`.
     function keys(obj) {
@@ -546,6 +876,50 @@ define('skylark-langx/objects',[
         }
         return !!length;
     }
+
+    /**
+     * Checks if `value` is in `collection`. If `collection` is a string, it's
+     * checked for a substring of `value`, otherwise
+     * [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
+     * is used for equality comparisons. If `fromIndex` is negative, it's used as
+     * the offset from the end of `collection`.
+     *
+     * @static
+     * @memberOf _
+     * @since 0.1.0
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to inspect.
+     * @param {*} value The value to search for.
+     * @param {number} [fromIndex=0] The index to search from.
+     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.reduce`.
+     * @returns {boolean} Returns `true` if `value` is found, else `false`.
+     * @example
+     *
+     * _.includes([1, 2, 3], 1);
+     * // => true
+     *
+     * _.includes([1, 2, 3], 1, 2);
+     * // => false
+     *
+     * _.includes({ 'a': 1, 'b': 2 }, 1);
+     * // => true
+     *
+     * _.includes('abcd', 'bc');
+     * // => true
+     */
+    function includes(collection, value, fromIndex, guard) {
+      collection = isArrayLike(collection) ? collection : values(collection);
+      fromIndex = (fromIndex && !guard) ? toInteger(fromIndex) : 0;
+
+      var length = collection.length;
+      if (fromIndex < 0) {
+        fromIndex = nativeMax(length + fromIndex, 0);
+      }
+      return isString(collection)
+        ? (fromIndex <= length && collection.indexOf(value, fromIndex) > -1)
+        : (!!length && baseIndexOf(collection, value, fromIndex) > -1);
+    }
+
 
    // Perform a deep comparison to check if two objects are equal.
     function isEqual(a, b) {
@@ -631,7 +1005,7 @@ define('skylark-langx/objects',[
 
     function result(obj, path, fallback) {
         if (!isArray(path)) {
-            path = [path]
+            path = path.split(".");//[path]
         };
         var length = path.length;
         if (!length) {
@@ -669,8 +1043,6 @@ define('skylark-langx/objects',[
         return values;
     }
 
-
-    
     function clone( /*anything*/ src,checkCloneMethod) {
         var copy;
         if (src === undefined || src === null) {
@@ -702,9 +1074,15 @@ define('skylark-langx/objects',[
 
         defaults : createAssigner(allKeys, true),
 
+        each : each,
+
+        extend : extend,
+
         has: has,
 
-        isEqual: isEqual,
+        isEqual: isEqual,   
+
+        includes: includes,
 
         isMatch: isMatch,
 
@@ -721,6 +1099,8 @@ define('skylark-langx/objects',[
         values: values
     };
 
+
+
 });
 define('skylark-langx/klass',[
     "./arrays",
@@ -732,6 +1112,52 @@ define('skylark-langx/klass',[
         mixin = objects.mixin,
         isArray = types.isArray,
         isDefined = types.isDefined;
+
+/* for reference 
+ function klass(props,parent) {
+    var ctor = function(){
+        this._construct();
+    };
+    ctor.prototype = props;
+    if (parent) {
+        ctor._proto_ = parent;
+        props.__proto__ = parent.prototype;
+    }
+    return ctor;
+}
+
+// Type some JavaScript code here.
+let animal = klass({
+  _construct(){
+      this.name = this.name + ",hi";
+  },
+    
+  name: "Animal",
+  eat() {         // [[HomeObject]] == animal
+    alert(`${this.name} eats.`);
+  }
+    
+    
+});
+
+
+let rabbit = klass({
+  name: "Rabbit",
+  _construct(){
+      super._construct();
+  },
+  eat() {         // [[HomeObject]] == rabbit
+    super.eat();
+  }
+},animal);
+
+let longEar = klass({
+  name: "Long Ear",
+  eat() {         // [[HomeObject]] == longEar
+    super.eat();
+  }
+},rabbit);
+*/
     
     function inherit(ctor, base) {
         var f = function() {};
@@ -740,13 +1166,13 @@ define('skylark-langx/klass',[
         ctor.prototype = new f();
     }
 
-
     var f1 = function() {
         function extendClass(ctor, props, options) {
             // Copy the properties to the prototype of the class.
             var proto = ctor.prototype,
                 _super = ctor.superclass.prototype,
-                noOverrided = options && options.noOverrided;
+                noOverrided = options && options.noOverrided,
+                overrides = options && options.overrides || {};
 
             for (var name in props) {
                 if (name === "constructor") {
@@ -775,7 +1201,7 @@ define('skylark-langx/klass',[
                             };
                         })(name, prop, _super[name]) :
                         prop;
-                } else if (typeof prop == "object" && prop!==null && (prop.get)) {
+                } else if (types.isPlainObject(prop) && prop!==null && (prop.get)) {
                     Object.defineProperty(proto,name,prop);
                 } else {
                     proto[name] = prop;
@@ -842,6 +1268,14 @@ define('skylark-langx/klass',[
             return newCtor;
         }
 
+        function _constructor ()  {
+            if (this._construct) {
+                return this._construct.apply(this, arguments);
+            } else  if (this.init) {
+                return this.init.apply(this, arguments);
+            }
+        }
+
         return function createClass(props, parent, mixins,options) {
             if (isArray(parent)) {
                 options = mixins;
@@ -865,16 +1299,6 @@ define('skylark-langx/klass',[
                 innerParent = mergeMixins(innerParent,mixins);
             }
 
-
-            var _constructor = props.constructor;
-            if (_constructor === Object) {
-                _constructor = function() {
-                    if (this.init) {
-                        return this.init.apply(this, arguments);
-                    }
-                };
-            };
-
             var klassName = props.klassName || "",
                 ctor = new Function(
                     "return function " + klassName + "() {" +
@@ -888,7 +1312,6 @@ define('skylark-langx/klass',[
                 )();
 
 
-            ctor._constructor = _constructor;
             // Populate our constructed prototype object
             ctor.prototype = Object.create(innerParent.prototype);
 
@@ -898,6 +1321,11 @@ define('skylark-langx/klass',[
 
             // And make this class extendable
             ctor.__proto__ = innerParent;
+
+
+            if (!ctor._constructor) {
+                ctor._constructor = _constructor;
+            } 
 
             if (mixins) {
                 ctor.__mixins__ = mixins;
@@ -1398,6 +1826,7 @@ define('skylark-langx/funcs',[
 	"./types"
 ],function(objects,types){
 	var mixin = objects.mixin,
+        slice = Array.prototype.slice,
         isFunction = types.isFunction,
         isString = types.isString;
 
@@ -1459,6 +1888,69 @@ define('skylark-langx/funcs',[
         };
     })();
 
+  var templateSettings = {
+    evaluate: /<%([\s\S]+?)%>/g,
+    interpolate: /<%=([\s\S]+?)%>/g,
+    escape: /<%-([\s\S]+?)%>/g
+  };
+
+
+  function template(text, settings, oldSettings) {
+    if (!settings && oldSettings) settings = oldSettings;
+    settings = objects.defaults({}, settings,templateSettings);
+
+    // Combine delimiters into one regular expression via alternation.
+    var matcher = RegExp([
+      (settings.escape || noMatch).source,
+      (settings.interpolate || noMatch).source,
+      (settings.evaluate || noMatch).source
+    ].join('|') + '|$', 'g');
+
+    // Compile the template source, escaping string literals appropriately.
+    var index = 0;
+    var source = "__p+='";
+    text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
+      source += text.slice(index, offset).replace(escapeRegExp, escapeChar);
+      index = offset + match.length;
+
+      if (escape) {
+        source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
+      } else if (interpolate) {
+        source += "'+\n((__t=(" + interpolate + "))==null?'':__t)+\n'";
+      } else if (evaluate) {
+        source += "';\n" + evaluate + "\n__p+='";
+      }
+
+      // Adobe VMs need the match returned to produce the correct offset.
+      return match;
+    });
+    source += "';\n";
+
+    // If a variable is not specified, place data values in local scope.
+    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
+
+    source = "var __t,__p='',__j=Array.prototype.join," +
+      "print=function(){__p+=__j.call(arguments,'');};\n" +
+      source + 'return __p;\n';
+
+    var render;
+    try {
+      render = new Function(settings.variable || 'obj', '_', source);
+    } catch (e) {
+      e.source = source;
+      throw e;
+    }
+
+    var template = function(data) {
+      return render.call(this, data, _);
+    };
+
+    // Provide the compiled source as a convenience for precompilation.
+    var argument = settings.variable || 'obj';
+    template.source = 'function(' + argument + '){\n' + source + '}';
+
+    return template;
+  };
 
     return {
         debounce: debounce,
@@ -1477,7 +1969,10 @@ define('skylark-langx/funcs',[
 
         returnFalse: function() {
             return false;
-        }
+        },
+
+        templateSettings : templateSettings,
+        template : template
     };
 });
 define('skylark-langx/Deferred',[
@@ -1487,7 +1982,8 @@ define('skylark-langx/Deferred',[
 ],function(arrays,funcs,objects){
     "use strict";
     
-    var  PGLISTENERS = Symbol ? Symbol() : '__pglisteners';
+    var  PGLISTENERS = Symbol ? Symbol() : '__pglisteners',
+         PGNOTIFIES = Symbol ? Symbol() : '__pgnotifies';
 
     var slice = Array.prototype.slice,
         proxy = funcs.proxy,
@@ -1502,8 +1998,10 @@ define('skylark-langx/Deferred',[
             this.then(handler,handler);
             return this;
         },
-        done : function(handler) {
-            this.then(handler);
+        done : function() {
+            for (var i = 0;i<arguments.length;i++) {
+                this.then(arguments[i]);
+            }
             return this;
         },
         fail : function(handler) { 
@@ -1511,7 +2009,7 @@ define('skylark-langx/Deferred',[
             //return this.then(null,handler);
             this.catch(handler);
             return this;
-        }
+         }
     });
 
 
@@ -1525,6 +2023,7 @@ define('skylark-langx/Deferred',[
         wrapPromise(p,self);
 
         this[PGLISTENERS] = [];
+        this[PGNOTIFIES] = [];
 
         //this.resolve = Deferred.prototype.resolve.bind(this);
         //this.reject = Deferred.prototype.reject.bind(this);
@@ -1547,7 +2046,7 @@ define('skylark-langx/Deferred',[
                     if (onProgress) {
                         this.progress(onProgress);
                     }
-                    return mixin(Promise.prototype.then.call(this,
+                    return wrapPromise(Promise.prototype.then.call(this,
                             onResolved && function(args) {
                                 if (args && args.__ctx__ !== undefined) {
                                     return onResolved.apply(args.__ctx__,args);
@@ -1561,9 +2060,12 @@ define('skylark-langx/Deferred',[
                                 } else {
                                     return onRejected(args);
                                 }
-                            }),added);
+                            }));
                 },
                 progress : function(handler) {
+                    d[PGNOTIFIES].forEach(function (value) {
+                        handler(value);
+                    });
                     d[PGLISTENERS].push(handler);
                     return this;
                 }
@@ -1588,11 +2090,13 @@ define('skylark-langx/Deferred',[
         return this;
     };
 
-    Deferred.prototype.progress = function(value) {
+    Deferred.prototype.notify = function(value) {
         try {
-          return this[PGLISTENERS].forEach(function (listener) {
-            return listener(value);
-          });
+            this[PGNOTIFIES].push(value);
+
+            return this[PGLISTENERS].forEach(function (listener) {
+                return listener(value);
+            });
         } catch (error) {
           this.reject(error);
         }
@@ -1625,10 +2129,33 @@ define('skylark-langx/Deferred',[
         return p.then(callback, errback, progback);
     };
 
-    Deferred.prototype.done  = Deferred.prototype.then;
+    Deferred.prototype.progress = function(progback){
+        var p = result(this,"promise");
+        return p.progress(progback);
+    };
+   
+    Deferred.prototype.catch = function(errback) {
+        var p = result(this,"promise");
+        return p.catch(errback);
+    };
+
+
+    Deferred.prototype.done  = function() {
+        var p = result(this,"promise");
+        return p.done.apply(p,arguments);
+    };
+
+    Deferred.prototype.fail = function(errback) {
+        var p = result(this,"promise");
+        return p.fail(errback);
+    };
+
 
     Deferred.all = function(array) {
-        return wrapPromise(Promise.all(array));
+        //return wrapPromise(Promise.all(array));
+        var d = new Deferred();
+        Promise.all(array).then(d.resolve.bind(d),d.reject.bind(d));
+        return result(d,"promise");
     };
 
     Deferred.first = function(array) {
@@ -1648,7 +2175,7 @@ define('skylark-langx/Deferred',[
             }
         } else if (!nativePromise) {
             var deferred = new Deferred(valueOrPromise.cancel);
-            valueOrPromise.then(proxy(deferred.resolve,deferred), proxy(deferred.reject,deferred), deferred.progress);
+            valueOrPromise.then(proxy(deferred.resolve,deferred), proxy(deferred.reject,deferred), deferred.notify);
             valueOrPromise = deferred.promise;
         }
 
@@ -1676,9 +2203,9 @@ define('skylark-langx/Deferred',[
 });
 define('skylark-langx/async',[
     "./Deferred",
-    "./arrays"
-],function(Deferred,arrays){
-    var each = arrays.each;
+    "./objects"
+],function(Deferred,objects){
+    var each = objects.each;
     
     var async = {
         parallel : function(arr,args,ctx) {
@@ -1730,12 +2257,77 @@ define('skylark-langx/async',[
 
 	return async;	
 });
+define('skylark-langx/datetimes',[],function(){
+     function parseMilliSeconds(str) {
+
+        var strs = str.split(' ');
+        var number = parseInt(strs[0]);
+
+        if (isNaN(number)){
+            return 0;
+        }
+
+        var min = 60000 * 60;
+
+        switch (strs[1].trim().replace(/\./g, '')) {
+            case 'minutes':
+            case 'minute':
+            case 'min':
+            case 'mm':
+            case 'm':
+                return 60000 * number;
+            case 'hours':
+            case 'hour':
+            case 'HH':
+            case 'hh':
+            case 'h':
+            case 'H':
+                return min * number;
+            case 'seconds':
+            case 'second':
+            case 'sec':
+            case 'ss':
+            case 's':
+                return 1000 * number;
+            case 'days':
+            case 'day':
+            case 'DD':
+            case 'dd':
+            case 'd':
+                return (min * 24) * number;
+            case 'months':
+            case 'month':
+            case 'MM':
+            case 'M':
+                return (min * 24 * 28) * number;
+            case 'weeks':
+            case 'week':
+            case 'W':
+            case 'w':
+                return (min * 24 * 7) * number;
+            case 'years':
+            case 'year':
+            case 'yyyy':
+            case 'yy':
+            case 'y':
+                return (min * 24 * 365) * number;
+            default:
+                return 0;
+        }
+    };
+	
+	return {
+		parseMilliSeconds
+	};
+});
 define('skylark-langx/Evented',[
     "./klass",
+    "./arrays",
     "./objects",
 	"./types"
-],function(klass,objects,types){
+],function(klass,arrays,objects,types){
 	var slice = Array.prototype.slice,
+        compact = arrays.compact,
         isDefined = types.isDefined,
         isPlainObject = types.isPlainObject,
 		isFunction = types.isFunction,
@@ -1974,6 +2566,86 @@ define('skylark-langx/Evented',[
 	return Evented;
 
 });
+define('skylark-langx/hoster',[
+],function(){
+	// The javascript host environment, brower and nodejs are supported.
+	var hoster = {
+		"isBrowser" : true, // default
+		"isNode" : null,
+		"global" : this,
+		"browser" : null,
+		"node" : null
+	};
+
+	if (typeof process == "object" && process.versions && process.versions.node && process.versions.v8) {
+		hoster.isNode = true;
+		hoster.isBrowser = false;
+	}
+
+	hoster.global = (function(){
+		if (typeof global !== 'undefined' && typeof global !== 'function') {
+			// global spec defines a reference to the global object called 'global'
+			// https://github.com/tc39/proposal-global
+			// `global` is also defined in NodeJS
+			return global;
+		} else if (typeof window !== 'undefined') {
+			// window is defined in browsers
+			return window;
+		}
+		else if (typeof self !== 'undefined') {
+			// self is defined in WebWorkers
+			return self;
+		}
+		return this;
+	})();
+
+	var _document = null;
+
+	Object.defineProperty(hoster,"document",function(){
+		if (!_document) {
+			var w = typeof window === 'undefined' ? require('html-element') : window;
+			_document = w.document;
+		}
+
+		return _document;
+	});
+
+	if (hoster.isBrowser) {
+	    function uaMatch( ua ) {
+		    ua = ua.toLowerCase();
+
+		    var match = /(chrome)[ \/]([\w.]+)/.exec( ua ) ||
+		      /(webkit)[ \/]([\w.]+)/.exec( ua ) ||
+		      /(opera)(?:.*version|)[ \/]([\w.]+)/.exec( ua ) ||
+		      /(msie) ([\w.]+)/.exec( ua ) ||
+		      ua.indexOf('compatible') < 0 && /(mozilla)(?:.*? rv:([\w.]+)|)/.exec( ua ) ||
+		      [];
+
+		    return {
+		      browser: match[ 1 ] || '',
+		      version: match[ 2 ] || '0'
+		    };
+	  	};
+
+	    var matched = uaMatch( navigator.userAgent );
+
+	    var browser = hoster.browser = {};
+
+	    if ( matched.browser ) {
+	      browser[ matched.browser ] = true;
+	      browser.version = matched.version;
+	    }
+
+	    // Chrome is Webkit, but Webkit is also Safari.
+	    if ( browser.chrome ) {
+	      browser.webkit = true;
+	    } else if ( browser.webkit ) {
+	      browser.safari = true;
+	    }
+	}
+
+	return  hoster;
+});
 define('skylark-langx/strings',[
 ],function(){
 
@@ -2004,6 +2676,7 @@ define('skylark-langx/strings',[
             return value;
         }
     }
+
 
     function trim(str) {
         return str == null ? "" : String.prototype.trim.call(str);
@@ -2061,13 +2734,18 @@ define('skylark-langx/strings',[
             }); // String
     }
 
+    var idCounter = 0;
+    function uniqueId (prefix) {
+        var id = ++idCounter + '';
+        return prefix ? prefix + id : id;
+    }
+
 	return {
         camelCase: function(str) {
             return str.replace(/-([\da-z])/g, function(a) {
                 return a.toUpperCase().replace('-', '');
             });
         },
-
 
         dasherize: dasherize,
 
@@ -2086,6 +2764,8 @@ define('skylark-langx/strings',[
 
         trim: trim,
 
+        uniqueId: uniqueId,
+
         upperFirst: function(str) {
             return str.charAt(0).toUpperCase() + str.slice(1);
         }
@@ -2100,7 +2780,7 @@ define('skylark-langx/Xhr',[
     "./funcs",
     "./types"
 ],function(arrays,Deferred,Evented,objects,funcs,types){
-    var each = arrays.each,
+    var each = objects.each,
         mixin = objects.mixin,
         noop = funcs.noop,
         isArray = types.isArray,
@@ -2331,7 +3011,7 @@ define('skylark-langx/Xhr',[
 
                 var onprogress = function(evt) {
                     if (deferred) {
-                        deferred.progress(evt,xhr.status,xhr);
+                        deferred.notify(evt,xhr.status,xhr);
                     }
                 }
 
@@ -2571,10 +3251,19 @@ define('skylark-langx/Restful',[
     return Restful;
 });
 define('skylark-langx/Stateful',[
-	"./Evented"
-],function(Evented){
+	"./Evented",
+  "./strings",
+  "./objects"
+],function(Evented,strings,objects){
+    var isEqual = objects.isEqual,
+        mixin = objects.mixin,
+        result = objects.result,
+        isEmptyObject = objects.isEmptyObject,
+        clone = objects.clone,
+        uniqueId = strings.uniqueId;
+
     var Stateful = Evented.inherit({
-        init : function(attributes, options) {
+        _construct : function(attributes, options) {
             var attrs = attributes || {};
             options || (options = {});
             this.cid = uniqueId(this.cidPrefix);
@@ -2773,23 +3462,57 @@ define('skylark-langx/Stateful',[
 
 	return Stateful;
 });
+define('skylark-langx/topic',[
+	"./Evented"
+],function(Evented){
+	var hub = new Evented();
+
+	return {
+	    publish: function(name, arg1,argn) {
+	        var data = [].slice.call(arguments, 1);
+
+	        return hub.trigger({
+	            type : name,
+	            data : data
+	        });
+	    },
+
+        subscribe: function(name, listener,ctx) {
+        	var handler = function(e){
+                listener.apply(ctx,e.data);
+            };
+            hub.on(name, handler);
+            return {
+            	remove : function(){
+            		hub.off(name,handler);
+            	}
+            }
+
+        }
+
+	}
+});
 define('skylark-langx/langx',[
     "./skylark",
     "./arrays",
     "./ArrayStore",
     "./aspect",
     "./async",
+    "./datetimes",
     "./Deferred",
     "./Evented",
     "./funcs",
+    "./hoster",
     "./klass",
+    "./numbers",
     "./objects",
     "./Restful",
     "./Stateful",
     "./strings",
+    "./topic",
     "./types",
     "./Xhr"
-], function(skylark,arrays,ArrayStore,aspect,async,Deferred,Evented,funcs,klass,objects,Restful,Stateful,strings,types,Xhr) {
+], function(skylark,arrays,ArrayStore,aspect,async,datetimes,Deferred,Evented,funcs,hoster,klass,numbers,objects,Restful,Stateful,strings,topic,types,Xhr) {
     "use strict";
     var toString = {}.toString,
         concat = Array.prototype.concat,
@@ -2840,13 +3563,6 @@ define('skylark-langx/langx',[
         return obj._uid || (obj._uid = _uid++);
     }
 
-    var idCounter = 0;
-    function uniqueId (prefix) {
-        var id = ++idCounter + '';
-        return prefix ? prefix + id : id;
-    }
-
-
     function langx() {
         return langx;
     }
@@ -2862,14 +3578,12 @@ define('skylark-langx/langx',[
 
         uid: uid,
 
-        uniqueId: uniqueId,
-
         URL: typeof window !== "undefined" ? window.URL || window.webkitURL : null
 
     });
 
 
-    mixin(langx, arrays,aspect,funcs,objects,strings,types,{
+    mixin(langx, arrays,aspect,datetimes,funcs,numbers,objects,strings,types,{
         ArrayStore : ArrayStore,
 
         async : async,
@@ -2878,11 +3592,15 @@ define('skylark-langx/langx',[
 
         Evented: Evented,
 
+        hoster : hoster,
+
         klass : klass,
 
         Restful: Restful,
         
         Stateful: Stateful,
+
+        topic : topic,
 
         Xhr: Xhr
 
@@ -2897,12 +3615,24 @@ define('skylark-utils-dom/langx',[
 });
 
 define('skylark-utils-dom/browser',[
-    "./skylark",
+    "./dom",
     "./langx"
-], function(skylark,langx) {
+], function(dom,langx) {
+    "use strict";
+
+    var browser = langx.hoster.browser;
+ 
     var checkedCssProperties = {
-        "transitionproperty": "TransitionProperty",
-    };
+            "transitionproperty": "TransitionProperty",
+        },
+        transEndEventNames = {
+          WebkitTransition : 'webkitTransitionEnd',
+          MozTransition    : 'transitionend',
+          OTransition      : 'oTransitionEnd otransitionend',
+          transition       : 'transitionend'
+        },
+        transEndEventName = null;
+
 
     var css3PropPrefix = "",
         css3StylePrefix = "",
@@ -2951,9 +3681,17 @@ define('skylark-utils-dom/browser',[
             var cssPropName = langx.dasherize(matched[2]);
             cssProps[cssPropName] = css3PropPrefix + cssPropName;
 
+            if (transEndEventNames[name]) {
+              transEndEventName = transEndEventNames[name];
+            }
         }
     }
 
+    if (!transEndEventName) {
+        if (testStyle["transition"] !== undefined) {
+            transEndEventName = transEndEventNames["transition"];
+        }
+    }
 
     function normalizeCssEvent(name) {
         return css3EventPrefix ? css3EventPrefix + name : name.toLowerCase();
@@ -2965,10 +3703,6 @@ define('skylark-utils-dom/browser',[
 
     function normalizeStyleProperty(name) {
         return cssStyles[name] || name;
-    }
-
-    function browser() {
-        return browser;
     }
 
     langx.mixin(browser, {
@@ -2998,15 +3732,21 @@ define('skylark-utils-dom/browser',[
 
     });
 
+    if  (transEndEventName) {
+        browser.support.transition = {
+            end : transEndEventName
+        };
+    }
+
     testEl = null;
 
-    return skylark.browser = browser;
+    return dom.browser = browser;
 });
 
 define('skylark-utils-dom/styler',[
-    "./skylark",
+    "./dom",
     "./langx"
-], function(skylark, langx) {
+], function(dom, langx) {
     var every = Array.prototype.every,
         forEach = Array.prototype.forEach,
         camelCase = langx.camelCase,
@@ -3065,7 +3805,7 @@ define('skylark-utils-dom/styler',[
         if (!elementDisplay[nodeName]) {
             element = document.createElement(nodeName)
             document.body.appendChild(element)
-            display = getComputedStyle(element, '').getPropertyValue("display")
+            display = getStyles(element).getPropertyValue("display")
             element.parentNode.removeChild(element)
             display == "none" && (display = "block")
             elementDisplay[nodeName] = display
@@ -3122,6 +3862,22 @@ define('skylark-utils-dom/styler',[
 
         return this;
     }
+
+    function getStyles( elem ) {
+
+        // Support: IE <=11 only, Firefox <=30 (#15098, #14150)
+        // IE throws on elements created in popups
+        // FF meanwhile throws on frame elements through "defaultView.getComputedStyle"
+        var view = elem.ownerDocument.defaultView;
+
+        if ( !view || !view.opener ) {
+            view = window;
+        }
+
+        return view.getComputedStyle( elem);
+    }
+
+
     /*
      * Get the value of a computed style property for the first element in the set of matched elements or set one or more CSS properties for every matched element.
      * @param {HTMLElement} elm
@@ -3131,7 +3887,7 @@ define('skylark-utils-dom/styler',[
     function css(elm, property, value) {
         if (arguments.length < 3) {
             var computedStyle,
-                computedStyle = getComputedStyle(elm, '')
+                computedStyle = getStyles(elm)
             if (langx.isString(property)) {
                 return elm.style[camelCase(property)] || computedStyle.getPropertyValue(dasherize(property))
             } else if (langx.isArrayLike(property)) {
@@ -3252,14 +4008,14 @@ define('skylark-utils-dom/styler',[
         toggleClass: toggleClass
     });
 
-    return skylark.styler = styler;
+    return dom.styler = styler;
 });
 define('skylark-utils-dom/noder',[
-    "./skylark",
+    "./dom",
     "./langx",
     "./browser",
     "./styler"
-], function(skylark, langx, browser, styler) {
+], function(dom, langx, browser, styler) {
     var isIE = !!navigator.userAgent.match(/Trident/g) || !!navigator.userAgent.match(/MSIE/g),
         fragmentRE = /^\s*<(\w+|!)[^>]*>/,
         singleTagRE = /^<(\w+)\s*\/?>(?:<\/\1>|)$/,
@@ -3298,6 +4054,36 @@ define('skylark-utils-dom/noder',[
             return name === chkName.toLowerCase();
         }
         return name;
+    };
+
+
+    function activeElement(doc) {
+        doc = doc || document;
+        var el;
+
+        // Support: IE 9 only
+        // IE9 throws an "Unspecified error" accessing document.activeElement from an <iframe>
+        try {
+            el = doc.activeElement;
+        } catch ( error ) {
+            el = doc.body;
+        }
+
+        // Support: IE 9 - 11 only
+        // IE may return null instead of an element
+        // Interestingly, this only seems to occur when NOT in an iframe
+        if ( !el ) {
+            el = doc.body;
+        }
+
+        // Support: IE 11 only
+        // IE11 returns a seemingly empty object in some cases when accessing
+        // document.activeElement from an <iframe>
+        if ( !el.nodeName ) {
+            el = doc.body;
+        }
+
+        return el;
     };
 
     function after(node, placing, copyByClone) {
@@ -3476,6 +4262,46 @@ define('skylark-utils-dom/noder',[
         }
     }
 
+
+    // Selectors
+    function focusable( element, hasTabindex ) {
+        var map, mapName, img, focusableIfVisible, fieldset,
+            nodeName = element.nodeName.toLowerCase();
+
+        if ( "area" === nodeName ) {
+            map = element.parentNode;
+            mapName = map.name;
+            if ( !element.href || !mapName || map.nodeName.toLowerCase() !== "map" ) {
+                return false;
+            }
+            img = $( "img[usemap='#" + mapName + "']" );
+            return img.length > 0 && img.is( ":visible" );
+        }
+
+        if ( /^(input|select|textarea|button|object)$/.test( nodeName ) ) {
+            focusableIfVisible = !element.disabled;
+
+            if ( focusableIfVisible ) {
+
+                // Form controls within a disabled fieldset are disabled.
+                // However, controls within the fieldset's legend do not get disabled.
+                // Since controls generally aren't placed inside legends, we skip
+                // this portion of the check.
+                fieldset = $( element ).closest( "fieldset" )[ 0 ];
+                if ( fieldset ) {
+                    focusableIfVisible = !fieldset.disabled;
+                }
+            }
+        } else if ( "a" === nodeName ) {
+            focusableIfVisible = element.href || hasTabindex;
+        } else {
+            focusableIfVisible = hasTabindex;
+        }
+
+        return focusableIfVisible && $( element ).is( ":visible" ) && visible( $( element ) );
+    };
+
+
    var rxhtmlTag = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/gi;
  
     /*   
@@ -3530,14 +4356,20 @@ define('skylark-utils-dom/noder',[
     }
 
     /*   
-     * Check to see if a dom node is a descendant of another dom node.
+     * Check to see if a dom node is a document.
      * @param {Node} node
-     * @param {Node} parent
-     * @param {Node} directly
      */
-    function isDoc(node) {
+    function isDocument(node) {
         return node != null && node.nodeType == node.DOCUMENT_NODE
     }
+
+    /*   
+     * Check to see if a dom node is in the document
+     * @param {Node} node
+     */
+    function isInDocument(node) {
+      return (node === document.body) ? true : document.body.contains(node);
+    }        
 
     /*   
      * Get the owner document object for the specified element.
@@ -3642,7 +4474,26 @@ define('skylark-utils-dom/noder',[
 
         return this;
     }
-    /*   
+
+    function scrollParent( elm, includeHidden ) {
+        var position = styler.css(elm,"position" ),
+            excludeStaticParent = position === "absolute",
+            overflowRegex = includeHidden ? /(auto|scroll|hidden)/ : /(auto|scroll)/,
+            scrollParent = this.parents().filter( function() {
+                var parent = $( this );
+                if ( excludeStaticParent && parent.css( "position" ) === "static" ) {
+                    return false;
+                }
+                return overflowRegex.test( parent.css( "overflow" ) + parent.css( "overflow-y" ) +
+                    parent.css( "overflow-x" ) );
+            } ).eq( 0 );
+
+        return position === "fixed" || !scrollParent.length ?
+            $( this[ 0 ].ownerDocument || document ) :
+            scrollParent;
+    };
+
+        /*   
      * Replace an old node with the specified node.
      * @param {Node} node
      * @param {Node} oldNode
@@ -3707,6 +4558,7 @@ define('skylark-utils-dom/noder',[
             update: update
         };
     }
+
 
     /*   
      * traverse the specified node and its descendants, perform the callback function on each
@@ -3779,6 +4631,12 @@ define('skylark-utils-dom/noder',[
     }
 
     langx.mixin(noder, {
+        active  : activeElement,
+
+        blur : function(el) {
+            el.blur();
+        },
+
         body: function() {
             return document.body;
         },
@@ -3800,11 +4658,15 @@ define('skylark-utils-dom/noder',[
 
         fullScreen: fullScreen,
 
+        focusable: focusable,
+
         html: html,
 
         isChildOf: isChildOf,
 
-        isDoc: isDoc,
+        isDocument: isDocument,
+
+        isInDocument: isInDocument,
 
         isWindow: langx.isWindow,
 
@@ -3841,14 +4703,14 @@ define('skylark-utils-dom/noder',[
         unwrap: unwrap
     });
 
-    return skylark.noder = noder;
+    return dom.noder = noder;
 });
 define('skylark-utils-dom/finder',[
-    "./skylark",
+    "./dom",
     "./langx",
     "./browser",
     "./noder"
-], function(skylark, langx, browser, noder, velm) {
+], function(dom, langx, browser, noder, velm) {
     var local = {},
         filter = Array.prototype.filter,
         slice = Array.prototype.slice,
@@ -4128,6 +4990,10 @@ define('skylark-utils-dom/finder',[
             return document.activeElement === elm && (elm.href || elm.type || elm.tabindex);
         },
 
+        'focusable': function( elm ) {
+            return noder.focusable(elm, elm.tabindex != null );
+        },
+
         'first': function(elm, idx) {
             return (idx === 0);
         },
@@ -4179,6 +5045,12 @@ define('skylark-utils-dom/finder',[
 
         'selected': function(elm) {
             return !!elm.selected;
+        },
+
+        'tabbable': function(elm) {
+            var tabIndex = elm.tabindex,
+                hasTabindex = tabIndex != null;
+            return ( !hasTabindex || tabIndex >= 0 ) && noder.focusable( element, hasTabindex );
         },
 
         'text': function(elm) {
@@ -4930,22 +5802,22 @@ define('skylark-utils-dom/finder',[
 
         parent: parent,
 
-        previousSibling: previousSibling,
+        previousSibling,
 
-        previousSiblings: previousSiblings,
+        previousSiblings,
 
         pseudos: local.pseudos,
 
         siblings: siblings
     });
 
-    return skylark.finder = finder;
+    return dom.finder = finder;
 });
 define('skylark-utils-dom/datax',[
-    "./skylark",
+    "./dom",
     "./langx",
     "./finder"
-], function(skylark, langx, finder) {
+], function(dom, langx, finder) {
     var map = Array.prototype.map,
         filter = Array.prototype.filter,
         camelCase = langx.camelCase,
@@ -5099,13 +5971,17 @@ define('skylark-utils-dom/datax',[
      * @param {Array} names
      */
     function removeData(elm, names) {
-        if (langx.isString(names)) {
-            names = names.split(/\s+/);
+        if (names) {
+            if (langx.isString(names)) {
+                names = names.split(/\s+/);
+            }
+            var store = _store(elm, true);
+            names.forEach(function(name) {
+                delete store[name];
+            });            
+        } else {
+            cleanData(elm);
         }
-        var store = _store(elm, true);
-        names.forEach(function(name) {
-            delete store[name];
-        });
         return this;
     }
 
@@ -5197,6 +6073,12 @@ define('skylark-utils-dom/datax',[
         }
     }
 
+
+    finder.pseudos.data = function( elem, i, match,dataName ) {
+        return !!data( elem, dataName || match[3]);
+    };
+   
+
     function datax() {
         return datax;
     }
@@ -5225,16 +6107,16 @@ define('skylark-utils-dom/datax',[
         val: val
     });
 
-    return skylark.datax = datax;
+    return dom.datax = datax;
 });
 define('skylark-utils-dom/eventer',[
-    "./skylark",
+    "./dom",
     "./langx",
     "./browser",
     "./finder",
     "./noder",
     "./datax"
-], function(skylark, langx, browser, finder, noder, datax) {
+], function(dom, langx, browser, finder, noder, datax) {
     var mixin = langx.mixin,
         each = langx.each,
         slice = Array.prototype.slice,
@@ -5869,6 +6751,16 @@ define('skylark-utils-dom/eventer',[
 
     }
 
+    if (browser.support.transition) {
+        specialEvents.transitionEnd = {
+//          handle: function (e) {
+//            if ($(e.target).is(this)) return e.handleObj.handler.apply(this, arguments)
+//          },
+          bindType: browser.support.transition.end,
+          delegateType: browser.support.transition.end
+        }        
+    }
+
     function eventer() {
         return eventer;
     }
@@ -5898,14 +6790,14 @@ define('skylark-utils-dom/eventer',[
 
     });
 
-    return skylark.eventer = eventer;
+    return dom.eventer = eventer;
 });
 define('skylark-utils-dom/geom',[
-    "./skylark",
+    "./dom",
     "./langx",
     "./noder",
     "./styler"
-], function(skylark, langx, noder, styler) {
+], function(dom, langx, noder, styler) {
     var rootNodeRE = /^(?:body|html)$/i,
         px = langx.toPixel,
         offsetParent = noder.offsetParent,
@@ -5942,7 +6834,14 @@ define('skylark-utils-dom/geom',[
      * @param {HTMLElement} elm
      */
     function borderExtents(elm) {
-        var s = getComputedStyle(elm);
+        if (noder.isWindow(elm)) {
+            return {
+                left : 0,
+                top : 0,
+                right : 0,
+                bottom : 0
+            }
+        }        var s = getComputedStyle(elm);
         return {
             left: px(s.borderLeftWidth, elm),
             top: px(s.borderTopWidth, elm),
@@ -6134,6 +7033,14 @@ define('skylark-utils-dom/geom',[
      * @param {HTMLElement} elm
      */
     function marginExtents(elm) {
+        if (noder.isWindow(elm)) {
+            return {
+                left : 0,
+                top : 0,
+                right : 0,
+                bottom : 0
+            }
+        }
         var s = getComputedStyle(elm);
         return {
             left: px(s.marginLeft),
@@ -6145,8 +7052,8 @@ define('skylark-utils-dom/geom',[
 
 
     function marginRect(elm) {
-        var obj = this.relativeRect(elm),
-            me = this.marginExtents(elm);
+        var obj = relativeRect(elm),
+            me = marginExtents(elm);
 
         return {
             left: obj.left,
@@ -6158,8 +7065,8 @@ define('skylark-utils-dom/geom',[
 
 
     function marginSize(elm) {
-        var obj = this.size(elm),
-            me = this.marginExtents(elm);
+        var obj = size(elm),
+            me = marginExtents(elm);
 
         return {
             width: obj.width + me.left + me.right,
@@ -6172,6 +7079,14 @@ define('skylark-utils-dom/geom',[
      * @param {HTMLElement} elm
      */
     function paddingExtents(elm) {
+        if (noder.isWindow(elm)) {
+            return {
+                left : 0,
+                top : 0,
+                right : 0,
+                bottom : 0
+            }
+        }
         var s = getComputedStyle(elm);
         return {
             left: px(s.paddingLeft),
@@ -6432,309 +7347,6 @@ define('skylark-utils-dom/geom',[
             return this;
         }
     }
-    
-// in development start
-    function _place(/*DomNode*/ node, choices, layoutNode, aroundNodeCoords){
-        // summary:
-        //      Given a list of spots to put node, put it at the first spot where it fits,
-        //      of if it doesn't fit anywhere then the place with the least overflow
-        // choices: Array
-        //      Array of elements like: {corner: 'TL', pos: {x: 10, y: 20} }
-        //      Above example says to put the top-left corner of the node at (10,20)
-        // layoutNode: Function(node, aroundNodeCorner, nodeCorner, size)
-        //      for things like tooltip, they are displayed differently (and have different dimensions)
-        //      based on their orientation relative to the parent.   This adjusts the popup based on orientation.
-        //      It also passes in the available size for the popup, which is useful for tooltips to
-        //      tell them that their width is limited to a certain amount.   layoutNode() may return a value expressing
-        //      how much the popup had to be modified to fit into the available space.   This is used to determine
-        //      what the best placement is.
-        // aroundNodeCoords: Object
-        //      Size of aroundNode, ex: {w: 200, h: 50}
-
-        // get {x: 10, y: 10, w: 100, h:100} type obj representing position of
-        // viewport over document
-
-        var doc = noder.ownerDoc(node),
-            win = noder.ownerWindow(doc),
-            view = geom.size(win);
-
-        view.left = 0;
-        view.top = 0;
-
-        if(!node.parentNode || String(node.parentNode.tagName).toLowerCase() != "body"){
-            doc.body.appendChild(node);
-        }
-
-        var best = null;
-
-        some.apply(choices, function(choice){
-            var corner = choice.corner;
-            var pos = choice.pos;
-            var overflow = 0;
-
-            // calculate amount of space available given specified position of node
-            var spaceAvailable = {
-                w: {
-                    'L': view.left + view.width - pos.x,
-                    'R': pos.x - view.left,
-                    'M': view.width
-                }[corner.charAt(1)],
-
-                h: {
-                    'T': view.top + view.height - pos.y,
-                    'B': pos.y - view.top,
-                    'M': view.height
-                }[corner.charAt(0)]
-            };
-
-            if(layoutNode){
-                var res = layoutNode(node, choice.aroundCorner, corner, spaceAvailable, aroundNodeCoords);
-                overflow = typeof res == "undefined" ? 0 : res;
-            }
-
-            var bb = geom.size(node);
-
-            // coordinates and size of node with specified corner placed at pos,
-            // and clipped by viewport
-            var
-                startXpos = {
-                    'L': pos.x,
-                    'R': pos.x - bb.width,
-                    'M': Math.max(view.left, Math.min(view.left + view.width, pos.x + (bb.width >> 1)) - bb.width) // M orientation is more flexible
-                }[corner.charAt(1)],
-
-                startYpos = {
-                    'T': pos.y,
-                    'B': pos.y - bb.height,
-                    'M': Math.max(view.top, Math.min(view.top + view.height, pos.y + (bb.height >> 1)) - bb.height)
-                }[corner.charAt(0)],
-
-                startX = Math.max(view.left, startXpos),
-                startY = Math.max(view.top, startYpos),
-                endX = Math.min(view.left + view.width, startXpos + bb.width),
-                endY = Math.min(view.top + view.height, startYpos + bb.height),
-                width = endX - startX,
-                height = endY - startY;
-
-            overflow += (bb.width - width) + (bb.height - height);
-
-            if(best == null || overflow < best.overflow){
-                best = {
-                    corner: corner,
-                    aroundCorner: choice.aroundCorner,
-                    left: startX,
-                    top: startY,
-                    width: width,
-                    height: height,
-                    overflow: overflow,
-                    spaceAvailable: spaceAvailable
-                };
-            }
-
-            return !overflow;
-        });
-
-        // In case the best position is not the last one we checked, need to call
-        // layoutNode() again.
-        if(best.overflow && layoutNode){
-            layoutNode(node, best.aroundCorner, best.corner, best.spaceAvailable, aroundNodeCoords);
-        }
-
-
-        geom.boundingPosition(node,best);
-
-        return best;
-    }
-
-    function at(node, pos, corners, padding, layoutNode){
-        var choices = map.apply(corners, function(corner){
-            var c = {
-                corner: corner,
-                aroundCorner: reverse[corner],  // so TooltipDialog.orient() gets aroundCorner argument set
-                pos: {x: pos.x,y: pos.y}
-            };
-            if(padding){
-                c.pos.x += corner.charAt(1) == 'L' ? padding.x : -padding.x;
-                c.pos.y += corner.charAt(0) == 'T' ? padding.y : -padding.y;
-            }
-            return c;
-        });
-
-        return _place(node, choices, layoutNode);
-    }
-
-    function around(
-        /*DomNode*/     node,
-        /*DomNode|__Rectangle*/ anchor,
-        /*String[]*/    positions,
-        /*Boolean*/     leftToRight,
-        /*Function?*/   layoutNode){
-
-        // summary:
-        //      Position node adjacent or kitty-corner to anchor
-        //      such that it's fully visible in viewport.
-        // description:
-        //      Place node such that corner of node touches a corner of
-        //      aroundNode, and that node is fully visible.
-        // anchor:
-        //      Either a DOMNode or a rectangle (object with x, y, width, height).
-        // positions:
-        //      Ordered list of positions to try matching up.
-        //
-        //      - before: places drop down to the left of the anchor node/widget, or to the right in the case
-        //          of RTL scripts like Hebrew and Arabic; aligns either the top of the drop down
-        //          with the top of the anchor, or the bottom of the drop down with bottom of the anchor.
-        //      - after: places drop down to the right of the anchor node/widget, or to the left in the case
-        //          of RTL scripts like Hebrew and Arabic; aligns either the top of the drop down
-        //          with the top of the anchor, or the bottom of the drop down with bottom of the anchor.
-        //      - before-centered: centers drop down to the left of the anchor node/widget, or to the right
-        //          in the case of RTL scripts like Hebrew and Arabic
-        //      - after-centered: centers drop down to the right of the anchor node/widget, or to the left
-        //          in the case of RTL scripts like Hebrew and Arabic
-        //      - above-centered: drop down is centered above anchor node
-        //      - above: drop down goes above anchor node, left sides aligned
-        //      - above-alt: drop down goes above anchor node, right sides aligned
-        //      - below-centered: drop down is centered above anchor node
-        //      - below: drop down goes below anchor node
-        //      - below-alt: drop down goes below anchor node, right sides aligned
-        // layoutNode: Function(node, aroundNodeCorner, nodeCorner)
-        //      For things like tooltip, they are displayed differently (and have different dimensions)
-        //      based on their orientation relative to the parent.   This adjusts the popup based on orientation.
-        // leftToRight:
-        //      True if widget is LTR, false if widget is RTL.   Affects the behavior of "above" and "below"
-        //      positions slightly.
-        // example:
-        //  |   placeAroundNode(node, aroundNode, {'BL':'TL', 'TR':'BR'});
-        //      This will try to position node such that node's top-left corner is at the same position
-        //      as the bottom left corner of the aroundNode (ie, put node below
-        //      aroundNode, with left edges aligned).   If that fails it will try to put
-        //      the bottom-right corner of node where the top right corner of aroundNode is
-        //      (ie, put node above aroundNode, with right edges aligned)
-        //
-
-        // If around is a DOMNode (or DOMNode id), convert to coordinates.
-        var aroundNodePos;
-        if(typeof anchor == "string" || "offsetWidth" in anchor || "ownerSVGElement" in anchor){
-            aroundNodePos = domGeometry.position(anchor, true);
-
-            // For above and below dropdowns, subtract width of border so that popup and aroundNode borders
-            // overlap, preventing a double-border effect.  Unfortunately, difficult to measure the border
-            // width of either anchor or popup because in both cases the border may be on an inner node.
-            if(/^(above|below)/.test(positions[0])){
-                var anchorBorder = domGeometry.getBorderExtents(anchor),
-                    anchorChildBorder = anchor.firstChild ? domGeometry.getBorderExtents(anchor.firstChild) : {t:0,l:0,b:0,r:0},
-                    nodeBorder =  domGeometry.getBorderExtents(node),
-                    nodeChildBorder = node.firstChild ? domGeometry.getBorderExtents(node.firstChild) : {t:0,l:0,b:0,r:0};
-                aroundNodePos.y += Math.min(anchorBorder.t + anchorChildBorder.t, nodeBorder.t + nodeChildBorder.t);
-                aroundNodePos.h -=  Math.min(anchorBorder.t + anchorChildBorder.t, nodeBorder.t+ nodeChildBorder.t) +
-                    Math.min(anchorBorder.b + anchorChildBorder.b, nodeBorder.b + nodeChildBorder.b);
-            }
-        }else{
-            aroundNodePos = anchor;
-        }
-
-        // Compute position and size of visible part of anchor (it may be partially hidden by ancestor nodes w/scrollbars)
-        if(anchor.parentNode){
-            // ignore nodes between position:relative and position:absolute
-            var sawPosAbsolute = domStyle.getComputedStyle(anchor).position == "absolute";
-            var parent = anchor.parentNode;
-            while(parent && parent.nodeType == 1 && parent.nodeName != "BODY"){  //ignoring the body will help performance
-                var parentPos = domGeometry.position(parent, true),
-                    pcs = domStyle.getComputedStyle(parent);
-                if(/relative|absolute/.test(pcs.position)){
-                    sawPosAbsolute = false;
-                }
-                if(!sawPosAbsolute && /hidden|auto|scroll/.test(pcs.overflow)){
-                    var bottomYCoord = Math.min(aroundNodePos.y + aroundNodePos.h, parentPos.y + parentPos.h);
-                    var rightXCoord = Math.min(aroundNodePos.x + aroundNodePos.w, parentPos.x + parentPos.w);
-                    aroundNodePos.x = Math.max(aroundNodePos.x, parentPos.x);
-                    aroundNodePos.y = Math.max(aroundNodePos.y, parentPos.y);
-                    aroundNodePos.h = bottomYCoord - aroundNodePos.y;
-                    aroundNodePos.w = rightXCoord - aroundNodePos.x;
-                }
-                if(pcs.position == "absolute"){
-                    sawPosAbsolute = true;
-                }
-                parent = parent.parentNode;
-            }
-        }           
-
-        var x = aroundNodePos.x,
-            y = aroundNodePos.y,
-            width = "w" in aroundNodePos ? aroundNodePos.w : (aroundNodePos.w = aroundNodePos.width),
-            height = "h" in aroundNodePos ? aroundNodePos.h : (kernel.deprecated("place.around: dijit/place.__Rectangle: { x:"+x+", y:"+y+", height:"+aroundNodePos.height+", width:"+width+" } has been deprecated.  Please use { x:"+x+", y:"+y+", h:"+aroundNodePos.height+", w:"+width+" }", "", "2.0"), aroundNodePos.h = aroundNodePos.height);
-
-        // Convert positions arguments into choices argument for _place()
-        var choices = [];
-        function push(aroundCorner, corner){
-            choices.push({
-                aroundCorner: aroundCorner,
-                corner: corner,
-                pos: {
-                    x: {
-                        'L': x,
-                        'R': x + width,
-                        'M': x + (width >> 1)
-                    }[aroundCorner.charAt(1)],
-                    y: {
-                        'T': y,
-                        'B': y + height,
-                        'M': y + (height >> 1)
-                    }[aroundCorner.charAt(0)]
-                }
-            })
-        }
-        array.forEach(positions, function(pos){
-            var ltr =  leftToRight;
-            switch(pos){
-                case "above-centered":
-                    push("TM", "BM");
-                    break;
-                case "below-centered":
-                    push("BM", "TM");
-                    break;
-                case "after-centered":
-                    ltr = !ltr;
-                    // fall through
-                case "before-centered":
-                    push(ltr ? "ML" : "MR", ltr ? "MR" : "ML");
-                    break;
-                case "after":
-                    ltr = !ltr;
-                    // fall through
-                case "before":
-                    push(ltr ? "TL" : "TR", ltr ? "TR" : "TL");
-                    push(ltr ? "BL" : "BR", ltr ? "BR" : "BL");
-                    break;
-                case "below-alt":
-                    ltr = !ltr;
-                    // fall through
-                case "below":
-                    // first try to align left borders, next try to align right borders (or reverse for RTL mode)
-                    push(ltr ? "BL" : "BR", ltr ? "TL" : "TR");
-                    push(ltr ? "BR" : "BL", ltr ? "TR" : "TL");
-                    break;
-                case "above-alt":
-                    ltr = !ltr;
-                    // fall through
-                case "above":
-                    // first try to align left borders, next try to align right borders (or reverse for RTL mode)
-                    push(ltr ? "TL" : "TR", ltr ? "BL" : "BR");
-                    push(ltr ? "TR" : "TL", ltr ? "BR" : "BL");
-                    break;
-                default:
-                    // To assist dijit/_base/place, accept arguments of type {aroundCorner: "BL", corner: "TL"}.
-                    // Not meant to be used directly.  Remove for 2.0.
-                    push(pos.aroundCorner, pos.corner);
-            }
-        });
-
-        var position = _place(node, choices, layoutNode, {w: width, h: height});
-        position.aroundNodePos = aroundNodePos;
-
-        return position;
-    }
-// in development end
 
     function geom() {
         return geom;
@@ -6792,16 +7404,458 @@ define('skylark-utils-dom/geom',[
         width: width
     });
 
-    return skylark.geom = geom;
+    ( function() {
+        var max = Math.max,
+            abs = Math.abs,
+            rhorizontal = /left|center|right/,
+            rvertical = /top|center|bottom/,
+            roffset = /[\+\-]\d+(\.[\d]+)?%?/,
+            rposition = /^\w+/,
+            rpercent = /%$/;
+
+        function getOffsets( offsets, width, height ) {
+            return [
+                parseFloat( offsets[ 0 ] ) * ( rpercent.test( offsets[ 0 ] ) ? width / 100 : 1 ),
+                parseFloat( offsets[ 1 ] ) * ( rpercent.test( offsets[ 1 ] ) ? height / 100 : 1 )
+            ];
+        }
+
+        function parseCss( element, property ) {
+            return parseInt( styler.css( element, property ), 10 ) || 0;
+        }
+
+        function getDimensions( raw ) {
+            if ( raw.nodeType === 9 ) {
+                return {
+                    size: size(raw),
+                    offset: { top: 0, left: 0 }
+                };
+            }
+            if ( noder.isWindow( raw ) ) {
+                return {
+                    size: size(raw),
+                    offset: { 
+                        top: scrollTop(raw), 
+                        left: scrollLeft(raw) 
+                    }
+                };
+            }
+            if ( raw.preventDefault ) {
+                return {
+                    size : {
+                        width: 0,
+                        height: 0
+                    },
+                    offset: { 
+                        top: raw.pageY, 
+                        left: raw.pageX 
+                    }
+                };
+            }
+            return {
+                size: size(raw),
+                offset: pagePosition(raw)
+            };
+        }
+
+        function getScrollInfo( within ) {
+            var overflowX = within.isWindow || within.isDocument ? "" :
+                    styler.css(within.element,"overflow-x" ),
+                overflowY = within.isWindow || within.isDocument ? "" :
+                    styler.css(within.element,"overflow-y" ),
+                hasOverflowX = overflowX === "scroll" ||
+                    ( overflowX === "auto" && within.width < scrollWidth(within.element) ),
+                hasOverflowY = overflowY === "scroll" ||
+                    ( overflowY === "auto" && within.height < scrollHeight(within.element));
+            return {
+                width: hasOverflowY ? scrollbarWidth() : 0,
+                height: hasOverflowX ? scrollbarWidth() : 0
+            };
+        }
+
+        function getWithinInfo( element ) {
+            var withinElement = element || window,
+                isWindow = noder.isWindow( withinElement),
+                isDocument = !!withinElement && withinElement.nodeType === 9,
+                hasOffset = !isWindow && !isDocument,
+                msize = marginSize(withinElement);
+            return {
+                element: withinElement,
+                isWindow: isWindow,
+                isDocument: isDocument,
+                offset: hasOffset ? pagePosition(element) : { left: 0, top: 0 },
+                scrollLeft: scrollLeft(withinElement),
+                scrollTop: scrollTop(withinElement),
+                width: msize.width,
+                height: msize.height
+            };
+        }
+
+        function posit(elm,options ) {
+            // Make a copy, we don't want to modify arguments
+            options = langx.extend( {}, options );
+
+            var atOffset, targetWidth, targetHeight, targetOffset, basePosition, dimensions,
+                target = options.of,
+                within = getWithinInfo( options.within ),
+                scrollInfo = getScrollInfo( within ),
+                collision = ( options.collision || "flip" ).split( " " ),
+                offsets = {};
+
+            dimensions = getDimensions( target );
+            if ( target.preventDefault ) {
+
+                // Force left top to allow flipping
+                options.at = "left top";
+            }
+            targetWidth = dimensions.size.width;
+            targetHeight = dimensions.size.height;
+            targetOffset = dimensions.offset;
+
+            // Clone to reuse original targetOffset later
+            basePosition = langx.extend( {}, targetOffset );
+
+            // Force my and at to have valid horizontal and vertical positions
+            // if a value is missing or invalid, it will be converted to center
+            langx.each( [ "my", "at" ], function() {
+                var pos = ( options[ this ] || "" ).split( " " ),
+                    horizontalOffset,
+                    verticalOffset;
+
+                if ( pos.length === 1 ) {
+                    pos = rhorizontal.test( pos[ 0 ] ) ?
+                        pos.concat( [ "center" ] ) :
+                        rvertical.test( pos[ 0 ] ) ?
+                            [ "center" ].concat( pos ) :
+                            [ "center", "center" ];
+                }
+                pos[ 0 ] = rhorizontal.test( pos[ 0 ] ) ? pos[ 0 ] : "center";
+                pos[ 1 ] = rvertical.test( pos[ 1 ] ) ? pos[ 1 ] : "center";
+
+                // Calculate offsets
+                horizontalOffset = roffset.exec( pos[ 0 ] );
+                verticalOffset = roffset.exec( pos[ 1 ] );
+                offsets[ this ] = [
+                    horizontalOffset ? horizontalOffset[ 0 ] : 0,
+                    verticalOffset ? verticalOffset[ 0 ] : 0
+                ];
+
+                // Reduce to just the positions without the offsets
+                options[ this ] = [
+                    rposition.exec( pos[ 0 ] )[ 0 ],
+                    rposition.exec( pos[ 1 ] )[ 0 ]
+                ];
+            } );
+
+            // Normalize collision option
+            if ( collision.length === 1 ) {
+                collision[ 1 ] = collision[ 0 ];
+            }
+
+            if ( options.at[ 0 ] === "right" ) {
+                basePosition.left += targetWidth;
+            } else if ( options.at[ 0 ] === "center" ) {
+                basePosition.left += targetWidth / 2;
+            }
+
+            if ( options.at[ 1 ] === "bottom" ) {
+                basePosition.top += targetHeight;
+            } else if ( options.at[ 1 ] === "center" ) {
+                basePosition.top += targetHeight / 2;
+            }
+
+            atOffset = getOffsets( offsets.at, targetWidth, targetHeight );
+            basePosition.left += atOffset[ 0 ];
+            basePosition.top += atOffset[ 1 ];
+
+            return ( function(elem) {
+                var collisionPosition, using,
+                    msize = marginSize(elem),
+                    elemWidth = msize.width,
+                    elemHeight = msize.height,
+                    marginLeft = parseCss( elem, "marginLeft" ),
+                    marginTop = parseCss( elem, "marginTop" ),
+                    collisionWidth = elemWidth + marginLeft + parseCss( elem, "marginRight" ) +
+                        scrollInfo.width,
+                    collisionHeight = elemHeight + marginTop + parseCss( elem, "marginBottom" ) +
+                        scrollInfo.height,
+                    position = langx.extend( {}, basePosition ),
+                    myOffset = getOffsets( offsets.my, msize.width, msize.height);
+
+                if ( options.my[ 0 ] === "right" ) {
+                    position.left -= elemWidth;
+                } else if ( options.my[ 0 ] === "center" ) {
+                    position.left -= elemWidth / 2;
+                }
+
+                if ( options.my[ 1 ] === "bottom" ) {
+                    position.top -= elemHeight;
+                } else if ( options.my[ 1 ] === "center" ) {
+                    position.top -= elemHeight / 2;
+                }
+
+                position.left += myOffset[ 0 ];
+                position.top += myOffset[ 1 ];
+
+                collisionPosition = {
+                    marginLeft: marginLeft,
+                    marginTop: marginTop
+                };
+
+                langx.each( [ "left", "top" ], function( i, dir ) {
+                    if ( positions[ collision[ i ] ] ) {
+                        positions[ collision[ i ] ][ dir ]( position, {
+                            targetWidth: targetWidth,
+                            targetHeight: targetHeight,
+                            elemWidth: elemWidth,
+                            elemHeight: elemHeight,
+                            collisionPosition: collisionPosition,
+                            collisionWidth: collisionWidth,
+                            collisionHeight: collisionHeight,
+                            offset: [ atOffset[ 0 ] + myOffset[ 0 ], atOffset [ 1 ] + myOffset[ 1 ] ],
+                            my: options.my,
+                            at: options.at,
+                            within: within,
+                            elem: elem
+                        } );
+                    }
+                } );
+
+                if ( options.using ) {
+
+                    // Adds feedback as second argument to using callback, if present
+                    using = function( props ) {
+                        var left = targetOffset.left - position.left,
+                            right = left + targetWidth - elemWidth,
+                            top = targetOffset.top - position.top,
+                            bottom = top + targetHeight - elemHeight,
+                            feedback = {
+                                target: {
+                                    element: target,
+                                    left: targetOffset.left,
+                                    top: targetOffset.top,
+                                    width: targetWidth,
+                                    height: targetHeight
+                                },
+                                element: {
+                                    element: elem,
+                                    left: position.left,
+                                    top: position.top,
+                                    width: elemWidth,
+                                    height: elemHeight
+                                },
+                                horizontal: right < 0 ? "left" : left > 0 ? "right" : "center",
+                                vertical: bottom < 0 ? "top" : top > 0 ? "bottom" : "middle"
+                            };
+                        if ( targetWidth < elemWidth && abs( left + right ) < targetWidth ) {
+                            feedback.horizontal = "center";
+                        }
+                        if ( targetHeight < elemHeight && abs( top + bottom ) < targetHeight ) {
+                            feedback.vertical = "middle";
+                        }
+                        if ( max( abs( left ), abs( right ) ) > max( abs( top ), abs( bottom ) ) ) {
+                            feedback.important = "horizontal";
+                        } else {
+                            feedback.important = "vertical";
+                        }
+                        options.using.call( this, props, feedback );
+                    };
+                }
+
+                pagePosition(elem, langx.extend( position, { using: using } ));
+            })(elm);
+        }
+
+        var positions = {
+            fit: {
+                left: function( position, data ) {
+                    var within = data.within,
+                        withinOffset = within.isWindow ? within.scrollLeft : within.offset.left,
+                        outerWidth = within.width,
+                        collisionPosLeft = position.left - data.collisionPosition.marginLeft,
+                        overLeft = withinOffset - collisionPosLeft,
+                        overRight = collisionPosLeft + data.collisionWidth - outerWidth - withinOffset,
+                        newOverRight;
+
+                    // Element is wider than within
+                    if ( data.collisionWidth > outerWidth ) {
+
+                        // Element is initially over the left side of within
+                        if ( overLeft > 0 && overRight <= 0 ) {
+                            newOverRight = position.left + overLeft + data.collisionWidth - outerWidth -
+                                withinOffset;
+                            position.left += overLeft - newOverRight;
+
+                        // Element is initially over right side of within
+                        } else if ( overRight > 0 && overLeft <= 0 ) {
+                            position.left = withinOffset;
+
+                        // Element is initially over both left and right sides of within
+                        } else {
+                            if ( overLeft > overRight ) {
+                                position.left = withinOffset + outerWidth - data.collisionWidth;
+                            } else {
+                                position.left = withinOffset;
+                            }
+                        }
+
+                    // Too far left -> align with left edge
+                    } else if ( overLeft > 0 ) {
+                        position.left += overLeft;
+
+                    // Too far right -> align with right edge
+                    } else if ( overRight > 0 ) {
+                        position.left -= overRight;
+
+                    // Adjust based on position and margin
+                    } else {
+                        position.left = max( position.left - collisionPosLeft, position.left );
+                    }
+                },
+                top: function( position, data ) {
+                    var within = data.within,
+                        withinOffset = within.isWindow ? within.scrollTop : within.offset.top,
+                        outerHeight = data.within.height,
+                        collisionPosTop = position.top - data.collisionPosition.marginTop,
+                        overTop = withinOffset - collisionPosTop,
+                        overBottom = collisionPosTop + data.collisionHeight - outerHeight - withinOffset,
+                        newOverBottom;
+
+                    // Element is taller than within
+                    if ( data.collisionHeight > outerHeight ) {
+
+                        // Element is initially over the top of within
+                        if ( overTop > 0 && overBottom <= 0 ) {
+                            newOverBottom = position.top + overTop + data.collisionHeight - outerHeight -
+                                withinOffset;
+                            position.top += overTop - newOverBottom;
+
+                        // Element is initially over bottom of within
+                        } else if ( overBottom > 0 && overTop <= 0 ) {
+                            position.top = withinOffset;
+
+                        // Element is initially over both top and bottom of within
+                        } else {
+                            if ( overTop > overBottom ) {
+                                position.top = withinOffset + outerHeight - data.collisionHeight;
+                            } else {
+                                position.top = withinOffset;
+                            }
+                        }
+
+                    // Too far up -> align with top
+                    } else if ( overTop > 0 ) {
+                        position.top += overTop;
+
+                    // Too far down -> align with bottom edge
+                    } else if ( overBottom > 0 ) {
+                        position.top -= overBottom;
+
+                    // Adjust based on position and margin
+                    } else {
+                        position.top = max( position.top - collisionPosTop, position.top );
+                    }
+                }
+            },
+            flip: {
+                left: function( position, data ) {
+                    var within = data.within,
+                        withinOffset = within.offset.left + within.scrollLeft,
+                        outerWidth = within.width,
+                        offsetLeft = within.isWindow ? within.scrollLeft : within.offset.left,
+                        collisionPosLeft = position.left - data.collisionPosition.marginLeft,
+                        overLeft = collisionPosLeft - offsetLeft,
+                        overRight = collisionPosLeft + data.collisionWidth - outerWidth - offsetLeft,
+                        myOffset = data.my[ 0 ] === "left" ?
+                            -data.elemWidth :
+                            data.my[ 0 ] === "right" ?
+                                data.elemWidth :
+                                0,
+                        atOffset = data.at[ 0 ] === "left" ?
+                            data.targetWidth :
+                            data.at[ 0 ] === "right" ?
+                                -data.targetWidth :
+                                0,
+                        offset = -2 * data.offset[ 0 ],
+                        newOverRight,
+                        newOverLeft;
+
+                    if ( overLeft < 0 ) {
+                        newOverRight = position.left + myOffset + atOffset + offset + data.collisionWidth -
+                            outerWidth - withinOffset;
+                        if ( newOverRight < 0 || newOverRight < abs( overLeft ) ) {
+                            position.left += myOffset + atOffset + offset;
+                        }
+                    } else if ( overRight > 0 ) {
+                        newOverLeft = position.left - data.collisionPosition.marginLeft + myOffset +
+                            atOffset + offset - offsetLeft;
+                        if ( newOverLeft > 0 || abs( newOverLeft ) < overRight ) {
+                            position.left += myOffset + atOffset + offset;
+                        }
+                    }
+                },
+                top: function( position, data ) {
+                    var within = data.within,
+                        withinOffset = within.offset.top + within.scrollTop,
+                        outerHeight = within.height,
+                        offsetTop = within.isWindow ? within.scrollTop : within.offset.top,
+                        collisionPosTop = position.top - data.collisionPosition.marginTop,
+                        overTop = collisionPosTop - offsetTop,
+                        overBottom = collisionPosTop + data.collisionHeight - outerHeight - offsetTop,
+                        top = data.my[ 1 ] === "top",
+                        myOffset = top ?
+                            -data.elemHeight :
+                            data.my[ 1 ] === "bottom" ?
+                                data.elemHeight :
+                                0,
+                        atOffset = data.at[ 1 ] === "top" ?
+                            data.targetHeight :
+                            data.at[ 1 ] === "bottom" ?
+                                -data.targetHeight :
+                                0,
+                        offset = -2 * data.offset[ 1 ],
+                        newOverTop,
+                        newOverBottom;
+                    if ( overTop < 0 ) {
+                        newOverBottom = position.top + myOffset + atOffset + offset + data.collisionHeight -
+                            outerHeight - withinOffset;
+                        if ( newOverBottom < 0 || newOverBottom < abs( overTop ) ) {
+                            position.top += myOffset + atOffset + offset;
+                        }
+                    } else if ( overBottom > 0 ) {
+                        newOverTop = position.top - data.collisionPosition.marginTop + myOffset + atOffset +
+                            offset - offsetTop;
+                        if ( newOverTop > 0 || abs( newOverTop ) < overBottom ) {
+                            position.top += myOffset + atOffset + offset;
+                        }
+                    }
+                }
+            },
+            flipfit: {
+                left: function() {
+                    positions.flip.left.apply( this, arguments );
+                    positions.fit.left.apply( this, arguments );
+                },
+                top: function() {
+                    positions.flip.top.apply( this, arguments );
+                    positions.fit.top.apply( this, arguments );
+                }
+            }
+        };
+
+        geom.posit = posit;
+    })();
+
+    return dom.geom = geom;
 });
 define('skylark-utils-dom/fx',[
-    "./skylark",
+    "./dom",
     "./langx",
     "./browser",
     "./geom",
     "./styler",
     "./eventer"
-], function(skylark, langx, browser, geom, styler, eventer) {
+], function(dom, langx, browser, geom, styler, eventer) {
     var animationName,
         animationDuration,
         animationTiming,
@@ -7209,7 +8263,7 @@ define('skylark-utils-dom/fx',[
         });
 
         return this;
-    };
+    }
 
     /*   
      * Hide an element with a sliding motion.
@@ -7271,7 +8325,7 @@ define('skylark-utils-dom/fx',[
             });
         }
         return this;
-    };
+    }
 
 
     /*   
@@ -7291,8 +8345,22 @@ define('skylark-utils-dom/fx',[
             slideUp(elm, duration, callback);
         }
         return this;
-    };
+    }
 
+    function emulateTransitionEnd(elm,duration) {
+        var called = false;
+        eventer.one(elm,'transitionEnd', function () { 
+            called = true;
+        })
+        var callback = function () { 
+            if (!called) {
+                eventer.trigger(elm,'transitionEnd') 
+            }
+        };
+        setTimeout(callback, duration);
+        
+        return this;
+    } 
 
     function fx() {
         return fx;
@@ -7307,25 +8375,26 @@ define('skylark-utils-dom/fx',[
             slow: 600
         },
 
-        animate: animate,
-        fadeIn: fadeIn,
-        fadeOut: fadeOut,
-        fadeTo: fadeTo,
-        fadeToggle: fadeToggle,
-        hide: hide,
-        scrollToTop: scrollToTop,
+        animate,
+        emulateTransitionEnd,
+        fadeIn,
+        fadeOut,
+        fadeTo,
+        fadeToggle,
+        hide,
+        scrollToTop,
 
-        slideDown: slideDown,
-        slideToggle: slideToggle,
-        slideUp: slideUp,
-        show: show,
-        toggle: toggle
+        slideDown,
+        slideToggle,
+        slideUp,
+        show,
+        toggle
     });
 
-    return skylark.fx = fx;
+    return dom.fx = fx;
 });
 define('skylark-utils-dom/query',[
-    "./skylark",
+    "./dom",
     "./langx",
     "./noder",
     "./datax",
@@ -7334,7 +8403,7 @@ define('skylark-utils-dom/query',[
     "./geom",
     "./styler",
     "./fx"
-], function(skylark, langx, noder, datax, eventer, finder, geom, styler, fx) {
+], function(dom, langx, noder, datax, eventer, finder, geom, styler, fx) {
     var some = Array.prototype.some,
         push = Array.prototype.push,
         every = Array.prototype.every,
@@ -7379,10 +8448,10 @@ define('skylark-utils-dom/query',[
         return function() {
             var self = this,
                 params = slice.call(arguments);
-            var result = $.map(self, function(elem, idx) {
+            var result = langx.map(self, function(elem, idx) {
                 return func.apply(context, [elem].concat(params));
             });
-            return $(uniq(result));
+            return query(uniq(result));
         }
     }
 
@@ -7555,7 +8624,7 @@ define('skylark-utils-dom/query',[
                         nodes = finder.descendants(context, selector);
                     }
                 } else {
-                    if (isArray(selector)) {
+                    if (selector !== window && isArrayLike(selector)) {
                         // a dom node array is expected
                         nodes = selector;
                     } else {
@@ -7765,8 +8834,6 @@ define('skylark-utils-dom/query',[
                 return ret;
             },
             
-            show: wrapper_every_act(fx.show, fx),
-
             replaceWith: function(newContent) {
                 return this.before(newContent).remove();
             },
@@ -7899,12 +8966,23 @@ define('skylark-utils-dom/query',[
 
             scrollLeft: wrapper_value(geom.scrollLeft, geom),
 
-            position: function() {
+            position: function(options) {
                 if (!this.length) return
 
-                var elem = this[0];
+                if (options) {
+                    if (options.of && options.of.length) {
+                        options = langx.clone(options);
+                        options.of = options.of[0];
+                    }
+                    return this.each( function() {
+                        geom.posit(this,options);
+                    });
+                } else {
+                    var elem = this[0];
 
-                return geom.relativePosition(elem);
+                    return geom.relativePosition(elem);
+
+                }             
             },
 
             offsetParent: wrapper_map(geom.offsetParent, geom)
@@ -7978,7 +9056,6 @@ define('skylark-utils-dom/query',[
         $.fn.innerWidth = wrapper_value(geom.clientWidth, geom, geom.clientWidth);
 
         $.fn.innerHeight = wrapper_value(geom.clientHeight, geom, geom.clientHeight);
-
 
         var traverseNode = noder.traverse;
 
@@ -8072,17 +9149,15 @@ define('skylark-utils-dom/query',[
 
         $.fn.trigger = wrapper_every_act(eventer.trigger, eventer);
 
-
         ('focusin focusout focus blur load resize scroll unload click dblclick ' +
             'mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave ' +
-            'change select keydown keypress keyup error').split(' ').forEach(function(event) {
+            'change select keydown keypress keyup error transitionEnd').split(' ').forEach(function(event) {
             $.fn[event] = function(data, callback) {
                 return (0 in arguments) ?
                     this.on(event, data, callback) :
                     this.trigger(event)
             }
         });
-
 
         $.fn.one = function(event, selector, data, callback) {
             if (!langx.isString(selector) && !langx.isFunction(callback)) {
@@ -8100,6 +9175,7 @@ define('skylark-utils-dom/query',[
         };
 
         $.fn.animate = wrapper_every_act(fx.animate, fx);
+        $.fn.emulateTransitionEnd = wrapper_every_act(fx.emulateTransitionEnd, fx);
 
         $.fn.show = wrapper_every_act(fx.show, fx);
         $.fn.hide = wrapper_every_act(fx.hide, fx);
@@ -8112,6 +9188,24 @@ define('skylark-utils-dom/query',[
         $.fn.slideDown = wrapper_every_act(fx.slideDown, fx);
         $.fn.slideToggle = wrapper_every_act(fx.slideToggle, fx);
         $.fn.slideUp = wrapper_every_act(fx.slideUp, fx);
+
+        $.fn.scrollParent = function( includeHidden ) {
+            var position = this.css( "position" ),
+                excludeStaticParent = position === "absolute",
+                overflowRegex = includeHidden ? /(auto|scroll|hidden)/ : /(auto|scroll)/,
+                scrollParent = this.parents().filter( function() {
+                    var parent = $( this );
+                    if ( excludeStaticParent && parent.css( "position" ) === "static" ) {
+                        return false;
+                    }
+                    return overflowRegex.test( parent.css( "overflow" ) + parent.css( "overflow-y" ) +
+                        parent.css( "overflow-x" ) );
+                } ).eq( 0 );
+
+            return position === "fixed" || !scrollParent.length ?
+                $( this[ 0 ].ownerDocument || document ) :
+                scrollParent;
+        };
     })(query);
 
 
@@ -8212,54 +9306,47 @@ define('skylark-utils-dom/query',[
             return this;
         };
 
+        $.fn.replaceClass = function(newClass, oldClass) {
+            this.removeClass(oldClass);
+            this.addClass(newClass);
+            return this;
+        };
+
+        $.fn.disableSelection = ( function() {
+            var eventType = "onselectstart" in document.createElement( "div" ) ?
+                "selectstart" :
+                "mousedown";
+
+            return function() {
+                return this.on( eventType + ".ui-disableSelection", function( event ) {
+                    event.preventDefault();
+                } );
+            };
+        } )();
+
+        $.fn.enableSelection = function() {
+            return this.off( ".ui-disableSelection" );
+        };
+       
+
     })(query);
 
+    query.fn.plugin = function(name,options) {
+        var args = slice.call( arguments, 1 ),
+            self = this,
+            returnValue = this;
 
-    return skylark.query = query;
+        this.each(function(){
+            returnValue = plugins.instantiate.apply(self,[this,name].concat(args));
+        });
+        return returnValue;
+    };
+
+    return dom.query = query;
 
 });
-define('skylark-utils/query',[
-    "skylark-utils-dom/query"
-], function(query) {
-    return query;
-});
-
-define('skylark-utils/skylark',["skylark-langx/skylark"], function(skylark) {
-    return skylark;
-});
-
-define('skylark-utils/langx',[
-    "skylark-langx/langx"
-], function(langx) {
-    return langx;
-});
-
-define('skylark-utils/browser',[
-    "skylark-utils-dom/browser"
-], function(browser) {
-    return browser;
-});
-
-define('skylark-utils/eventer',[
-    "skylark-utils-dom/eventer"
-], function(eventer) {
-    return eventer;
-});
-
-define('skylark-utils/noder',[
-    "skylark-utils-dom/noder"
-], function(noder) {
-    return noder;
-});
-
-define('skylark-utils/geom',[
-    "skylark-utils-dom/geom"
-], function(geom) {
-    return geom;
-});
-
-define('skylark-utils-dom/velm',[
-    "./skylark",
+define('skylark-utils-dom/elmx',[
+    "./dom",
     "./langx",
     "./datax",
     "./eventer",
@@ -8267,28 +9354,45 @@ define('skylark-utils-dom/velm',[
     "./fx",
     "./geom",
     "./noder",
-    "./styler"
-], function(skylark, langx, datax, eventer, finder, fx, geom, noder, styler) {
+    "./styler",
+    "./query"
+], function(dom, langx, datax, eventer, finder, fx, geom, noder, styler,$) {
     var map = Array.prototype.map,
         slice = Array.prototype.slice;
     /*
-     * VisualElement is a skylark class type wrapping a visule dom node,provides a number of prototype methods and supports chain calls.
+     * VisualElement is a skylark class type wrapping a visule dom node,
+     * provides a number of prototype methods and supports chain calls.
      */
     var VisualElement = langx.klass({
         klassName: "VisualElement",
 
-        "init": function(node) {
+        "_construct": function(node) {
             if (langx.isString(node)) {
-                node = document.getElementById(node);
+                if (node.charAt(0) === "<") {
+                    //html
+                    node = noder.createFragment(node)[0];
+                } else {
+                    // id
+                    node = document.getElementById(node);
+                }
             }
-            this.domNode = node;
+            this._elm = node;
         }
     });
+
+    VisualElement.prototype.$ = VisualElement.prototype.query = function(selector) {
+        return $(selector,this._elm);
+    };
+
+    VisualElement.prototype.elm = function() {
+        return this._elm;
+    };
+
     /*
      * the VisualElement object wrapping document.body
      */
     var root = new VisualElement(document.body),
-        velm = function(node) {
+        elmx = function(node) {
             if (node) {
                 return new VisualElement(node);
             } else {
@@ -8303,7 +9407,7 @@ define('skylark-utils-dom/velm',[
     function _delegator(fn, context) {
         return function() {
             var self = this,
-                elem = self.domNode,
+                elem = self._elm,
                 ret = fn.apply(context, [elem].concat(slice.call(arguments)));
 
             if (ret) {
@@ -8315,7 +9419,7 @@ define('skylark-utils-dom/velm',[
                     } else if (langx.isArrayLike(ret)) {
                         ret = map.call(ret, function(el) {
                             if (el instanceof HTMLElement) {
-                                return new VisualElement(ret);
+                                return new VisualElement(el);
                             } else {
                                 return el;
                             }
@@ -8327,10 +9431,10 @@ define('skylark-utils-dom/velm',[
         };
     }
 
-    langx.mixin(velm, {
+    langx.mixin(elmx, {
         batch: function(nodes, action, args) {
             nodes.forEach(function(node) {
-                var elm = (node instanceof VisualElement) ? node : velm(node);
+                var elm = (node instanceof VisualElement) ? node : elmx(node);
                 elm[action].apply(elm, args);
             });
 
@@ -8361,7 +9465,7 @@ define('skylark-utils-dom/velm',[
     });
 
     // from ./datax
-    velm.delegate([
+    elmx.delegate([
         "attr",
         "data",
         "prop",
@@ -8371,15 +9475,8 @@ define('skylark-utils-dom/velm',[
         "val"
     ], datax);
 
-    // from ./dnd
-    velm.delegate([
-        "draggable",
-        "droppable"
-    ], dnd);
-
-
     // from ./eventer
-    velm.delegate([
+    elmx.delegate([
         "off",
         "on",
         "one",
@@ -8388,7 +9485,7 @@ define('skylark-utils-dom/velm',[
     ], eventer);
 
     // from ./finder
-    velm.delegate([
+    elmx.delegate([
         "ancestor",
         "ancestors",
         "children",
@@ -8410,7 +9507,7 @@ define('skylark-utils-dom/velm',[
      * find a dom element matched by the specified selector.
      * @param {String} selector
      */
-    velm.find = function(selector) {
+    elmx.find = function(selector) {
         if (selector === "body") {
             return this.root;
         } else {
@@ -8419,7 +9516,7 @@ define('skylark-utils-dom/velm',[
     };
 
     // from ./fx
-    velm.delegate([
+    elmx.delegate([
         "animate",
         "fadeIn",
         "fadeOut",
@@ -8433,7 +9530,7 @@ define('skylark-utils-dom/velm',[
 
 
     // from ./geom
-    velm.delegate([
+    elmx.delegate([
         "borderExtents",
         "boundingPosition",
         "boundingRect",
@@ -8457,7 +9554,7 @@ define('skylark-utils-dom/velm',[
     ], geom);
 
     // from ./noder
-    velm.delegate([
+    elmx.delegate([
         "after",
         "append",
         "before",
@@ -8467,6 +9564,9 @@ define('skylark-utils-dom/velm',[
         "empty",
         "html",
         "isChildOf",
+        "isDocument",
+        "isInDocument",
+        "isWindow",
         "ownerDoc",
         "prepend",
         "remove",
@@ -8481,7 +9581,7 @@ define('skylark-utils-dom/velm',[
     ], noder);
 
     // from ./styler
-    velm.delegate([
+    elmx.delegate([
         "addClass",
         "className",
         "css",
@@ -8529,563 +9629,330 @@ define('skylark-utils-dom/velm',[
 
     });
 
-    return skylark.velm = velm;
+
+    return dom.elmx = elmx;
 });
-define('skylark-utils/velm',[
-    "skylark-utils-dom/velm"
-], function(velm) {
-    return velm;
-});
-
-define('skylark-utils/datax',[
-    "skylark-utils-dom/datax"
-], function(datax) {
-    return datax;
-});
-
-define('skylark-utils/styler',[
-    "./skylark",
-    "./langx"
-], function(skylark, langx) {
-    var every = Array.prototype.every,
-        forEach = Array.prototype.forEach,
-        camelCase = langx.camelCase,
-        dasherize = langx.dasherize;
-
-    function maybeAddPx(name, value) {
-        return (typeof value == "number" && !cssNumber[dasherize(name)]) ? value + "px" : value
-    }
-
-    var cssNumber = {
-            'column-count': 1,
-            'columns': 1,
-            'font-weight': 1,
-            'line-height': 1,
-            'opacity': 1,
-            'z-index': 1,
-            'zoom': 1
-        },
-        classReCache = {
-
-        };
-
-    function classRE(name) {
-        return name in classReCache ?
-            classReCache[name] : (classReCache[name] = new RegExp('(^|\\s)' + name + '(\\s|$)'));
-    }
-
-    // access className property while respecting SVGAnimatedString
-    /*
-     * Adds the specified class(es) to each element in the set of matched elements.
-     * @param {HTMLElement} node
-     * @param {String} value
-     */
-    function className(node, value) {
-        var klass = node.className || '',
-            svg = klass && klass.baseVal !== undefined
-
-        if (value === undefined) return svg ? klass.baseVal : klass
-        svg ? (klass.baseVal = value) : (node.className = value)
-    }
-
-    function disabled(elm, value ) {
-        if (arguments.length < 2) {
-            return !!this.dom.disabled;
-        }
-
-        elm.disabled = value;
-
-        return this;
-    }
-
-    var elementDisplay = {};
-
-    function defaultDisplay(nodeName) {
-        var element, display
-        if (!elementDisplay[nodeName]) {
-            element = document.createElement(nodeName)
-            document.body.appendChild(element)
-            display = getComputedStyle(element, '').getPropertyValue("display")
-            element.parentNode.removeChild(element)
-            display == "none" && (display = "block")
-            elementDisplay[nodeName] = display
-        }
-        return elementDisplay[nodeName]
-    }
-    /*
-     * Display the matched elements.
-     * @param {HTMLElement} elm
-     */
-    function show(elm) {
-        styler.css(elm, "display", "");
-        if (styler.css(elm, "display") == "none") {
-            styler.css(elm, "display", defaultDisplay(elm.nodeName));
-        }
-        return this;
-    }
-
-    function isInvisible(elm) {
-        return styler.css(elm, "display") == "none" || styler.css(elm, "opacity") == 0;
-    }
-
-    /*
-     * Hide the matched elements.
-     * @param {HTMLElement} elm
-     */
-    function hide(elm) {
-        styler.css(elm, "display", "none");
-        return this;
-    }
-
-    /*
-     * Adds the specified class(es) to each element in the set of matched elements.
-     * @param {HTMLElement} elm
-     * @param {String} name
-     */
-    function addClass(elm, name) {
-        if (!name) return this
-        var cls = className(elm),
-            names;
-        if (langx.isString(name)) {
-            names = name.split(/\s+/g);
-        } else {
-            names = name;
-        }
-        names.forEach(function(klass) {
-            var re = classRE(klass);
-            if (!cls.match(re)) {
-                cls += (cls ? " " : "") + klass;
-            }
-        });
-
-        className(elm, cls);
-
-        return this;
-    }
-    /*
-     * Get the value of a computed style property for the first element in the set of matched elements or set one or more CSS properties for every matched element.
-     * @param {HTMLElement} elm
-     * @param {String} property
-     * @param {Any} value
-     */
-    function css(elm, property, value) {
-        if (arguments.length < 3) {
-            var computedStyle,
-                computedStyle = getComputedStyle(elm, '')
-            if (langx.isString(property)) {
-                return elm.style[camelCase(property)] || computedStyle.getPropertyValue(dasherize(property))
-            } else if (langx.isArrayLike(property)) {
-                var props = {}
-                forEach.call(property, function(prop) {
-                    props[prop] = (elm.style[camelCase(prop)] || computedStyle.getPropertyValue(dasherize(prop)))
-                })
-                return props
-            }
-        }
-
-        var css = '';
-        if (typeof(property) == 'string') {
-            if (!value && value !== 0) {
-                elm.style.removeProperty(dasherize(property));
-            } else {
-                css = dasherize(property) + ":" + maybeAddPx(property, value)
-            }
-        } else {
-            for (key in property) {
-                if (property[key] === undefined) {
-                    continue;
-                }
-                if (!property[key] && property[key] !== 0) {
-                    elm.style.removeProperty(dasherize(key));
-                } else {
-                    css += dasherize(key) + ':' + maybeAddPx(key, property[key]) + ';'
-                }
-            }
-        }
-
-        elm.style.cssText += ';' + css;
-        return this;
-    }
-
-    /*
-     * Determine whether any of the matched elements are assigned the given class.
-     * @param {HTMLElement} elm
-     * @param {String} name
-     */
-    function hasClass(elm, name) {
-        var re = classRE(name);
-        return elm.className && elm.className.match(re);
-    }
-
-    /*
-     * Remove a single class, multiple classes, or all classes from each element in the set of matched elements.
-     * @param {HTMLElement} elm
-     * @param {String} name
-     */
-    function removeClass(elm, name) {
-        if (name) {
-            var cls = className(elm),
-                names;
-
-            if (langx.isString(name)) {
-                names = name.split(/\s+/g);
-            } else {
-                names = name;
-            }
-
-            names.forEach(function(klass) {
-                var re = classRE(klass);
-                if (cls.match(re)) {
-                    cls = cls.replace(re, " ");
-                }
-            });
-
-            className(elm, cls.trim());
-        } else {
-            className(elm, "");
-        }
-
-        return this;
-    }
-
-    /*
-     * Add or remove one or more classes from the specified element.
-     * @param {HTMLElement} elm
-     * @param {String} name
-     * @param {} when
-     */
-    function toggleClass(elm, name, when) {
-        var self = this;
-        name.split(/\s+/g).forEach(function(klass) {
-            if (when === undefined) {
-                when = !self.hasClass(elm, klass);
-            }
-            if (when) {
-                self.addClass(elm, klass);
-            } else {
-                self.removeClass(elm, klass)
-            }
-        });
-
-        return self;
-    }
-
-    var styler = function() {
-        return styler;
-    };
-
-    langx.mixin(styler, {
-        autocssfix: false,
-        cssHooks: {
-
-        },
-
-        addClass: addClass,
-        className: className,
-        css: css,
-        disabled : disabled,        
-        hasClass: hasClass,
-        hide: hide,
-        isInvisible: isInvisible,
-        removeClass: removeClass,
-        show: show,
-        toggleClass: toggleClass
-    });
-
-    return skylark.styler = styler;
-});
-define('skylark-utils/widgets',[
-    "./skylark",
+define('skylark-utils-dom/plugins',[
+    "./dom",
     "./langx",
     "./noder",
     "./datax",
-    "./styler",
-    "./geom",
     "./eventer",
+    "./finder",
+    "./geom",
+    "./styler",
+    "./fx",
     "./query",
-    "./velm"
-], function(skylark,langx,noder, datax, styler, geom, eventer,query,velm) {
-	// Cached regex to split keys for `delegate`.
-	var delegateEventSplitter = /^(\S+)\s*(.*)$/,
-		slice = Array.prototype.slice;
+    "./elmx"
+], function(dom, langx, noder, datax, eventer, finder, geom, styler, fx, $, elmx) {
+    "use strict";
+
+    var slice = Array.prototype.slice,
+        concat = Array.prototype.concat,
+        pluginKlasses = {},
+        shortcuts = {};
+
+    /*
+     * Create or get or destory a plugin instance assocated with the element.
+     */
+    function instantiate(elm,pluginName,options) {
+        var pair = pluginName.split(":"),
+            instanceDataName = pair[1];
+        pluginName = pair[0];
+
+        if (!instanceDataName) {
+            instanceDataName = pluginName;
+        }
+
+        var pluginInstance = datax.data( elm, instanceDataName );
+
+        if (options === "instance") {
+            return pluginInstance;
+        } else if (options === "destroy") {
+            if (!pluginInstance) {
+                throw new Error ("The plugin instance is not existed");
+            }
+            pluginInstance.destroy();
+            datax.removeData( elm, pluginName);
+            pluginInstance = undefined;
+        } else {
+            if (!pluginInstance) {
+                if (options !== undefined && typeof options !== "object") {
+                    throw new Error ("The options must be a plain object");
+                }
+                var pluginKlass = pluginKlasses[pluginName]; 
+                pluginInstance = new pluginKlass(elm,options);
+                datax.data( elm, instanceDataName,pluginInstance );
+            } else if (options) {
+                pluginInstance.reset(options);
+            }
+        }
+
+        return pluginInstance;
+    }
+
+    function shortcutter(pluginName,extfn) {
+       /*
+        * Create or get or destory a plugin instance assocated with the element,
+        * and also you can execute the plugin method directory;
+        */
+        return function (elm,options) {
+            var  plugin = instantiate(elm, pluginName,"instance");
+            if ( options === "instance" ) {
+              return plugin || null;
+            }
+            if (!plugin) {
+                plugin = instantiate(elm, pluginName,typeof options == 'object' && options || {});
+            }
+
+            if (options) {
+                var args = slice.call(arguments,2);
+                if (extfn) {
+                    return extfn.apply(plugin,args);
+                } else {
+                    if (typeof options == 'string') {
+                        var methodName = options;
+
+                        if ( !plugin ) {
+                            throw new Error( "cannot call methods on " + pluginName +
+                                " prior to initialization; " +
+                                "attempted to call method '" + methodName + "'" );
+                        }
+
+                        if ( !langx.isFunction( plugin[ methodName ] ) || methodName.charAt( 0 ) === "_" ) {
+                            throw new Error( "no such method '" + methodName + "' for " + pluginName +
+                                " plugin instance" );
+                        }
+
+                        return plugin[methodName].apply(plugin,args);
+                    }                
+                }                
+            }
+
+        }
+
+    }
+
+    /*
+     * Register a plugin type
+     */
+    function register( pluginKlass,shortcutName,instanceDataName,extfn) {
+        var pluginName = pluginKlass.prototype.pluginName;
+        
+        pluginKlasses[pluginName] = pluginKlass;
+
+        if (shortcutName) {
+            if (instanceDataName && langx.isFunction(instanceDataName)) {
+                extfn = instanceDataName;
+                instanceDataName = null;
+            } 
+            if (instanceDataName) {
+                pluginName = pluginName + ":" + instanceDataName;
+            }
+
+            var shortcut = shortcuts[shortcutName] = shortcutter(pluginName,extfn);
+                
+            $.fn[shortcutName] = function(options) {
+                var returnValue = this;
+
+                if ( !this.length && options === "instance" ) {
+                  returnValue = undefined;
+                } else {
+                  var args = slice.call(arguments);
+                  this.each(function () {
+                    var args2 = slice.call(args);
+                    args2.unshift(this);
+                    var  ret  = shortcut.apply(null,args2);
+                    if (ret !== undefined) {
+                        returnValue = ret;
+                        return false;
+                    }
+                  });
+                }
+
+                return returnValue;
+            };
+
+            elmx.partial(shortcutName,function(options) {
+                var  ret  = shortcut(this._elm,options);
+                if (ret === undefined) {
+                    ret = this;
+                }
+                return ret;
+            });
+
+        }
+    }
+
+ 
+    var Plugin =   langx.Evented.inherit({
+        klassName: "Plugin",
+
+        _construct : function(elm,options) {
+           this._elm = elm;
+           this._initOptions(options);
+        },
+
+        _initOptions : function(options) {
+          var ctor = this.constructor,
+              cache = ctor.cache = ctor.cache || {},
+              defaults = cache.defaults;
+          if (!defaults) {
+            var  ctors = [];
+            do {
+              ctors.unshift(ctor);
+              if (ctor === Plugin) {
+                break;
+              }
+              ctor = ctor.superclass;
+            } while (ctor);
+
+            defaults = cache.defaults = {};
+            for (var i=0;i<ctors.length;i++) {
+              ctor = ctors[i];
+              if (ctor.prototype.hasOwnProperty("options")) {
+                langx.mixin(defaults,ctor.prototype.options);
+              }
+              if (ctor.hasOwnProperty("options")) {
+                langx.mixin(defaults,ctor.options);
+              }
+            }
+          }
+          Object.defineProperty(this,"options",{
+            value :langx.mixin({},defaults,options)
+          });
+
+          //return this.options = langx.mixin({},defaults,options);
+          return this.options;
+        },
 
 
-	function bridge( name, object ) {
-		var fullName = object.prototype.widgetFullName || name,
-			fn = {};
+        destroy: function() {
+            var that = this;
 
-		function _delegate (isQuery) {
+            this._destroy();
+            // We can probably remove the unbind calls in 2.0
+            // all event bindings should go through this._on()
+            datax.removeData(this._elm,this.pluginName );
+        },
 
-		}
+        _destroy: langx.noop,
 
-		fn[name] = function( options ) {
-			var isMethodCall = typeof options === "string";
-			var args = slice.call( arguments, 1 );
-			var returnValue = this;
+        _delay: function( handler, delay ) {
+            function handlerProxy() {
+                return ( typeof handler === "string" ? instance[ handler ] : handler )
+                    .apply( instance, arguments );
+            }
+            var instance = this;
+            return setTimeout( handlerProxy, delay || 0 );
+        },
 
-			if ( isMethodCall ) {
+        option: function( key, value ) {
+            var options = key;
+            var parts;
+            var curOption;
+            var i;
 
-				// If this is an empty collection, we need to have the instance method
-				// return undefined instead of the jQuery instance
-				if ( !this.length && options === "instance" ) {
-					returnValue = undefined;
-				} else {
-					this.each( function() {
-						var methodValue;
-						var instance = datax.data( this, fullName );
+            if ( arguments.length === 0 ) {
 
-						if ( options === "instance" ) {
-							returnValue = instance;
-							return false;
-						}
+                // Don't return a reference to the internal hash
+                return langx.mixin( {}, this.options );
+            }
 
-						if ( !instance ) {
-							return $.error( "cannot call methods on " + name +
-								" prior to initialization; " +
-								"attempted to call method '" + options + "'" );
-						}
+            if ( typeof key === "string" ) {
 
-						if ( !langx.isFunction( instance[ options ] ) || options.charAt( 0 ) === "_" ) {
-							return $.error( "no such method '" + options + "' for " + name +
-								" widget instance" );
-						}
+                // Handle nested keys, e.g., "foo.bar" => { foo: { bar: ___ } }
+                options = {};
+                parts = key.split( "." );
+                key = parts.shift();
+                if ( parts.length ) {
+                    curOption = options[ key ] = langx.mixin( {}, this.options[ key ] );
+                    for ( i = 0; i < parts.length - 1; i++ ) {
+                        curOption[ parts[ i ] ] = curOption[ parts[ i ] ] || {};
+                        curOption = curOption[ parts[ i ] ];
+                    }
+                    key = parts.pop();
+                    if ( arguments.length === 1 ) {
+                        return curOption[ key ] === undefined ? null : curOption[ key ];
+                    }
+                    curOption[ key ] = value;
+                } else {
+                    if ( arguments.length === 1 ) {
+                        return this.options[ key ] === undefined ? null : this.options[ key ];
+                    }
+                    options[ key ] = value;
+                }
+            }
 
-						methodValue = instance[ options ].apply( instance, args );
+            this._setOptions( options );
 
-						if ( methodValue !== instance && methodValue !== undefined ) {
-							returnValue = methodValue && methodValue.jquery ?
-								returnValue.pushStack( methodValue.get() ) :
-								methodValue;
-							return false;
-						}
-					} );
-				}
-			} else {
+            return this;
+        },
 
-				// Allow multiple hashes to be passed on init
-				if ( args.length ) {
-					options = $.widget.extend.apply( null, [ options ].concat( args ) );
-				}
+        _setOptions: function( options ) {
+            var key;
 
-				this.each( function() {
-					var instance = datax.data( this, fullName );
-					if ( instance ) {
-						instance.option( options || {} );
-						if ( instance._init ) {
-							instance._init();
-						}
-					} else {
-						datax.data( this, fullName, new object( options, this ) );
-					}
-				} );
-			}
+            for ( key in options ) {
+                this._setOption( key, options[ key ] );
+            }
 
-			return returnValue;
-		};
-	};
+            return this;
+        },
 
-	function widgets() {
-	    return widgets;
-	}
+        _setOption: function( key, value ) {
 
-	var Widget = langx.Evented.inherit({
-	    init :function(el,options) {
-	    	//for supporting init(options,el)
-	        if (langx.isHtmlNode(options)) {
-	        	var _t = el,
-	        		options = el;
-	            el = options;
-	        }
-	        if (langx.isHtmlNode(el)) { 
-	        	this.el = el;
-	    	} else {
-	    		this.el = null;
-	    	}
-	        if (options) {
-	            langx.mixin(this,options);
-	        }
-	        if (!this.cid) {
-	            this.cid = langx.uniqueId('w');
-	        }
-	        this._ensureElement();
-	    },
+            this.options[ key ] = value;
 
-	    // The default `tagName` of a View's element is `"div"`.
-	    tagName: 'div',
+            return this;
+        },
 
-	    // query delegate for element lookup, scoped to DOM elements within the
-	    // current view. This should be preferred to global lookups where possible.
-	    $: function(selector) {
-	      return this.$el.find(selector);
-	    },
+        elm : function() {
+            return this._elm;
+        }
 
-	    // **render** is the core function that your view should override, in order
-	    // to populate its element (`this.el`), with the appropriate HTML. The
-	    // convention is for **render** to always return `this`.
-	    render: function() {
-	      return this;
-	    },
+    });
 
-	    // Remove this view by taking the element out of the DOM, and removing any
-	    // applicable Backbone.Events listeners.
-	    remove: function() {
-	      this._removeElement();
-	      this.unlistenTo();
-	      return this;
-	    },
+    $.fn.plugin = function(name,options) {
+        var args = slice.call( arguments, 1 ),
+            self = this,
+            returnValue = this;
 
-	    // Remove this view's element from the document and all event listeners
-	    // attached to it. Exposed for subclasses using an alternative DOM
-	    // manipulation API.
-	    _removeElement: function() {
-	      this.$el.remove();
-	    },
+        this.each(function(){
+            returnValue = instantiate.apply(self,[this,name].concat(args));
+        });
+        return returnValue;
+    };
 
-	    // Change the view's element (`this.el` property) and re-delegate the
-	    // view's events on the new element.
-	    setElement: function(element) {
-	      this.undelegateEvents();
-	      this._setElement(element);
-	      this.delegateEvents();
-	      return this;
-	    },
-
-	    // Creates the `this.el` and `this.$el` references for this view using the
-	    // given `el`. `el` can be a CSS selector or an HTML string, a jQuery
-	    // context or an element. Subclasses can override this to utilize an
-	    // alternative DOM manipulation API and are only required to set the
-	    // `this.el` property.
-	    _setElement: function(el) {
-	      this.$el = widgets.$(el);
-	      this.el = this.$el[0];
-	    },
-
-	    // Set callbacks, where `this.events` is a hash of
-	    //
-	    // *{"event selector": "callback"}*
-	    //
-	    //     {
-	    //       'mousedown .title':  'edit',
-	    //       'click .button':     'save',
-	    //       'click .open':       function(e) { ... }
-	    //     }
-	    //
-	    // pairs. Callbacks will be bound to the view, with `this` set properly.
-	    // Uses event delegation for efficiency.
-	    // Omitting the selector binds the event to `this.el`.
-	    delegateEvents: function(events) {
-	      events || (events = langx.result(this, 'events'));
-	      if (!events) return this;
-	      this.undelegateEvents();
-	      for (var key in events) {
-	        var method = events[key];
-	        if (!langx.isFunction(method)) method = this[method];
-	        if (!method) continue;
-	        var match = key.match(delegateEventSplitter);
-	        this.delegate(match[1], match[2], langx.proxy(method, this));
-	      }
-	      return this;
-	    },
-
-	    // Add a single event listener to the view's element (or a child element
-	    // using `selector`). This only works for delegate-able events: not `focus`,
-	    // `blur`, and not `change`, `submit`, and `reset` in Internet Explorer.
-	    delegate: function(eventName, selector, listener) {
-	      this.$el.on(eventName + '.delegateEvents' + this.uid, selector, listener);
-	      return this;
-	    },
-
-	    // Clears all callbacks previously bound to the view by `delegateEvents`.
-	    // You usually don't need to use this, but may wish to if you have multiple
-	    // Backbone views attached to the same DOM element.
-	    undelegateEvents: function() {
-	      if (this.$el) this.$el.off('.delegateEvents' + this.uid);
-	      return this;
-	    },
-
-	    // A finer-grained `undelegateEvents` for removing a single delegated event.
-	    // `selector` and `listener` are both optional.
-	    undelegate: function(eventName, selector, listener) {
-	      this.$el.off(eventName + '.delegateEvents' + this.uid, selector, listener);
-	      return this;
-	    },
-
-	    // Produces a DOM element to be assigned to your view. Exposed for
-	    // subclasses using an alternative DOM manipulation API.
-	    _createElement: function(tagName,attrs) {
-	      return noder.createElement(tagName,attrs);
-	    },
-
-	    // Ensure that the View has a DOM element to render into.
-	    // If `this.el` is a string, pass it through `$()`, take the first
-	    // matching element, and re-assign it to `el`. Otherwise, create
-	    // an element from the `id`, `className` and `tagName` properties.
-	    _ensureElement: function() {
-	      if (!this.el) {
-	        var attrs = langx.mixin({}, langx.result(this, 'attributes'));
-	        if (this.id) attrs.id = langx.result(this, 'id');
-	        if (this.className) attrs['class'] = langx.result(this, 'className');
-	        this.setElement(this._createElement(langx.result(this, 'tagName'),attrs));
-	        this._setAttributes(attrs);
-	      } else {
-	        this.setElement(langx.result(this, 'el'));
-	      }
-	    },
-
-	    // Set attributes from a hash on this view's element.  Exposed for
-	    // subclasses using an alternative DOM manipulation API.
-	    _setAttributes: function(attributes) {
-	      this.$el.attr(attributes);
-	    },
-
-	    // Translation function, gets the message key to be translated
-	    // and an object with context specific data as arguments:
-	    i18n: function (message, context) {
-	        message = (this.messages && this.messages[message]) || message.toString();
-	        if (context) {
-	            langx.each(context, function (key, value) {
-	                message = message.replace('{' + key + '}', value);
-	            });
-	        }
-	        return message;
-	    },
-
-		});
-
-	function defineWidgetClass(name,base,prototype) {
-
-	};
-
-	langx.mixin(widgets, {
-		$ : query,
-
-		define : defineWidgetClass,
-		Widget : Widget
-	});
+    elmx.partial("plugin",function(name,options) {
+        var args = slice.call( arguments, 1 );
+        return instantiate.apply(this,[this.domNode,name].concat(args));
+    }); 
 
 
-	return skylark.widgets = widgets;
+    function plugins() {
+        return plugins;
+    }
+     
+    langx.mixin(plugins, {
+        instantiate,
+        Plugin,
+        register,
+        shortcuts
+    });
+
+    return plugins;
 });
-
-/**
- * skylark-fuelux - A version of fuelux that ported to running on skylarkjs
- * @author Hudaokeji, Inc.
- * @version v0.9.2
- * @link https://github.com/skylarkui/skylark-fuelux/
- * @license MIT
- */
-define('skylark-fuelux/sbswt',[
-  "skylark-utils/skylark",
-  "skylark-utils/langx",
-  "skylark-utils/browser",
-  "skylark-utils/eventer",
-  "skylark-utils/noder",
-  "skylark-utils/geom",
-  "skylark-utils/query",
-  "skylark-utils/widgets"
-],function(skylark,langx,browser,eventer,noder,geom,$,widgets){
+define('skylark-fuelux/fuelux',[
+  "skylark-langx/skylark",
+  "skylark-langx/langx",
+  "skylark-utils-dom/browser",
+  "skylark-utils-dom/eventer",
+  "skylark-utils-dom/noder",
+  "skylark-utils-dom/geom",
+  "skylark-utils-dom/query"
+],function(skylark,langx,browser,eventer,noder,geom,$){
 	var ui = skylark.ui = skylark.ui || {}, 
-		sbswt = ui.sbswt = {};
+		fuelux = ui.fuelux = {};
 
 /*---------------------------------------------------------------------------------*/
 	/*
@@ -9136,7 +10003,7 @@ define('skylark-fuelux/sbswt',[
 
 
 
-	langx.mixin(sbswt, {
+	langx.mixin(fuelux, {
 		CONST: CONST,
 		cleanInput: cleanInput,
 		isBackspaceKey: isBackspaceKey,
@@ -9149,35 +10016,22 @@ define('skylark-fuelux/sbswt',[
 
 /*---------------------------------------------------------------------------------*/
 
-	var WidgetBase = widgets.Widget.inherit({
-        klassName: "WidgetBase",
-    });
-
-
-	langx.mixin(sbswt, {
-		WidgetBase : WidgetBase
+	langx.mixin(fuelux, {
+		WidgetBase : langx.Evented
 	});
 
-	return sbswt;
+	return fuelux;
 });
 
-/**
- * skylark-fuelux - A version of fuelux that ported to running on skylarkjs
- * @author Hudaokeji, Inc.
- * @version v0.9.2
- * @link https://github.com/skylarkui/skylark-fuelux/
- * @license MIT
- */
 define('skylark-fuelux/loader',[
-  "skylark-utils/langx",
-  "skylark-utils/browser",
-  "skylark-utils/eventer",
-  "skylark-utils/noder",
-  "skylark-utils/geom",
-  "skylark-utils/velm",
-  "skylark-utils/query",
-  "./sbswt"
-],function(langx,browser,eventer,noder,geom,velm,$,sbswt){
+  "skylark-langx/langx",
+  "skylark-utils-dom/browser",
+  "skylark-utils-dom/eventer",
+  "skylark-utils-dom/noder",
+  "skylark-utils-dom/geom",
+  "skylark-utils-dom/query",
+  "./fuelux"
+],function(langx,browser,eventer,noder,geom,$,fuelux){
 
 
 	/*
@@ -9193,7 +10047,7 @@ define('skylark-fuelux/loader',[
 
 	// LOADER CONSTRUCTOR AND PROTOTYPE
 
-	var Loader = sbswt.Loader = sbswt.WidgetBase.inherit({
+	var Loader = fuelux.Loader = fuelux.WidgetBase.inherit({
 		klassName: "Loader",
 
 		init : function(element,options) {
@@ -9272,23 +10126,280 @@ define('skylark-fuelux/loader',[
 	return $.fn.loader;
 });
 
-/**
- * skylark-fuelux - A version of fuelux that ported to running on skylarkjs
- * @author Hudaokeji, Inc.
- * @version v0.9.2
- * @link https://github.com/skylarkui/skylark-fuelux/
- * @license MIT
- */
+define('skylark-bootstrap3/bs3',[
+  "skylark-utils-dom/skylark",
+  "skylark-langx/langx",
+  "skylark-utils-dom/browser",
+  "skylark-utils-dom/eventer",
+  "skylark-utils-dom/noder",
+  "skylark-utils-dom/geom",
+  "skylark-utils-dom/query"
+],function(skylark,langx,browser,eventer,noder,geom,$){
+	var ui = skylark.ui = skylark.ui || {}, 
+		bs3 = ui.bs3 = {};
+
+/*---------------------------------------------------------------------------------*/
+	/*
+	 * Fuel UX utilities.js
+	 * https://github.com/ExactTarget/fuelux
+	 *
+	 * Copyright (c) 2014 ExactTarget
+	 * Licensed under the BSD New license.
+	 */
+	var CONST = {
+		BACKSPACE_KEYCODE: 8,
+		COMMA_KEYCODE: 188, // `,` & `<`
+		DELETE_KEYCODE: 46,
+		DOWN_ARROW_KEYCODE: 40,
+		ENTER_KEYCODE: 13,
+		TAB_KEYCODE: 9,
+		UP_ARROW_KEYCODE: 38
+	};
+
+	var isShiftHeld = function isShiftHeld (e) { return e.shiftKey === true; };
+
+	var isKey = function isKey (keyCode) {
+		return function compareKeycodes (e) {
+			return e.keyCode === keyCode;
+		};
+	};
+
+	var isBackspaceKey = isKey(CONST.BACKSPACE_KEYCODE);
+	var isDeleteKey = isKey(CONST.DELETE_KEYCODE);
+	var isTabKey = isKey(CONST.TAB_KEYCODE);
+	var isUpArrow = isKey(CONST.UP_ARROW_KEYCODE);
+	var isDownArrow = isKey(CONST.DOWN_ARROW_KEYCODE);
+
+	var ENCODED_REGEX = /&[^\s]*;/;
+	/*
+	 * to prevent double encoding decodes content in loop until content is encoding free
+	 */
+	var cleanInput = function cleanInput (questionableMarkup) {
+		// check for encoding and decode
+		while (ENCODED_REGEX.test(questionableMarkup)) {
+			questionableMarkup = $('<i>').html(questionableMarkup).text();
+		}
+
+		// string completely decoded now encode it
+		return $('<i>').text(questionableMarkup).html();
+	};
+
+
+
+
+	langx.mixin(bs3, {
+		CONST: CONST,
+		cleanInput: cleanInput,
+		isBackspaceKey: isBackspaceKey,
+		isDeleteKey: isDeleteKey,
+		isShiftHeld: isShiftHeld,
+		isTabKey: isTabKey,
+		isUpArrow: isUpArrow,
+		isDownArrow: isDownArrow
+	});
+
+	return bs3;
+});
+
+define('skylark-bootstrap3/dropdown',[
+  "skylark-langx/langx",
+  "skylark-utils-dom/browser",
+  "skylark-utils-dom/eventer",
+  "skylark-utils-dom/noder",
+  "skylark-utils-dom/geom",
+  "skylark-utils-dom/query",
+  "skylark-utils-dom/plugins",
+  "./bs3"
+],function(langx,browser,eventer,noder,geom,$,plugins,bs3){
+
+/* ========================================================================
+ * Bootstrap: dropdown.js v3.3.7
+ * http://getbootstrap.com/javascript/#dropdowns
+ * ========================================================================
+ * Copyright 2011-2016 Twitter, Inc.
+ * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+ * ======================================================================== */
+  'use strict';
+
+  // DROPDOWN CLASS DEFINITION
+  // =========================
+
+  var backdrop = '.dropdown-backdrop';
+  var toggle   = '[data-toggle="dropdown"]';
+
+  var Dropdown = bs3.Dropdown = plugins.Plugin.inherit({
+    klassName: "Dropdown",
+
+    pluginName : "bs3.dropdown",
+
+    _construct : function(element,options) {
+      var $el = this.$element = $(element);
+      $el.on('click.bs.dropdown', this.toggle);
+      $el.on('keydown.bs.dropdown', '[data-toggle="dropdown"],.dropdown-menu',this.keydown);
+    },
+
+    toggle : function (e) {
+      var $this = $(this)
+
+      if ($this.is('.disabled, :disabled')) return
+
+      var $parent  = getParent($this)
+      var isActive = $parent.hasClass('open')
+
+      clearMenus()
+
+      if (!isActive) {
+        if ('ontouchstart' in document.documentElement && !$parent.closest('.navbar-nav').length) {
+          // if mobile we use a backdrop because click events don't delegate
+          $(document.createElement('div'))
+            .addClass('dropdown-backdrop')
+            .insertAfter($(this))
+            .on('click', clearMenus)
+        }
+
+        var relatedTarget = { relatedTarget: this }
+        $parent.trigger(e = eventer.create('show.bs.dropdown', relatedTarget))
+
+        if (e.isDefaultPrevented()) return
+
+        $this
+          .trigger('focus')
+          .attr('aria-expanded', 'true')
+
+        $parent
+          .toggleClass('open')
+          .trigger(eventer.create('shown.bs.dropdown', relatedTarget))
+      }
+
+      return false
+    },
+
+    keydown : function (e) {
+      if (!/(38|40|27|32)/.test(e.which) || /input|textarea/i.test(e.target.tagName)) return
+
+      var $this = $(this)
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      if ($this.is('.disabled, :disabled')) return
+
+      var $parent  = getParent($this)
+      var isActive = $parent.hasClass('open')
+
+      if (!isActive && e.which != 27 || isActive && e.which == 27) {
+        if (e.which == 27) $parent.find(toggle).trigger('focus')
+        return $this.trigger('click')
+      }
+
+      var desc = ' li:not(.disabled):visible a'
+      var $items = $parent.find('.dropdown-menu' + desc)
+
+      if (!$items.length) return
+
+      var index = $items.index(e.target)
+
+      if (e.which == 38 && index > 0)                 index--         // up
+      if (e.which == 40 && index < $items.length - 1) index++         // down
+      if (!~index)                                    index = 0
+
+      $items.eq(index).trigger('focus')
+    }
+
+  });
+
+  Dropdown.VERSION = '3.3.7'
+
+  function getParent($this) {
+    var selector = $this.attr('data-target')
+
+    if (!selector) {
+      selector = $this.attr('href')
+      selector = selector && /#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
+    }
+
+    var $parent = selector && $(selector)
+
+    return $parent && $parent.length ? $parent : $this.parent()
+  }
+
+  function clearMenus(e) {
+    if (e && e.which === 3) return
+    $(backdrop).remove()
+    $(toggle).each(function () {
+      var $this         = $(this)
+      var $parent       = getParent($this)
+      var relatedTarget = { relatedTarget: this }
+
+      if (!$parent.hasClass('open')) return
+
+      if (e && e.type == 'click' && /input|textarea/i.test(e.target.tagName) && noder.contains($parent[0], e.target)) return
+
+      $parent.trigger(e = eventer.create('hide.bs.dropdown', relatedTarget))
+
+      if (e.isDefaultPrevented()) return
+
+      $this.attr('aria-expanded', 'false')
+      $parent.removeClass('open').trigger(eventer.create('hidden.bs.dropdown', relatedTarget))
+    })
+  }
+
+
+  /*
+  // DROPDOWN PLUGIN DEFINITION
+  // ==========================
+
+  function Plugin(option) {
+    return this.each(function () {
+      var $this = $(this)
+      var data  = $this.data('bs.dropdown')
+
+      if (!data) $this.data('bs.dropdown', (data = new Dropdown(this)))
+      if (typeof option == 'string') data[option].call($this)
+    })
+  }
+
+  var old = $.fn.dropdown
+
+  $.fn.dropdown             = Plugin;
+  $.fn.dropdown.Constructor = Dropdown;
+
+
+  // DROPDOWN NO CONFLICT
+  // ====================
+
+  $.fn.dropdown.noConflict = function () {
+    $.fn.dropdown = old
+    return this
+  }
+
+
+
+  return $.fn.dropdown;
+  */
+
+  // APPLY TO STANDARD DROPDOWN ELEMENTS
+  // ===================================
+  $(document)
+    .on('click.bs.dropdown.data-api', clearMenus)
+    .on('click.bs.dropdown.data-api', '.dropdown form', function (e) { e.stopPropagation() });
+
+  plugins.register(Dropdown,"dropdown");
+
+  return Dropdown;
+
+});
+
 define('skylark-fuelux/selectlist',[
-  "skylark-utils/langx",
-  "skylark-utils/browser",
-  "skylark-utils/eventer",
-  "skylark-utils/noder",
-  "skylark-utils/geom",
-  "skylark-utils/velm",
-  "skylark-utils/query",
-  "./sbswt"
-],function(langx,browser,eventer,noder,geom,velm,$,sbswt){
+  "skylark-langx/langx",
+  "skylark-utils-dom/browser",
+  "skylark-utils-dom/eventer",
+  "skylark-utils-dom/noder",
+  "skylark-utils-dom/geom",
+  "skylark-utils-dom/query",
+  "./fuelux",
+  "skylark-bootstrap3/dropdown"
+],function(langx,browser,eventer,noder,geom,$,fuelux){
 
 
 	/*
@@ -9302,7 +10413,7 @@ define('skylark-fuelux/selectlist',[
 	var old = $.fn.selectlist;
 	// SELECT CONSTRUCTOR AND PROTOTYPE
 
-	var Selectlist = sbswt.Selectlist = sbswt.WidgetBase.inherit({
+	var Selectlist = fuelux.Selectlist = fuelux.WidgetBase.inherit({
 		klassName: "Selectlist",
 
 		init : function(element,options) {
@@ -9566,23 +10677,15 @@ define('skylark-fuelux/selectlist',[
 	return $.fn.selectlist;
 });
 
-/**
- * skylark-fuelux - A version of fuelux that ported to running on skylarkjs
- * @author Hudaokeji, Inc.
- * @version v0.9.2
- * @link https://github.com/skylarkui/skylark-fuelux/
- * @license MIT
- */
 define('skylark-fuelux/combobox',[
-  "skylark-utils/langx",
-  "skylark-utils/browser",
-  "skylark-utils/eventer",
-  "skylark-utils/noder",
-  "skylark-utils/geom",
-  "skylark-utils/velm",
-  "skylark-utils/query",
-  "./sbswt"
-],function(langx,browser,eventer,noder,geom,velm,$,sbswt){
+  "skylark-langx/langx",
+  "skylark-utils-dom/browser",
+  "skylark-utils-dom/eventer",
+  "skylark-utils-dom/noder",
+  "skylark-utils-dom/geom",
+  "skylark-utils-dom/query",
+  "./fuelux"
+],function(langx,browser,eventer,noder,geom,$,fuelux){
 
 
 	/*
@@ -9598,7 +10701,7 @@ define('skylark-fuelux/combobox',[
 
 	// COMBOBOX CONSTRUCTOR AND PROTOTYPE
 
-	var Combobox = sbswt.Combobox = sbswt.WidgetBase.inherit({
+	var Combobox = fuelux.Combobox = fuelux.WidgetBase.inherit({
 		klassName: "Combobox",
 
 		init : function(element,options) {
@@ -9960,19 +11063,19 @@ define('skylark-fuelux/combobox',[
 });
 
 define('skylark-ui-repeater/repeater',[
-  "skylark-utils/skylark",
-  "skylark-utils/langx",
-  "skylark-utils/browser",
-  "skylark-utils/eventer",
-  "skylark-utils/noder",
-  "skylark-utils/geom",
-  "skylark-utils/velm",
-  "skylark-utils/query",
-  "skylark-utils/widgets",
+  "skylark-langx/skylark",
+  "skylark-langx/langx",
+  "skylark-utils-dom/browser",
+  "skylark-utils-dom/eventer",
+  "skylark-utils-dom/noder",
+  "skylark-utils-dom/geom",
+  "skylark-utils-dom/elmx",
+  "skylark-utils-dom/query",
+  "skylark-utils-dom/plugins",
   "skylark-fuelux/loader",
   "skylark-fuelux/selectlist",
   "skylark-fuelux/combobox"  
-],function(skylark,langx,browser,eventer,noder,geom,velm,$,widgets){
+],function(skylark,langx,browser,eventer,noder,geom,elmx,$,plugins){
 
 	var ui = skylark.ui = skylark.ui || {};
 
@@ -9988,7 +11091,7 @@ define('skylark-ui-repeater/repeater',[
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
-	var Repeater = ui.Repeater = widgets.Widget.inherit({
+	var Repeater = ui.Repeater = plugins.Plugin.inherit({
 		klassName: "Repeater",
 
 		init : function(element,options) {
@@ -10879,12 +11982,12 @@ define('skylark-ui-repeater/repeater',[
 });
 
 define('skylark-ui-repeater/repeater-list',[
-  "skylark-utils/langx",
-  "skylark-utils/browser",
-  "skylark-utils/eventer",
-  "skylark-utils/noder",
-  "skylark-utils/geom",
-  "skylark-utils/query",
+  "skylark-langx/langx",
+  "skylark-utils-dom/browser",
+  "skylark-utils-dom/eventer",
+  "skylark-utils-dom/noder",
+  "skylark-utils-dom/geom",
+  "skylark-utils-dom/query",
   "./repeater"
 ],function(langx,browser,eventer,noder,geom,$){
 
@@ -11894,12 +12997,12 @@ define('skylark-ui-repeater/repeater-list',[
 });
 
 define('skylark-ui-repeater/repeater-thumbnail',[
-    "skylark-utils/langx",
-    "skylark-utils/browser",
-    "skylark-utils/eventer",
-    "skylark-utils/noder",
-    "skylark-utils/geom",
-    "skylark-utils/query",
+    "skylark-langx/langx",
+    "skylark-utils-dom/browser",
+    "skylark-utils-dom/eventer",
+    "skylark-utils-dom/noder",
+    "skylark-utils-dom/geom",
+    "skylark-utils-dom/query",
     "./repeater"
 ], function(langx, browser, eventer, noder, geom, $) {
 
@@ -12122,7 +13225,7 @@ define('skylark-ui-repeater/repeater-thumbnail',[
 
 });
 define('skylark-ui-repeater/main',[
-    "skylark-utils/query",
+    "skylark-utils-dom/query",
     "./repeater",
     "./repeater-list",
     "./repeater-thumbnail"

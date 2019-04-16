@@ -1,5 +1,5 @@
 define([
-    "skylark-utils"
+    "skylark-utils-dom"
 ],function(sutils){
     var $ = sutils.query;
 sutils.eventer.ready(function() {

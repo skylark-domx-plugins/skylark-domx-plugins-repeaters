@@ -6,12 +6,13 @@
  */
 
 define([
-	"skylark-utils",
+	"skylark-langx",
+	"skylark-utils-dom",
 	"skylark-ui-repeater",
 	"underscore",
 	"./data/pokemon",
 	"./data/colors"
-],function (sutils,$,_,pokemon,colors) {
+],function (langx,sutils,$,_,pokemon,colors) {
 
 	var columns = [
 		{
@@ -53,7 +54,7 @@ define([
 	var delays = ['300', '600', '900', '1200'];
 
 	var dataFilter = function dataFilter(options) {
-		var items = sutils.langx.clone(pokemon);
+		var items = langx.clone(pokemon);
 
 		var filterValue = new RegExp(options.filter, 'i');//Explicitly make a regex object instead of just using String.search() to avoid confusion with FuelUX search() and options.search
 		if (!filterValue.test('all')) {

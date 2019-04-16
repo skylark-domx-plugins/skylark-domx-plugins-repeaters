@@ -5,5 +5,5 @@
  * @link https://github.com/skylarkui/skylark-ui-repeater/
  * @license MIT
  */
-define(["skylark-utils/query","./repeater","./repeater-list","./repeater-thumbnail"],function(e){return e});
+define(["skylark-utils-dom/query","./repeater","./repeater-list","./repeater-thumbnail"],function(e){return e});
 //# sourceMappingURL=sourcemaps/main.js.map

@@ -6,21 +6,23 @@
  */
 
 define([
-	"skylark-utils/query",
+	"skylark-utils-dom/query",
+	"skylark-bootstrap3/scrollspy",
+	"skylark-bootstrap3/affix",
 	"./repeater-examples",
 	"supercopy"
 ],function ($) {
 	var $body = $(document.body);
 	var $window = $(window);
 
-	$body.scrollspy({
+	$body.plugin("bs3.scrollspy",{
 		target: '.fu-sidebar'
 	});
 
 	setTimeout(function () {
 		var $sideBar = $('.fu-sidebar');
 
-		$sideBar.affix({
+		$sideBar.plugin("bs3.affix",{
 			offset: {
 				top: function () {
 					var offsetTop = $sideBar.offset().top;

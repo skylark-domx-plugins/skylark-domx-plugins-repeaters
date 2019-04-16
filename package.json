@@ -32,9 +32,8 @@
   "license": "MIT",
   "devDependencies": {
     "skylark-langx": "https://github.com/skylarklangx/skylark-langx#master",
-    "skylark-utils": "https://github.com/skylarkutils/skylark-utils#master",
-    "skylark-bootstrap3": "https://github.com/skylarkui/skylark-bootstrap3#master",
-    "skylark-fuelux": "https://github.com/skylarkui/skylark-fuelux#master",
+    "skylark-bootstrap3": "https://github.com/skylark-integration/skylark-bootstrap3#master",
+    "skylark-fuelux": "https://github.com/skylark-integration/skylark-fuelux#master",
     "skylark-utils-dom": "https://github.com/skylarkutils/skylark-utils-dom#master"
   },
   "engines": {
