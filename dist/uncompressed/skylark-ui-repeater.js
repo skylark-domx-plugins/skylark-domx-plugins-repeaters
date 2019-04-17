@@ -95,11 +95,11 @@ define('skylark-ui-repeater/repeater',[
   "skylark-utils-dom/geom",
   "skylark-utils-dom/elmx",
   "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
+  "skylark-ui-swt/Widget",
   "skylark-fuelux/loader",
   "skylark-fuelux/selectlist",
   "skylark-fuelux/combobox"  
-],function(skylark,langx,browser,eventer,noder,geom,elmx,$,plugins){
+],function(skylark,langx,browser,eventer,noder,geom,elmx,$,Widget){
 
 	var ui = skylark.ui = skylark.ui || {};
 
@@ -115,15 +115,28 @@ define('skylark-ui-repeater/repeater',[
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
-	var Repeater = ui.Repeater = plugins.Plugin.inherit({
+	var Repeater = ui.Repeater = Widget.inherit({
 		klassName: "Repeater",
 
-		init : function(element,options) {
+		options : {
+			dataSource: function dataSource (options, callback) {
+				callback({ count: 0, end: 0, items: [], page: 0, pages: 1, start: 0 });
+			},
+			defaultView: -1, // should be a string value. -1 means it will grab the active view from the view controls
+			dropPagingCap: 10,
+			staticHeight: -1, // normally true or false. -1 means it will look for data-staticheight on the element
+			views: null, // can be set to an object to configure multiple views of the same type,
+			searchOnKeyPress: false,
+			allowCancel: true
+		},
+
+//		_init : function(element,options) {
+		_init : function() {
 			var self = this;
 			var $btn;
 			var currentView;
 
-			this.$element = $(element);
+			this.$element = $(this._elm); //$(element);
 
 			this.$canvas = this.$element.find('.repeater-canvas');
 			this.$count = this.$element.find('.repeater-count');
@@ -154,7 +167,7 @@ define('skylark-ui-repeater/repeater',[
 			this.infiniteScrollingEnd = null;
 			this.infiniteScrollingOptions = {};
 			this.lastPageInput = 0;
-			this.options = langx.mixin({}, $.fn.repeater.defaults, options);
+			//this.options = langx.mixin({}, $.fn.repeater.defaults, options);
 			this.pageIncrement = 0;// store direction navigated
 			this.resizeTimeout = {};
 			this.stamp = new Date().getTime() + (Math.floor(Math.random() * 100) + 1);
@@ -1462,7 +1475,8 @@ define('skylark-ui-repeater/repeater-list',[
 		};
 
 		// ADDITIONAL DEFAULT OPTIONS
-		$.fn.repeater.defaults = langx.mixin({}, $.fn.repeater.defaults, {
+		$.fn.repeater.Constructor.prototype.options = langx.mixin({}, $.fn.repeater.Constructor.prototype.options, {
+		//$.fn.repeater.defaults = langx.mixin({}, $.fn.repeater.defaults, {
 			list_columnRendered: null,
 			list_columnSizing: true,
 			list_columnSyncing: true,
@@ -2116,8 +2130,9 @@ define('skylark-ui-repeater/repeater-thumbnail',[
         };
 
         //ADDITIONAL DEFAULT OPTIONS
-        $.fn.repeater.defaults = langx.mixin({}, $.fn.repeater.defaults, {
-            thumbnail_alignment: 'left',
+        $.fn.repeater.Constructor.prototype.options = langx.mixin({}, $.fn.repeater.Constructor.prototype.options, {
+        //$.fn.repeater.defaults = langx.mixin({}, $.fn.repeater.defaults, {
+           thumbnail_alignment: 'left',
             thumbnail_infiniteScroll: false,
             thumbnail_itemRendered: null,
             thumbnail_noItemsHTML: 'no items found',

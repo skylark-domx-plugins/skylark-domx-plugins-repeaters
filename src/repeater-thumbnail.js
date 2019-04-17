@@ -94,8 +94,9 @@ define([
         };
 
         //ADDITIONAL DEFAULT OPTIONS
-        $.fn.repeater.defaults = langx.mixin({}, $.fn.repeater.defaults, {
-            thumbnail_alignment: 'left',
+        $.fn.repeater.Constructor.prototype.options = langx.mixin({}, $.fn.repeater.Constructor.prototype.options, {
+        //$.fn.repeater.defaults = langx.mixin({}, $.fn.repeater.defaults, {
+           thumbnail_alignment: 'left',
             thumbnail_infiniteScroll: false,
             thumbnail_itemRendered: null,
             thumbnail_noItemsHTML: 'no items found',

@@ -6,7 +6,7 @@
  */
 
 define([
-	"skylark-langx",
+	"skylark-langx/langx",
 	"skylark-utils-dom",
 	"skylark-ui-repeater",
 	"underscore",

@@ -9942,6 +9942,711 @@ define('skylark-utils-dom/plugins',[
 
     return plugins;
 });
+define('skylark-utils-collection/collections',[
+	"skylark-langx/skylark"
+],function(skylark){
+	return skylark.collections = {};
+});
+define('skylark-utils-collection/Collection',[
+    "skylark-langx/Evented",
+    "./collections"
+], function(Evented, collections) {
+
+    var Collection = collections.Collection = Evented.inherit({
+
+        "klassName": "Collection",
+
+        _clear: function() {
+            throw new Error('Unimplemented API');
+        },
+
+        "clear": function() {
+            //desc: "Removes all items from the Collection",
+            //result: {
+            //    type: Collection,
+            //    desc: "this instance for chain call"
+            //},
+            //params: [],
+            this._clear();
+            this.trigger("changed:clear");
+            return this;
+        },
+
+        /*
+         *@method count
+         *@return {Number}
+         */
+        count : /*Number*/function () {
+            var c = 0,
+                it = this.iterator();
+            while(!it.hasNext()){
+                c++;
+            }
+            return c;
+        },
+
+        "forEach": function( /*Function*/ func, /*Object?*/ thisArg) {
+            //desc: "Executes a provided callback function once per collection item.",
+            //result: {
+            //    type: Number,
+            //    desc: "the number of items"
+            //},
+            //params: [{
+            //    name: "func",
+            //    type: Function,
+            //    desc: "Function to execute for each element."
+            //}, {
+            //    name: "thisArg",
+            //    type: Object,
+            //    desc: "Value to use as this when executing callback."
+            //}],
+            var it = this.iterator();
+            while(it.hasNext()){
+                var item = it.next();
+                func.call(thisArg || item,item);
+            }
+            return this;
+
+        },
+
+        "iterator" : function() {
+            throw new Error('Unimplemented API');
+        },
+
+        "toArray": function() {
+            //desc: "Returns an array containing all of the items in this collection in proper sequence (from first to last item).",
+            //result: {
+            //    type: Array,
+            //    desc: "an array containing all of the elements in this collection in proper sequence"
+            //},
+            //params: [],
+            var items = [],
+                it = this.iterator();
+            while(!it.hasNext()){
+                items.push(it.next());
+            }
+            return items;
+        }
+    });
+
+    return Collection;
+});
+
+
+define('skylark-utils-collection/Map',[
+    "./collections",
+    "./Collection"
+], function( collections, Collection) {
+
+    var Map = collections.Map = Collection.inherit({
+
+        "klassName": "Map",
+
+        _getInnerItems : function() {
+            return this._items;
+        },
+
+        _clear : function() {
+            this._items = [];
+        },
+
+        _findKeyByRegExp: function(regExp, callback) {
+            var items = this._getInnerItems();
+            return items.filter(function(key) {
+                if (key.match(regExp)) {
+                    if (callback) callback(key);
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+        },
+
+        "get":  function(strKey, silent) {
+            //desc: "Returns the item at the specified key in the Hashtable.",
+            //result: {
+            //    type: Object,
+            //    desc: "The item at the specified key."
+            //},
+            //params: [{
+            //    name: "strKey",
+            //    type: String,
+            //    desc: "The key of the item to return."
+            //}, {
+            //    name: "silent",
+            //    type: Boolean,
+            //    desc: "the silent flag.",
+            //    optional: true
+            //}],
+            if (typeof(strKey) != "string") {
+                throw "hash key is not string!";
+            }
+            /*
+            if (!silent && !this.contains(strKey)) {
+                throw "hash key is not  existed";
+            }
+            */
+            var items = this._getInnerItems();
+            return items[strKey];
+        },
+
+        "iterator" : function() {
+            var i =0;
+            return {
+                hasNext : function() {
+                    return i < this._items.length;
+                },
+                next : function() {
+                    var key =  this._items[i++];
+                    return [this._items[key],key];
+                }
+            }
+        },
+
+        "set": function( /*String*/ strKey, /*Object*/ value) {
+            //desc: "Replaces the item at the specified key in the Hashtable with the specified item.",
+            //result: {
+            //    type: Map,
+            //    desc: "this instance for chain call."
+            //},
+            //params: [{
+            //    name: "strKey",
+            //    type: String,
+            //    desc: "key of the item to replace."
+            //}, {
+            //    name: "value",
+            //    type: Object,
+            //    desc: "item to be stored at the specified position."
+            //}],
+            if (typeof(strKey) != "string") {
+                throw "hash key is not string!";
+            }
+
+            /*
+            if (!this.contains(strKey)) {
+                throw "hash key is not existed";
+            }
+            */
+
+            var items = this._getInnerItems();
+            if (items.indexOf(strKey) == -1) {
+                items.push(strKey);
+            }
+            var oldValue = items[strKey];
+            if (oldValue !== value) {
+                items[strKey] = value;
+                var updated = {};
+                updated[strKey] = {
+                    name : strKey,
+                    value : value,
+                    oldValue : oldValue
+                };
+                this.trigger("changed" ,{ //TODO: "changed:"+ strKey
+                    data : updated
+                });
+            }
+            return this;
+        },
+
+
+        "remove": function( /*String*/ strKey) {
+            //desc: "Removes the first occurrence of a specific item from the Hashtable",
+            //result: {
+            //    type: Map,
+            //    desc: "this instance for chain call."
+            //},
+            //params: [{
+            //    name: "strKey",
+            //    type: String,
+            //    desc: "The key for The item to remove from the Hashtable."
+            //}],
+            if (typeof(strKey) != "string") {
+                throw "hash key is not string!";
+            }
+            var items = this._getInnerItems();
+            var idx = items.indexOf(strKey);
+            if (idx >= 0) {
+                delete items[strKey];
+                delete items[idx];
+            }
+        },
+
+        findByRegExp: function( /*String*/ regExp, callback) {
+            //desc: "find regExp items",
+            //result: {
+            //    type: Map,
+            //    desc: "this instance for chain call."
+            //},
+            //params: [{
+            //    name: "regExp",
+            //    type: String,
+            //    desc: "The key for The item to remove from the Hashtable."
+            //}, {
+            //    name: "callback",
+            //    type: Function,
+            //    desc: "the callback method"
+            //}],
+            var items = [],
+                self = this;
+            this._findKeyByRegExp(regExp, function(key) {
+                var item = self.get(key);
+                if (callback) callback(item);
+                items.push(item);
+            });
+            return items;
+        },
+
+        removeByRegExp: function( /*String*/ regExp) {
+            //desc: "Removes regExp items",
+            //result: {
+            //    type: Map,
+            //    desc: "this instance for chain call."
+            //},
+            //params: [{
+            //    name: "regExp",
+            //    type: String,
+            //    desc: "The key for The item to remove from the Hashtable."
+            //}],
+            var self = this;
+            this._findKeyByRegExp(regExp, function(key) {
+                self.remove(key);
+            });
+        },
+
+        "toPlain": function() {
+            //desc: "Returns a plain object containing all of the items in this Hashable.",
+            //result: {
+            //    type: Object,
+            //    desc: "a plain object containing all of the items in this Hashtable."
+            //},
+            //params: [],
+            var items = this._getInnerItems(); 
+
+            for (var i = 0; i < items.length; i++) {
+                var key = items[i];
+                plain[key] = items[key];
+            }
+            return plain;
+        },
+
+        "toString": function( /*String?*/ delim) {
+            //desc: "implementation of toString, follows [].toString().",
+            //result: {
+            //    type: String,
+            //   desc: "The string."
+            //},
+            //params: [{
+            //    name: "delim",
+            //    type: String,
+            //    desc: "The delim ",
+            //    optional: true
+            //}],
+            var items = this._getInnerItems();
+
+            return items.join((delim || ","));
+        },
+
+        "init": function( /*Object*/ data) {
+            var items = this._items = [];
+            for (var name in data) {
+                items.push(name);
+                items[name]= data[name];
+            }
+        }
+       
+    });
+    return Map;
+});
+
+define('skylark-ui-swt/ui',[
+  "skylark-langx/skylark",
+  "skylark-langx/langx",
+  "skylark-utils-dom/browser",
+  "skylark-utils-dom/eventer",
+  "skylark-utils-dom/noder",
+  "skylark-utils-dom/geom",
+  "skylark-utils-dom/query"
+],function(skylark,langx,browser,eventer,noder,geom,$){
+	var ui = skylark.ui = skylark.ui || {};
+		sbswt = ui.sbswt = {};
+
+	var CONST = {
+		BACKSPACE_KEYCODE: 8,
+		COMMA_KEYCODE: 188, // `,` & `<`
+		DELETE_KEYCODE: 46,
+		DOWN_ARROW_KEYCODE: 40,
+		ENTER_KEYCODE: 13,
+		TAB_KEYCODE: 9,
+		UP_ARROW_KEYCODE: 38
+	};
+
+	var isShiftHeld = function isShiftHeld (e) { return e.shiftKey === true; };
+
+	var isKey = function isKey (keyCode) {
+		return function compareKeycodes (e) {
+			return e.keyCode === keyCode;
+		};
+	};
+
+	var isBackspaceKey = isKey(CONST.BACKSPACE_KEYCODE);
+	var isDeleteKey = isKey(CONST.DELETE_KEYCODE);
+	var isTabKey = isKey(CONST.TAB_KEYCODE);
+	var isUpArrow = isKey(CONST.UP_ARROW_KEYCODE);
+	var isDownArrow = isKey(CONST.DOWN_ARROW_KEYCODE);
+
+	var ENCODED_REGEX = /&[^\s]*;/;
+	/*
+	 * to prevent double encoding decodes content in loop until content is encoding free
+	 */
+	var cleanInput = function cleanInput (questionableMarkup) {
+		// check for encoding and decode
+		while (ENCODED_REGEX.test(questionableMarkup)) {
+			questionableMarkup = $('<i>').html(questionableMarkup).text();
+		}
+
+		// string completely decoded now encode it
+		return $('<i>').text(questionableMarkup).html();
+	};
+
+	langx.mixin(ui, {
+		CONST: CONST,
+		cleanInput: cleanInput,
+		isBackspaceKey: isBackspaceKey,
+		isDeleteKey: isDeleteKey,
+		isShiftHeld: isShiftHeld,
+		isTabKey: isTabKey,
+		isUpArrow: isUpArrow,
+		isDownArrow: isDownArrow
+	});
+
+	return ui;
+
+});
+
+define('skylark-ui-swt/Widget',[
+  "skylark-langx/skylark",
+  "skylark-langx/langx",
+  "skylark-utils-dom/browser",
+  "skylark-utils-dom/datax",
+  "skylark-utils-dom/eventer",
+  "skylark-utils-dom/noder",
+  "skylark-utils-dom/geom",
+  "skylark-utils-dom/elmx",
+  "skylark-utils-dom/query",
+  "skylark-utils-dom/plugins",
+  "skylark-utils-collection/Map",
+  "./ui"
+],function(skylark,langx,browser,datax,eventer,noder,geom,elmx,$,plugins,Map,ui){
+
+/*---------------------------------------------------------------------------------*/
+
+	var Widget = plugins.Plugin.inherit({
+    klassName: "Widget",
+
+    _elmx : elmx,
+
+    _construct : function(elm,options) {
+        if (langx.isHtmlNode(elm)) {
+          options = this._parse(elm,options);
+        } else {
+          options = elm;
+          elm = null;
+        }
+        this.overrided(elm,options);
+
+        if (!elm) {
+          this._elm = this._create();
+        }
+        this._velm = elmx(this._elm);
+        this.state = this.options.state || new Map();
+        this._init();
+     },
+
+    /**
+     * Parses widget options from attached element.
+     * This is a callback method called by constructor when attached element is specified.
+     * @method _parse
+     * @return {Object} options.
+     */
+    _parse : function(elm,options) {
+      var optionsAttr = datax.data(elm,"options");
+      if (optionsAttr) {
+         var options1 = JSON.parse("{" + optionsAttr + "}");
+         options = langx.mixin(options1,options); 
+      }
+      return options || {};
+    },
+
+
+    /**
+     * Create html element for this widget.
+     * This is a callback method called by constructor when attached element is not specified.
+     * @method _create
+     */
+    _create : function() {
+        //TODO:     
+    },
+
+    /**
+     * Init widget.
+     * This is a callback method called by constructor.
+     * @method _init
+     */
+    _init : function() {
+      //TODO:
+      var self = this;
+      if (this.widgetClass) {
+        this._velm.addClass(this.widgetClass);
+      }
+      this.state.on("changed",function(e,args) {
+        self._refresh(args.data);
+      });
+
+    },
+
+
+    /**
+     * Post widget.
+     * This is a callback method called when widget element is added into dom.
+     * @method _post
+     */
+    _post : function() {
+
+    },
+
+
+    /**
+     * Refresh widget.
+     * This is a callback method called when widget state is changed.
+     * @method _refresh
+     */
+    _refresh : function(updates) {
+      /*
+      var _ = this._,
+          model = _.model,
+          dom = _.dom,
+          props = {
+
+          };
+      updates = updates || {};
+      for (var attrName in updates){
+          var v = updates[attrName].value;
+          if (v && v.toCss) {
+              v.toCss(props);
+              updates[attrName].processed = true;
+          }
+
+      };
+
+      this.css(props);
+
+      if (updates["disabled"]) {
+          var v = updates["disabled"].value;
+          dom.aria('disabled', v);
+          self.classes.toggle('disabled', v);
+      }
+      */
+    },                
+
+    mapping : {
+      "events" : {
+  //       'mousedown .title':  'edit',
+  //       'click .button':     'save',
+  //       'click .open':       function(e) { ... }            
+      },
+
+      "attributs" : {
+
+      },
+
+      "properties" : {
+
+      },
+
+      "styles" : {
+
+      }
+    },
+
+    /**
+     * Returns a html element representing the widget.
+     *
+     * @method html
+     * @return {HtmlElement} HTML element representing the widget.
+     */
+    html: function() {
+      return this._elm;
+    },
+
+
+    /**
+     * Returns a parent widget  enclosing this widgets, or null if not exist.
+     *
+     * @method getEnclosing
+     * @return {Widget} The enclosing parent widget, or null if not exist.
+     */
+    getEnclosing : function(selector) {
+      return null;
+    },
+
+    /**
+     * Returns a widget collection with all enclosed child widgets.
+     *
+     * @method getEnclosed
+     * @return {List} Collection with all enclosed child widgets..
+     */
+    getEnclosed : function() {
+      var self = this;
+          children = new ArrayList();
+      return children;
+    },
+
+    /**
+     * Sets the visible state to true.
+     *
+     * @method show
+     * @return {Widget} Current widget instance.
+     */
+
+    show : function() {
+      this._velm.show();
+    },
+
+    /**
+     * Sets the visible state to false.
+     *
+     * @method hide
+     * @return {Widget} Current widget instance.
+     */
+    hide : function() {
+      this._velm.hide();
+    },
+
+    /**
+     * Focuses the current widget.
+     *
+     * @method focus
+     * @return {Widget} Current widget instance.
+     */
+    focus :function() {
+      try {
+        this._velm.focus();
+      } catch (ex) {
+        // Ignore IE error
+      }
+
+      return this;
+    },
+
+    /**
+     * Blurs the current widget.
+     *
+     * @method blur
+     * @return {Widget} Current widget instance.
+     */
+    blur : function() {
+      this._velm.blur();
+
+      return this;
+    },
+
+    enable: function () {
+      this.state.set('disabled',false);
+      return this;
+    },
+
+    disable: function () {
+      this.state.set('disabled',true);
+      return this;
+    },
+
+    /**
+     * Sets the specified aria property.
+     *
+     * @method aria
+     * @param {String} name Name of the aria property to set.
+     * @param {String} value Value of the aria property.
+     * @return {Widget} Current widget instance.
+     */
+    aria : function(name, value) {
+      const self = this, elm = self.getEl(self.ariaTarget);
+
+      if (typeof value === 'undefined') {
+        return self._aria[name];
+      }
+
+      self._aria[name] = value;
+
+      if (self.state.get('rendered')) {
+        elm.setAttribute(name === 'role' ? name : 'aria-' + name, value);
+      }
+
+      return self;
+    },
+
+    attr: function (name,value) {
+        var velm = this._velm,
+            ret = velm.attr(name,value);
+        return ret == velm ? this : ret;
+    },
+
+    css: function (name, value) {
+        var velm = this._velm,
+            ret = velm.css(name, value);
+        return ret == velm ? this : ret;
+    },
+
+    data: function (name, value) {
+        var velm = this._velm,
+            ret = velm.data(name,value);
+        return ret == velm ? this : ret;
+    },
+
+    prop: function (name,value) {
+        var velm = this._velm,
+            ret = velm.prop(name,value);
+        return ret == velm ? this : ret;
+    },
+
+    /**
+     *  Detach the current widget element from dom document.
+     *
+     * @method html
+     * @return {HtmlElement} HTML element representing the widget.
+     */
+    detach : function() {
+      this._velm.remove();
+    }
+  });
+
+  Widget.inherit = function(meta) {
+    var ctor = plugins.Plugin.inherit.apply(this,arguments);
+
+    function addStatePropMethod(name) {
+        ctor.prototype[name] = function(value) {
+          if (value !== undefined) {
+            this.state.set(name,value);
+            return this;
+          } else {
+            return this.state.get(name);
+          }
+        };
+    }
+    if (meta.state) {
+      for (var name in meta.state) {
+          addStatePropMethod(name);
+      }
+    }
+
+    if (meta.pluginName) {
+      plugins.register(ctor,meta.pluginName);
+    }
+    return ctor;
+  };
+
+	return ui.Widget = Widget;
+});
+
 define('skylark-fuelux/fuelux',[
   "skylark-langx/skylark",
   "skylark-langx/langx",
@@ -11071,11 +11776,11 @@ define('skylark-ui-repeater/repeater',[
   "skylark-utils-dom/geom",
   "skylark-utils-dom/elmx",
   "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
+  "skylark-ui-swt/Widget",
   "skylark-fuelux/loader",
   "skylark-fuelux/selectlist",
   "skylark-fuelux/combobox"  
-],function(skylark,langx,browser,eventer,noder,geom,elmx,$,plugins){
+],function(skylark,langx,browser,eventer,noder,geom,elmx,$,Widget){
 
 	var ui = skylark.ui = skylark.ui || {};
 
@@ -11091,15 +11796,28 @@ define('skylark-ui-repeater/repeater',[
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
-	var Repeater = ui.Repeater = plugins.Plugin.inherit({
+	var Repeater = ui.Repeater = Widget.inherit({
 		klassName: "Repeater",
 
-		init : function(element,options) {
+		options : {
+			dataSource: function dataSource (options, callback) {
+				callback({ count: 0, end: 0, items: [], page: 0, pages: 1, start: 0 });
+			},
+			defaultView: -1, // should be a string value. -1 means it will grab the active view from the view controls
+			dropPagingCap: 10,
+			staticHeight: -1, // normally true or false. -1 means it will look for data-staticheight on the element
+			views: null, // can be set to an object to configure multiple views of the same type,
+			searchOnKeyPress: false,
+			allowCancel: true
+		},
+
+//		_init : function(element,options) {
+		_init : function() {
 			var self = this;
 			var $btn;
 			var currentView;
 
-			this.$element = $(element);
+			this.$element = $(this._elm); //$(element);
 
 			this.$canvas = this.$element.find('.repeater-canvas');
 			this.$count = this.$element.find('.repeater-count');
@@ -11130,7 +11848,7 @@ define('skylark-ui-repeater/repeater',[
 			this.infiniteScrollingEnd = null;
 			this.infiniteScrollingOptions = {};
 			this.lastPageInput = 0;
-			this.options = langx.mixin({}, $.fn.repeater.defaults, options);
+			//this.options = langx.mixin({}, $.fn.repeater.defaults, options);
 			this.pageIncrement = 0;// store direction navigated
 			this.resizeTimeout = {};
 			this.stamp = new Date().getTime() + (Math.floor(Math.random() * 100) + 1);
@@ -12438,7 +13156,8 @@ define('skylark-ui-repeater/repeater-list',[
 		};
 
 		// ADDITIONAL DEFAULT OPTIONS
-		$.fn.repeater.defaults = langx.mixin({}, $.fn.repeater.defaults, {
+		$.fn.repeater.Constructor.prototype.options = langx.mixin({}, $.fn.repeater.Constructor.prototype.options, {
+		//$.fn.repeater.defaults = langx.mixin({}, $.fn.repeater.defaults, {
 			list_columnRendered: null,
 			list_columnSizing: true,
 			list_columnSyncing: true,
@@ -13092,8 +13811,9 @@ define('skylark-ui-repeater/repeater-thumbnail',[
         };
 
         //ADDITIONAL DEFAULT OPTIONS
-        $.fn.repeater.defaults = langx.mixin({}, $.fn.repeater.defaults, {
-            thumbnail_alignment: 'left',
+        $.fn.repeater.Constructor.prototype.options = langx.mixin({}, $.fn.repeater.Constructor.prototype.options, {
+        //$.fn.repeater.defaults = langx.mixin({}, $.fn.repeater.defaults, {
+           thumbnail_alignment: 'left',
             thumbnail_infiniteScroll: false,
             thumbnail_itemRendered: null,
             thumbnail_noItemsHTML: 'no items found',

@@ -455,7 +455,8 @@ define([
 		};
 
 		// ADDITIONAL DEFAULT OPTIONS
-		$.fn.repeater.defaults = langx.mixin({}, $.fn.repeater.defaults, {
+		$.fn.repeater.Constructor.prototype.options = langx.mixin({}, $.fn.repeater.Constructor.prototype.options, {
+		//$.fn.repeater.defaults = langx.mixin({}, $.fn.repeater.defaults, {
 			list_columnRendered: null,
 			list_columnSizing: true,
 			list_columnSyncing: true,
