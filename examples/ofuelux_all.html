@@ -1019,7 +1019,8 @@
       packages: [
          {
             name: 'skylark-langx',
-            location: '../node_modules/skylark-langx/dist/uncompressed/skylark-langx',
+//            location: '../node_modules/skylark-langx/dist/uncompressed/skylark-langx',
+            location: '../../../langx/skylark-langx/src',
             main: 'main'
           },
          {
@@ -1033,7 +1034,8 @@
             main: 'main'
           },         {
             name: 'skylark-ui-swt',
-            location: '../node_modules/skylark-ui-swt/dist/uncompressed/skylark-ui-swt',
+//            location: '../node_modules/skylark-ui-swt/dist/uncompressed/skylark-ui-swt',
+            location: '../../skylark-ui-swt/src',
             main: 'main'
           },         {
             name: 'skylark-bootstrap3',
@@ -1047,35 +1049,14 @@
           },
          {
             name: 'skylark-ui-repeater',
-            location: '../dist/uncompressed/skylark-ui-repeater',
+//            location: '../dist/uncompressed/skylark-ui-repeater',
+            location: '../src',
             main: 'main'
           }
       ],      
       paths: {
-        "skylark-utils-interact" : "../node_modules/skylark-utils-interact/dist/uncompressed/skylark-utils-interact",
         //        "skylark-fuelux": "../dist/js/uncompressed/skylark-fuelux",
 
-        assets: './ofuelux_all',
-        moment: './ofuelux_all/vendor/moment-with-locales.min', // comment out if you dont want momentjs to be default
-        underscore: './ofuelux_all/vendor/underscore',
-        backbone: 'http://registry.skylarkjs.org/packages/skylark-backbone/0.9.0/backbone',
-        formbuilder: 'http://getfuelux.com/assets/js/form-builder',
-        collections: 'http://getfuelux.com/assets/js/form-builder/collections',
-        data: 'http://getfuelux.com/assets/js/form-builder/data',
-        models: 'http://getfuelux.com/assets/js/form-builder/models',
-        helper: 'http://getfuelux.com/assets/js/form-builder/helper',
-        templates: 'http://getfuelux.com/assets/js/form-builder/templates',
-        views: 'http://getfuelux.com/assets/js/form-builder/views',
-        text: 'https://cdnjs.cloudflare.com/ajax/libs/require-text/2.0.12/text',
-        supercopy: './ofuelux_all/js/super-copy',
-      },
-      // Bootstrap is a "browser globals" script :-(
-      shim: {
-        'skylark-fuelux': { deps: ['skylark-utils'] },
-        'backbone': {
-          deps: ['underscore', 'skylark-utils'],
-          exports: 'Backbone'
-        }
       }
     });
   })();
@@ -1083,7 +1064,7 @@
 <script>
   require(['skylark-utils-dom'],function(){
     require(['skylark-fuelux'],function(){
-      require(['skylark-ui-repeater', 'moment'],function(){
+      require(['skylark-ui-repeater'],function(){
         require(['ofuelux_all/js/application'], function($){
 
         });

@@ -86,9 +86,31 @@
 
 })(function(define,require) {
 
-define('skylark-langx/skylark',[], function() {
-    var skylark = {
+define('skylark-langx/_attach',[],function(){
+    return  function attach(obj1,path,obj2) {
+        if (typeof path == "string") {
+            path = path.split(".");//[path]
+        };
+        var length = path.length,
+            ns=obj1,
+            i=0,
+            name = path[i++];
 
+        while (i < length) {
+            ns = ns[name] = ns[name] || {};
+            name = path[i++];
+        }
+
+        return ns[name] = obj2;
+    }
+});
+define('skylark-langx/skylark',[
+    "./_attach"
+], function(_attach) {
+    var skylark = {
+    	attach : function(path,obj) {
+    		return _attach(skylark,path,obj);
+    	}
     };
     return skylark;
 });
@@ -98,7 +120,7 @@ define('skylark-utils-dom/skylark',["skylark-langx/skylark"], function(skylark) 
 });
 
 define('skylark-utils-dom/dom',["./skylark"], function(skylark) {
-	return skylark.dom = {};
+	return skylark.dom = skylark.attach("utils.dom",{});
 });
 
 define('skylark-langx/types',[
@@ -204,7 +226,7 @@ define('skylark-langx/types',[
     }
 
     function isHtmlNode(obj) {
-        return obj && (obj instanceof Node);
+        return obj && obj.nodeType; // obj instanceof Node; //Consider the elements in IFRAME
     }
 
     function isInstanceOf( /*Object*/ value, /*Type*/ type) {
@@ -395,6 +417,10 @@ define('skylark-langx/arrays',[
         });
     }
 
+    function filter2(array,func) {
+      return filter.call(array,func);
+    }
+
     function flatten(array) {
         if (isArrayLike(array)) {
             var result = [];
@@ -478,6 +504,31 @@ define('skylark-langx/arrays',[
         return flatten(values)
     }
 
+
+    function merge( first, second ) {
+      var l = second.length,
+          i = first.length,
+          j = 0;
+
+      if ( typeof l === "number" ) {
+        for ( ; j < l; j++ ) {
+          first[ i++ ] = second[ j ];
+        }
+      } else {
+        while ( second[j] !== undefined ) {
+          first[ i++ ] = second[ j++ ];
+        }
+      }
+
+      first.length = i;
+
+      return first;
+    }
+
+    function reduce(array,callback,initialValue) {
+        return Array.prototype.reduce.call(array,callback,initialValue);
+    }
+
     function uniq(array) {
         return filter.call(array, function(item, idx) {
             return array.indexOf(item) == idx;
@@ -499,16 +550,22 @@ define('skylark-langx/arrays',[
             }
         },
 
+        filter : filter2,
+        
         flatten: flatten,
 
         inArray: inArray,
 
         makeArray: makeArray,
 
+        merge : merge,
+
         forEach : forEach,
 
         map : map,
         
+        reduce : reduce,
+
         uniq : uniq
 
     }
@@ -659,9 +716,10 @@ define('skylark-langx/numbers',[
 	}
 });
 define('skylark-langx/objects',[
+    "./_attach",
 	"./types",
     "./numbers"
-],function(types,numbers){
+],function(_attach,types,numbers){
 	var hasOwnProperty = Object.prototype.hasOwnProperty,
         slice = Array.prototype.slice,
         isBoolean = types.isBoolean,
@@ -985,6 +1043,37 @@ define('skylark-langx/objects',[
         return args.target;
     }
 
+   // Return a copy of the object without the blacklisted properties.
+    function omit(obj, prop1,prop2) {
+        if (!obj) {
+            return null;
+        }
+        var result = mixin({},obj);
+        for(var i=1;i<arguments.length;i++) {
+            var pn = arguments[i];
+            if (pn in obj) {
+                delete result[pn];
+            }
+        }
+        return result;
+
+    }
+
+   // Return a copy of the object only containing the whitelisted properties.
+    function pick(obj,prop1,prop2) {
+        if (!obj) {
+            return null;
+        }
+        var result = {};
+        for(var i=1;i<arguments.length;i++) {
+            var pn = arguments[i];
+            if (pn in obj) {
+                result[pn] = obj[pn];
+            }
+        }
+        return result;
+    }
+
     function removeItem(items, item) {
         if (isArray(items)) {
             var idx = items.indexOf(item);
@@ -1034,7 +1123,7 @@ define('skylark-langx/objects',[
 
     // Retrieve the values of an object's properties.
     function values(obj) {
-        var keys = _.keys(obj);
+        var keys = allKeys(obj);
         var length = keys.length;
         var values = Array(length);
         for (var i = 0; i < length; i++) {
@@ -1070,6 +1159,8 @@ define('skylark-langx/objects',[
     return {
         allKeys: allKeys,
 
+        attach : _attach,
+
         clone: clone,
 
         defaults : createAssigner(allKeys, true),
@@ -1089,6 +1180,10 @@ define('skylark-langx/objects',[
         keys: keys,
 
         mixin: mixin,
+
+        omit: omit,
+
+        pick: pick,
 
         removeItem: removeItem,
 
@@ -2324,16 +2419,24 @@ define('skylark-langx/Evented',[
     "./klass",
     "./arrays",
     "./objects",
-	"./types"
+    "./types"
 ],function(klass,arrays,objects,types){
-	var slice = Array.prototype.slice,
+    var slice = Array.prototype.slice,
         compact = arrays.compact,
         isDefined = types.isDefined,
         isPlainObject = types.isPlainObject,
-		isFunction = types.isFunction,
-		isString = types.isString,
-		isEmptyObject = types.isEmptyObject,
-		mixin = objects.mixin;
+        isFunction = types.isFunction,
+        isString = types.isString,
+        isEmptyObject = types.isEmptyObject,
+        mixin = objects.mixin;
+
+    function parse(event) {
+        var segs = ("" + event).split(".");
+        return {
+            name: segs[0],
+            ns: segs.slice(1).join(" ")
+        };
+    }
 
     var Evented = klass({
         on: function(events, selector, data, callback, ctx, /*used internally*/ one) {
@@ -2365,12 +2468,17 @@ define('skylark-langx/Evented',[
                 events = events.split(/\s/)
             }
 
-            events.forEach(function(name) {
+            events.forEach(function(event) {
+                var parsed = parse(event),
+                    name = parsed.name,
+                    ns = parsed.ns;
+
                 (_hub[name] || (_hub[name] = [])).push({
                     fn: callback,
                     selector: selector,
                     data: data,
                     ctx: ctx,
+                    ns : ns,
                     one: one
                 });
             });
@@ -2404,7 +2512,11 @@ define('skylark-langx/Evented',[
                 args = [e];
             }
             [e.type || e.name, "all"].forEach(function(eventName) {
-                var listeners = self._hub[eventName];
+                var parsed = parse(eventName),
+                    name = parsed.name,
+                    ns = parsed.ns;
+
+                var listeners = self._hub[name];
                 if (!listeners) {
                     return;
                 }
@@ -2414,6 +2526,9 @@ define('skylark-langx/Evented',[
 
                 for (var i = 0; i < len; i++) {
                     var listener = listeners[i];
+                    if (ns && (!listener.ns ||  !listener.ns.startsWith(ns))) {
+                        continue;
+                    }
                     if (e.data) {
                         if (listener.data) {
                             e.data = mixin({}, listener.data, e.data);
@@ -2494,21 +2609,37 @@ define('skylark-langx/Evented',[
                 events = events.split(/\s/)
             }
 
-            events.forEach(function(name) {
+            events.forEach(function(event) {
+                var parsed = parse(event),
+                    name = parsed.name,
+                    ns = parsed.ns;
+
                 var evts = _hub[name];
-                var liveEvents = [];
 
-                if (evts && callback) {
-                    for (var i = 0, len = evts.length; i < len; i++) {
-                        if (evts[i].fn !== callback && evts[i].fn._ !== callback)
-                            liveEvents.push(evts[i]);
+                if (evts) {
+                    var liveEvents = [];
+
+                    if (callback || ns) {
+                        for (var i = 0, len = evts.length; i < len; i++) {
+                            
+                            if (callback && evts[i].fn !== callback && evts[i].fn._ !== callback) {
+                                liveEvents.push(evts[i]);
+                                continue;
+                            } 
+
+                            if (ns && (!evts[i].ns || evts[i].ns.indexOf(ns)!=0)) {
+                                liveEvents.push(evts[i]);
+                                continue;
+                            }
+                        }
                     }
-                }
 
-                if (liveEvents.length) {
-                    _hub[name] = liveEvents;
-                } else {
-                    delete _hub[name];
+                    if (liveEvents.length) {
+                        _hub[name] = liveEvents;
+                    } else {
+                        delete _hub[name];
+                    }
+
                 }
             });
 
@@ -2563,7 +2694,7 @@ define('skylark-langx/Evented',[
         }
     });
 
-	return Evented;
+    return Evented;
 
 });
 define('skylark-langx/hoster',[
@@ -5455,17 +5586,20 @@ define('skylark-utils-dom/finder',[
         var ret = [],
             rootIsSelector = root && langx.isString(root);
         while ((node = node.parentNode) && (node.nodeType !== 9)) {
-            ret.push(node);
             if (root) {
                 if (rootIsSelector) {
                     if (matches(node, root)) {
+                        break;
+                    }
+                } else if (langx.isArrayLike(root)) {
+                    if (langx.inArray(node,root)>-1) {
                         break;
                     }
                 } else if (node == root) {
                     break;
                 }
             }
-
+            ret.push(node); // TODO
         }
 
         if (selector) {
@@ -7258,6 +7392,9 @@ define('skylark-utils-dom/geom',[
      * @param {Number} value
      */
     function scrollLeft(elm, value) {
+        if (elm.nodeType === 9) {
+            elm = elm.defaultView;
+        }
         var hasScrollLeft = "scrollLeft" in elm;
         if (value === undefined) {
             return hasScrollLeft ? elm.scrollLeft : elm.pageXOffset
@@ -7276,6 +7413,9 @@ define('skylark-utils-dom/geom',[
      * @param {Number} value
      */
     function scrollTop(elm, value) {
+        if (elm.nodeType === 9) {
+            elm = elm.defaultView;
+        }
         var hasScrollTop = "scrollTop" in elm;
 
         if (value === undefined) {
@@ -8461,9 +8601,9 @@ define('skylark-utils-dom/query',[
                 params = slice.call(arguments);
             var result = this.map(function(idx, elem) {
                 // if (elem.nodeType == 1) {
-                if (elem.querySelector) {
+                //if (elem.querySelector) {
                     return func.apply(context, last ? [elem] : [elem, selector]);
-                }
+                //}
             });
             if (last && selector) {
                 return result.filter(selector);
@@ -8477,15 +8617,15 @@ define('skylark-utils-dom/query',[
         return function(util, selector) {
             var self = this,
                 params = slice.call(arguments);
-            if (selector === undefined) {
-                selector = util;
-                util = undefined;
-            }
+            //if (selector === undefined) { //TODO : needs confirm?
+            //    selector = util;
+            //    util = undefined;
+            //}
             var result = this.map(function(idx, elem) {
-                // if (elem.nodeType == 1) {
-                if (elem.querySelector) {
+                // if (elem.nodeType == 1) { // TODO
+                //if (elem.querySelector) {
                     return func.apply(context, last ? [elem, util] : [elem, selector, util]);
-                }
+                //}
             });
             if (last && selector) {
                 return result.filter(selector);
@@ -8500,7 +8640,7 @@ define('skylark-utils-dom/query',[
         return function() {
             var self = this,
                 params = slice.call(arguments);
-            this.each(function(idx) {
+            this.each(function(idx,node) {
                 func.apply(context, [this].concat(params));
             });
             return self;
@@ -8760,8 +8900,8 @@ define('skylark-utils-dom/query',[
             not: function(selector) {
                 var nodes = []
                 if (isFunction(selector) && selector.call !== undefined)
-                    this.each(function(idx) {
-                        if (!selector.call(this, idx)) nodes.push(this)
+                    this.each(function(idx,node) {
+                        if (!selector.call(this, idx,node)) nodes.push(this)
                     })
                 else {
                     var excludes = typeof selector == 'string' ? this.filter(selector) :
@@ -8844,9 +8984,9 @@ define('skylark-utils-dom/query',[
                     var dom = $(structure).get(0),
                         clone = dom.parentNode || this.length > 1
 
-                return this.each(function(index) {
+                return this.each(function(index,node) {
                     $(this).wrapAll(
-                        func ? structure.call(this, index) :
+                        func ? structure.call(this, index,node) :
                         clone ? dom.cloneNode(true) : dom
                     )
                 })
@@ -8867,10 +9007,10 @@ define('skylark-utils-dom/query',[
 
             wrapInner: function(wrappingElement) {
                 var func = isFunction(wrappingElement)
-                return this.each(function(index) {
+                return this.each(function(index,node) {
                     var self = $(this),
                         contents = self.contents(),
-                        dom = func ? wrappingElement.call(this, index) : wrappingElement
+                        dom = func ? wrappingElement.call(this, index,node) : wrappingElement
                     contents.length ? contents.wrapAll(dom) : self.append(dom)
                 })
             },
@@ -8908,7 +9048,7 @@ define('skylark-utils-dom/query',[
                 return $(this.pluck('previousElementSibling')).filter(selector || '*')
             },
 
-            prevAll: wrapper_selector(finder.previousSibling, finder),
+            prevAll: wrapper_selector(finder.previousSiblings, finder),
 
             next: function(selector) {
                 return $(this.pluck('nextElementSibling')).filter(selector || '*')
@@ -9230,7 +9370,7 @@ define('skylark-utils-dom/query',[
             }
         }
 
-        'filter,add,not,eq,first,last,find,closest,parents,parent,children,siblings'.split(',').forEach(function(property) {
+        'filter,add,not,eq,first,last,find,closest,parents,parent,children,siblings,prev,prevAll,next,nextAll'.split(',').forEach(function(property) {
             var fn = $.fn[property]
             $.fn[property] = function() {
                 var ret = fn.apply(this, arguments)
@@ -9706,7 +9846,7 @@ define('skylark-utils-dom/plugins',[
             }
 
             if (options) {
-                var args = slice.call(arguments,2);
+                var args = slice.call(arguments,1); //2
                 if (extfn) {
                     return extfn.apply(plugin,args);
                 } else {
@@ -10258,7 +10398,7 @@ define('skylark-utils-collection/Map',[
     return Map;
 });
 
-define('skylark-ui-swt/ui',[
+define('skylark-ui-swt/swt',[
   "skylark-langx/skylark",
   "skylark-langx/langx",
   "skylark-utils-dom/browser",
@@ -10335,8 +10475,8 @@ define('skylark-ui-swt/Widget',[
   "skylark-utils-dom/query",
   "skylark-utils-dom/plugins",
   "skylark-utils-collection/Map",
-  "./ui"
-],function(skylark,langx,browser,datax,eventer,noder,geom,elmx,$,plugins,Map,ui){
+  "./swt"
+],function(skylark,langx,browser,datax,eventer,noder,geom,elmx,$,plugins,Map,swt){
 
 /*---------------------------------------------------------------------------------*/
 
@@ -10355,10 +10495,17 @@ define('skylark-ui-swt/Widget',[
         this.overrided(elm,options);
 
         if (!elm) {
-          this._elm = this._create();
+          this._velm = this._create();
+          this._elm = this._velm.elm();
+        } else {
+          this._velm = elmx(this._elm);
         }
-        this._velm = elmx(this._elm);
-        this.state = this.options.state || new Map();
+        
+        Object.defineProperty(this,"state",{
+          value :this.options.state || new Map()
+        });
+
+        //this.state = this.options.state || new Map();
         this._init();
      },
 
@@ -10384,8 +10531,14 @@ define('skylark-ui-swt/Widget',[
      * @method _create
      */
     _create : function() {
-        //TODO:     
+        var template = this.options.template;
+        if (template) {
+          return this._elmx(template);
+        } else {
+          throw new Error("The template is not existed in options!");
+        }
     },
+
 
     /**
      * Init widget.
@@ -10393,7 +10546,6 @@ define('skylark-ui-swt/Widget',[
      * @method _init
      */
     _init : function() {
-      //TODO:
       var self = this;
       if (this.widgetClass) {
         this._velm.addClass(this.widgetClass);
@@ -10401,16 +10553,15 @@ define('skylark-ui-swt/Widget',[
       this.state.on("changed",function(e,args) {
         self._refresh(args.data);
       });
-
     },
 
 
     /**
-     * Post widget.
+     * Startup widget.
      * This is a callback method called when widget element is added into dom.
      * @method _post
      */
-    _post : function() {
+    _startup : function() {
 
     },
 
@@ -10471,10 +10622,10 @@ define('skylark-ui-swt/Widget',[
     /**
      * Returns a html element representing the widget.
      *
-     * @method html
+     * @method render
      * @return {HtmlElement} HTML element representing the widget.
      */
-    html: function() {
+    render: function() {
       return this._elm;
     },
 
@@ -10608,6 +10759,25 @@ define('skylark-ui-swt/Widget',[
         return ret == velm ? this : ret;
     },
 
+
+    /**
+     *  Attach the current widget element to dom document.
+     *
+     * @method attach
+     * @return {Widget} This Widget.
+     */
+    attach : function(target,position){
+        var elm = target;
+        if (!position || position=="child") {
+            noder.append(elm,this._elm);
+        } else  if (position == "before") {
+            noder.before(elm,this._elm);
+        } else if (position == "after") {
+            noder.after(elm,this._elm);
+        }
+        this._startup();
+    },
+
     /**
      *  Detach the current widget element from dom document.
      *
@@ -10644,7 +10814,33 @@ define('skylark-ui-swt/Widget',[
     return ctor;
   };
 
-	return ui.Widget = Widget;
+  Widget.register = function(ctor,widgetName) {
+    var meta = ctor.prototype,
+        pluginName = widgetName || meta.pluginName;
+
+    function addStatePropMethod(name) {
+        ctor.prototype[name] = function(value) {
+          if (value !== undefined) {
+            this.state.set(name,value);
+            return this;
+          } else {
+            return this.state.get(name);
+          }
+        };
+    }
+    if (meta.state) {
+      for (var name in meta.state) {
+          addStatePropMethod(name);
+      }
+    }
+
+    if (pluginName) {
+      plugins.register(ctor,pluginName);
+    }
+    return ctor;
+  };
+
+	return swt.Widget = Widget;
 });
 
 define('skylark-fuelux/fuelux',[
@@ -11095,35 +11291,34 @@ define('skylark-bootstrap3/dropdown',[
 
 });
 
-define('skylark-fuelux/selectlist',[
+define('skylark-ui-swt/SelectList',[
   "skylark-langx/langx",
   "skylark-utils-dom/browser",
   "skylark-utils-dom/eventer",
   "skylark-utils-dom/noder",
   "skylark-utils-dom/geom",
   "skylark-utils-dom/query",
-  "./fuelux",
+  "./swt",
+  "./Widget",
   "skylark-bootstrap3/dropdown"
-],function(langx,browser,eventer,noder,geom,$,fuelux){
+],function(langx,browser,eventer,noder,geom,$,swt,Widget){
 
 
-	/*
-	 * Fuel UX Checkbox
-	 * https://github.com/ExactTarget/fuelux
-	 *
-	 * Copyright (c) 2014 ExactTarget
-	 * Licensed under the BSD New license.
-	 */
-
-	var old = $.fn.selectlist;
 	// SELECT CONSTRUCTOR AND PROTOTYPE
 
-	var Selectlist = fuelux.Selectlist = fuelux.WidgetBase.inherit({
-		klassName: "Selectlist",
+	var SelectList = Widget.inherit({
+		klassName: "SelectList",
 
-		init : function(element,options) {
-			this.$element = $(element);
-			this.options = langx.mixin({}, $.fn.selectlist.defaults, options);
+		pluginName : "lark.selectlist",
+	
+		options : {
+			emptyLabelHTML: '<li data-value=""><a href="#">No items</a></li>'
+
+		},
+
+		_init : function() {
+			this.$element = $(this._elm);
+			//this.options = langx.mixin({}, $.fn.selectlist.defaults, options);
 
 
 			this.$button = this.$element.find('.btn.dropdown-toggle');
@@ -11136,7 +11331,7 @@ define('skylark-fuelux/selectlist',[
 			this.$element.on('click.fu.selectlist', '.dropdown-menu a', langx.proxy(this.itemClicked, this));
 			this.setDefaultSelection();
 
-			if (options.resize === 'auto' || this.$element.attr('data-resize') === 'auto') {
+			if (this.options.resize === 'auto' || this.$element.attr('data-resize') === 'auto') {
 				this.resize();
 			}
 
@@ -11319,99 +11514,70 @@ define('skylark-fuelux/selectlist',[
 	});	
 
 
-	Selectlist.prototype.getValue = Selectlist.prototype.selectedItem;
+	SelectList.prototype.getValue = SelectList.prototype.selectedItem;
 
 
-	// SELECT PLUGIN DEFINITION
 
-	$.fn.selectlist = function (option) {
-		var args = Array.prototype.slice.call(arguments, 1);
-		var methodReturn;
-
-		var $set = this.each(function () {
-			var $this = $(this);
-			var data = $this.data('fu.selectlist');
-			var options = typeof option === 'object' && option;
-
-			if (!data) {
-				$this.data('fu.selectlist', (data = new Selectlist(this, options)));
-			}
-
-			if (typeof option === 'string') {
-				methodReturn = data[option].apply(data, args);
-			}
-		});
-
-		return (methodReturn === undefined) ? $set : methodReturn;
-	};
-
-	$.fn.selectlist.defaults = {
-		emptyLabelHTML: '<li data-value=""><a href="#">No items</a></li>'
-	};
-
-	$.fn.selectlist.Constructor = Selectlist;
-
-	$.fn.selectlist.noConflict = function () {
-		$.fn.selectlist = old;
-		return this;
-	};
-
-
-	// DATA-API
-
-	/*
-	$(document).on('mousedown.fu.selectlist.data-api', '[data-initialize=selectlist]', function (e) {
-		var $control = $(e.target).closest('.selectlist');
-		if (!$control.data('fu.selectlist')) {
-			$control.selectlist($control.data());
-		}
-	});
-
-	// Must be domReady for AMD compatibility
-	$(function () {
-		$('[data-initialize=selectlist]').each(function () {
-			var $this = $(this);
-			if (!$this.data('fu.selectlist')) {
-				$this.selectlist($this.data());
-			}
-		});
-	});
-
-	*/
-
-	return $.fn.selectlist;
+	return swt.SelectList = SelectList;
 });
 
-define('skylark-fuelux/combobox',[
+define('skylark-ui-swt/Combobox',[
   "skylark-langx/langx",
   "skylark-utils-dom/browser",
   "skylark-utils-dom/eventer",
   "skylark-utils-dom/noder",
   "skylark-utils-dom/geom",
   "skylark-utils-dom/query",
-  "./fuelux"
-],function(langx,browser,eventer,noder,geom,$,fuelux){
+  "./swt",
+  "./Widget",
+  "skylark-bootstrap3/dropdown"
+],function(langx,browser,eventer,noder,geom,$,swt,Widget){
 
-
-	/*
-	 * Fuel UX Checkbox
-	 * https://github.com/ExactTarget/fuelux
-	 *
-	 * Copyright (c) 2014 ExactTarget
-	 * Licensed under the BSD New license.
-	 */
-
-	var old = $.fn.combobox;
 
 
 	// COMBOBOX CONSTRUCTOR AND PROTOTYPE
 
-	var Combobox = fuelux.Combobox = fuelux.WidgetBase.inherit({
+	var Combobox = Widget.inherit({
 		klassName: "Combobox",
 
-		init : function(element,options) {
-			this.$element = $(element);
-			this.options = langx.mixin({}, $.fn.combobox.defaults, options);
+		pluginName : "lark.combobox",
+
+		widgetClass : "lark-combobox",
+
+		options : {
+
+			autoResizeMenu: true,
+			filterOnKeypress: false,
+			showOptionsOnKeypress: false,
+			filter: function filter (list, predicate, self) {
+				var visible = 0;
+				self.$dropMenu.find('.empty-indicator').remove();
+
+				list.each(function (i) {
+					var $li = $(this);
+					var text = $(this).text().trim();
+
+					$li.removeClass();
+
+					if (text === predicate) {
+						$li.addClass('text-success');
+						visible++;
+					} else if (text.substr(0, predicate.length) === predicate) {
+						$li.addClass('text-info');
+						visible++;
+					} else {
+						$li.addClass('hidden');
+					}
+				});
+
+				if (visible === 0) {
+					self.$dropMenu.append('<li class="empty-indicator text-muted"><em>No Matches</em></li>');
+				}
+			}
+		},
+
+		_init : function() {
+			this.$element = $(this._elm);
 
 			this.$dropMenu = this.$element.find('.dropdown-menu');
 			this.$input = this.$element.find('input');
@@ -11419,10 +11585,10 @@ define('skylark-fuelux/combobox',[
 			this.$button.dropdown();
 			this.$inputGroupBtn = this.$element.find('.input-group-btn');
 
-			this.$element.on('click.fu.combobox', 'a', langx.proxy(this.itemclicked, this));
-			this.$element.on('change.fu.combobox', 'input', langx.proxy(this.inputchanged, this));
+			this.$element.on('click.lark', 'a', langx.proxy(this.itemclicked, this));
+			this.$element.on('change.lark', 'input', langx.proxy(this.inputchanged, this));
 			this.$element.on('shown.bs.dropdown', langx.proxy(this.menuShown, this));
-			this.$input.on('keyup.fu.combobox', langx.proxy(this.keypress, this));
+			this.$input.on('keyup.lark', langx.proxy(this.keypress, this));
 
 			// set default selection
 			this.setDefaultSelection();
@@ -11439,7 +11605,7 @@ define('skylark-fuelux/combobox',[
 			}
 		},
 
-		destroy: function () {
+		_destroy: function () {
 			this.$element.remove();
 			// remove any external bindings
 			// [none]
@@ -11576,7 +11742,7 @@ define('skylark-fuelux/combobox',[
 			var data = this.selectedItem();
 
 			// trigger changed event
-			this.$element.trigger('changed.fu.combobox', data);
+			this.$element.trigger('changed.lark', data);
 
 			e.preventDefault();
 
@@ -11671,7 +11837,7 @@ define('skylark-fuelux/combobox',[
 			}
 
 			// trigger changed event
-			this.$element.trigger('changed.fu.combobox', data);
+			this.$element.trigger('changed.lark', data);
 		}
 
 	});
@@ -11680,91 +11846,9 @@ define('skylark-fuelux/combobox',[
 
 	Combobox.prototype.getValue = Combobox.prototype.selectedItem;
 
-	// COMBOBOX PLUGIN DEFINITION
 
-	$.fn.combobox = function (option) {
-		var args = Array.prototype.slice.call(arguments, 1);
-		var methodReturn;
 
-		var $set = this.each(function () {
-			var $this = $(this);
-			var data = $this.data('fu.combobox');
-			var options = typeof option === 'object' && option;
-
-			if (!data) {
-				$this.data('fu.combobox', (data = new Combobox(this, options)));
-			}
-
-			if (typeof option === 'string') {
-				methodReturn = data[option].apply(data, args);
-			}
-		});
-
-		return (methodReturn === undefined) ? $set : methodReturn;
-	};
-
-	$.fn.combobox.defaults = {
-
-		autoResizeMenu: true,
-		filterOnKeypress: false,
-		showOptionsOnKeypress: false,
-		filter: function filter (list, predicate, self) {
-			var visible = 0;
-			self.$dropMenu.find('.empty-indicator').remove();
-
-			list.each(function (i) {
-				var $li = $(this);
-				var text = $(this).text().trim();
-
-				$li.removeClass();
-
-				if (text === predicate) {
-					$li.addClass('text-success');
-					visible++;
-				} else if (text.substr(0, predicate.length) === predicate) {
-					$li.addClass('text-info');
-					visible++;
-				} else {
-					$li.addClass('hidden');
-				}
-			});
-
-			if (visible === 0) {
-				self.$dropMenu.append('<li class="empty-indicator text-muted"><em>No Matches</em></li>');
-			}
-		}
-	};
-
-	$.fn.combobox.Constructor =  Combobox;
-
-	$.fn.combobox.noConflict = function () {
-		$.fn.combobox = old;
-		return this;
-	};
-
-	// DATA-API
-
-	/*
-
-	$(document).on('mousedown.fu.combobox.data-api', '[data-initialize=combobox]', function (e) {
-		var $control = $(e.target).closest('.combobox');
-		if (!$control.data('fu.combobox')) {
-			$control.combobox($control.data());
-		}
-	});
-
-	// Must be domReady for AMD compatibility
-	$(function () {
-		$('[data-initialize=combobox]').each(function () {
-			var $this = $(this);
-			if (!$this.data('fu.combobox')) {
-				$this.combobox($this.data());
-			}
-		});
-	});
-	*/
-
-	return $.fn.combobox;
+	return swt.Combobox = Combobox;
 });
 
 define('skylark-ui-repeater/repeater',[
@@ -11778,8 +11862,8 @@ define('skylark-ui-repeater/repeater',[
   "skylark-utils-dom/query",
   "skylark-ui-swt/Widget",
   "skylark-fuelux/loader",
-  "skylark-fuelux/selectlist",
-  "skylark-fuelux/combobox"  
+  "skylark-ui-swt/SelectList",
+  "skylark-ui-swt/Combobox"  
 ],function(skylark,langx,browser,eventer,noder,geom,elmx,$,Widget){
 
 	var ui = skylark.ui = skylark.ui || {};
@@ -11857,9 +11941,9 @@ define('skylark-ui-repeater/repeater',[
 			this.viewOptions = {};
 			this.viewType = null;
 
-			this.$filters.selectlist();
+			this.$filters.plugin("lark.selectlist");
 			this.$pageSize.selectlist();
-			this.$primaryPaging.find('.combobox').combobox();
+			this.$primaryPaging.find('.combobox').plugin("lark.combobox");
 			this.$search.search({
 				searchOnKeyPress: this.options.searchOnKeyPress,
 				allowCancel: this.options.allowCancel
@@ -11973,8 +12057,8 @@ define('skylark-ui-repeater/repeater',[
 			markup = this.$element[0].outerHTML;
 
 			// destroy components and remove leftover
-			this.$element.find('.combobox').combobox('destroy');
-			this.$element.find('.selectlist').selectlist('destroy');
+			this.$element.find('.combobox').plugin("lark.combobox").destroy();
+			this.$element.find('.selectlist').plugin("lark.selectlist").destroy();
 			this.$element.find('.search').search('destroy');
 			if (this.infiniteScrollingEnabled) {
 				$(this.infiniteScrollingCont).infinitescroll('destroy');
@@ -11992,10 +12076,10 @@ define('skylark-ui-repeater/repeater',[
 			var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 
 			this.$search.search('disable');
-			this.$filters.selectlist('disable');
+			this.$filters.plugin("lark.selectlist").disable();
 			this.$views.find('label, input').addClass('disabled').attr('disabled', 'disabled');
-			this.$pageSize.selectlist('disable');
-			this.$primaryPaging.find('.combobox').combobox('disable');
+			this.$pageSize.plugin("lark.selectlist").disable();
+			this.$primaryPaging.find('.combobox').plugin("lark.combobox").disable();
 			this.$secondaryPaging.attr('disabled', 'disabled');
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.$nextBtn.attr('disabled', 'disabled');
@@ -12015,10 +12099,10 @@ define('skylark-ui-repeater/repeater',[
 			var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 
 			this.$search.search('enable');
-			this.$filters.selectlist('enable');
+			this.$filters.plugin("lark.selectlist").enable()
 			this.$views.find('label, input').removeClass('disabled').removeAttr('disabled');
 			this.$pageSize.selectlist('enable');
-			this.$primaryPaging.find('.combobox').combobox('enable');
+			this.$primaryPaging.find('.combobox').plugin("lark.combobox").enable();
 			this.$secondaryPaging.removeAttr('disabled');
 
 			if (!this.$prevBtn.hasClass('page-end')) {
@@ -12031,7 +12115,7 @@ define('skylark-ui-repeater/repeater',[
 			// is 0 or 1 pages, if using $primaryPaging (combobox)
 			// if using selectlist allow user to use selectlist to select 0 or 1
 			if (this.$prevBtn.hasClass('page-end') && this.$nextBtn.hasClass('page-end')) {
-				this.$primaryPaging.combobox('disable');
+				this.$primaryPaging.plugin("lark.combobox").disable();
 			}
 
 			// if there are no items

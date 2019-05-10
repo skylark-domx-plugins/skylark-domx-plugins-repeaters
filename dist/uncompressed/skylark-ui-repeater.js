@@ -97,8 +97,8 @@ define('skylark-ui-repeater/repeater',[
   "skylark-utils-dom/query",
   "skylark-ui-swt/Widget",
   "skylark-fuelux/loader",
-  "skylark-fuelux/selectlist",
-  "skylark-fuelux/combobox"  
+  "skylark-ui-swt/SelectList",
+  "skylark-ui-swt/Combobox"  
 ],function(skylark,langx,browser,eventer,noder,geom,elmx,$,Widget){
 
 	var ui = skylark.ui = skylark.ui || {};
@@ -176,9 +176,9 @@ define('skylark-ui-repeater/repeater',[
 			this.viewOptions = {};
 			this.viewType = null;
 
-			this.$filters.selectlist();
+			this.$filters.plugin("lark.selectlist");
 			this.$pageSize.selectlist();
-			this.$primaryPaging.find('.combobox').combobox();
+			this.$primaryPaging.find('.combobox').plugin("lark.combobox");
 			this.$search.search({
 				searchOnKeyPress: this.options.searchOnKeyPress,
 				allowCancel: this.options.allowCancel
@@ -292,8 +292,8 @@ define('skylark-ui-repeater/repeater',[
 			markup = this.$element[0].outerHTML;
 
 			// destroy components and remove leftover
-			this.$element.find('.combobox').combobox('destroy');
-			this.$element.find('.selectlist').selectlist('destroy');
+			this.$element.find('.combobox').plugin("lark.combobox").destroy();
+			this.$element.find('.selectlist').plugin("lark.selectlist").destroy();
 			this.$element.find('.search').search('destroy');
 			if (this.infiniteScrollingEnabled) {
 				$(this.infiniteScrollingCont).infinitescroll('destroy');
@@ -311,10 +311,10 @@ define('skylark-ui-repeater/repeater',[
 			var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 
 			this.$search.search('disable');
-			this.$filters.selectlist('disable');
+			this.$filters.plugin("lark.selectlist").disable();
 			this.$views.find('label, input').addClass('disabled').attr('disabled', 'disabled');
-			this.$pageSize.selectlist('disable');
-			this.$primaryPaging.find('.combobox').combobox('disable');
+			this.$pageSize.plugin("lark.selectlist").disable();
+			this.$primaryPaging.find('.combobox').plugin("lark.combobox").disable();
 			this.$secondaryPaging.attr('disabled', 'disabled');
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.$nextBtn.attr('disabled', 'disabled');
@@ -334,10 +334,10 @@ define('skylark-ui-repeater/repeater',[
 			var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 
 			this.$search.search('enable');
-			this.$filters.selectlist('enable');
+			this.$filters.plugin("lark.selectlist").enable()
 			this.$views.find('label, input').removeClass('disabled').removeAttr('disabled');
 			this.$pageSize.selectlist('enable');
-			this.$primaryPaging.find('.combobox').combobox('enable');
+			this.$primaryPaging.find('.combobox').plugin("lark.combobox").enable();
 			this.$secondaryPaging.removeAttr('disabled');
 
 			if (!this.$prevBtn.hasClass('page-end')) {
@@ -350,7 +350,7 @@ define('skylark-ui-repeater/repeater',[
 			// is 0 or 1 pages, if using $primaryPaging (combobox)
 			// if using selectlist allow user to use selectlist to select 0 or 1
 			if (this.$prevBtn.hasClass('page-end') && this.$nextBtn.hasClass('page-end')) {
-				this.$primaryPaging.combobox('disable');
+				this.$primaryPaging.plugin("lark.combobox").disable();
 			}
 
 			// if there are no items

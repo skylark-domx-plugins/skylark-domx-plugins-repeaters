@@ -9,10 +9,9 @@ define([
 	"skylark-langx/langx",
 	"skylark-utils-dom",
 	"skylark-ui-repeater",
-	"underscore",
 	"./data/pokemon",
 	"./data/colors"
-],function (langx,sutils,$,_,pokemon,colors) {
+],function (langx,sutils,$,pokemon,colors) {
 
 	var columns = [
 		{
@@ -58,7 +57,7 @@ define([
 
 		var filterValue = new RegExp(options.filter, 'i');//Explicitly make a regex object instead of just using String.search() to avoid confusion with FuelUX search() and options.search
 		if (!filterValue.test('all')) {
-			items = _.filter(items, function (item) {
+			items = langx.filter(items, function (item) {
 				var isFilterMatch = filterValue.test(item.type);
 				return isFilterMatch;
 			});
@@ -67,9 +66,9 @@ define([
 		var searchTerm;
 		if (options.search) {
 			searchTerm = new RegExp(options.search, 'i');//Explicitly make a regex object instead of just using String.search() to avoid confusion with FuelUX search() and options.search
-			items = _.filter(items, function (item) {
+			items = langx.filter(items, function (item) {
 				//collapse all item property values down to a single string to make matching on it easier to manage
-				var itemText = _.reduce(_.values(_.omit(item, 'ThumbnailAltText', 'ThumbnailImage')), function (finalText, currentText) {
+				var itemText = langx.reduce(langx.values(langx.omit(item, 'ThumbnailAltText', 'ThumbnailImage')), function (finalText, currentText) {
 					return finalText + " " + currentText;
 				});
 
@@ -79,7 +78,7 @@ define([
 		}
 
 		if (options.sortProperty) {
-			items = _.sortBy(items, function (item) {
+			items = items.sort(function (item) {
 				if (options.sortProperty === 'id' || options.sortProperty === 'height' || options.sortProperty === 'weight') {
 					return parseFloat(item[options.sortProperty]);
 				} else {
