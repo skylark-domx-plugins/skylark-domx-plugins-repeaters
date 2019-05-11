@@ -1,13 +1,14 @@
 /* global define, window, document, DocumentTouch */
 
 define([
-  'skylark-langx/langx',
-  '../../helper',
-  '../../Album'
-],function (langx,$,Album) {
+  "skylark-langx/langx",
+  "skylark-utils-dom/noder",
+  "../views", 
+  "./ViewBase"
+],function (langx,noder,views,ViewBase) {
   'use strict'
 
-  var SliderView = Album.ViewBase.inherit({
+  var SliderView = ViewBase.inherit({
     klassName : "SliderView",
 
     options: {
@@ -1233,7 +1234,7 @@ define([
     }
   });
 
-  Album.installPlugin("views",{
+  return views["slider"] = {
     "name" :  "slider",
     "ctor" :  SliderView,
     "templates" : {
@@ -1246,7 +1247,6 @@ define([
                   '<ol class="indicator"></ol>'
 
     } 
-  });
+  };
 
-  return Album.SliderView = SliderView;
 });

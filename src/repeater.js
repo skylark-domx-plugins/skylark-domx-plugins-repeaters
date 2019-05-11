@@ -13,22 +13,12 @@ define([
   "skylark-ui-swt/SearchBox"  
 ],function(skylark,langx,browser,eventer,noder,geom,elmx,$,Widget){
 
-	var ui = skylark.ui = skylark.ui || {};
-
-	/*
-	 * Repeater
-	 * https://github.com/ExactTarget/fuelux
-	 *
-	 * Copyright (c) 2014 ExactTarget
-	 * Licensed under the BSD New license.
-	 */
-
-	var old = $.fn.repeater;
-
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
-	var Repeater = ui.Repeater = Widget.inherit({
+	var Repeater = Widget.inherit({
 		klassName: "Repeater",
+
+		pluginName: "lark.repeater",
 
 		options : {
 			dataSource: function dataSource (options, callback) {
@@ -39,7 +29,11 @@ define([
 			staticHeight: -1, // normally true or false. -1 means it will look for data-staticheight on the element
 			views: null, // can be set to an object to configure multiple views of the same type,
 			searchOnKeyPress: false,
-			allowCancel: true
+			allowCancel: true,
+
+			addons : {
+				views : ["table","tile"]
+			}
 		},
 
 //		_init : function(element,options) {
@@ -153,10 +147,10 @@ define([
 				currentView = this.options.defaultView;
 			} else {
 				$btn = this.$views.find('label.active input');
-				currentView = ($btn.length > 0) ? $btn.val() : 'list';
+				currentView = ($btn.length > 0) ? $btn.val() : 'table';
 			}
 
-			this.setViewOptions(currentView);
+			//this.setViewOptions(currentView); // by lwf
 
 			this.initViewTypes(function initViewTypes () {
 				self.resize();
@@ -180,9 +174,16 @@ define([
 
 			// If viewChanged and current viewTypeObj has a cleared function, call it
 			var viewChanged = (options.viewChanged !== undefined) ? options.viewChanged : false;
+			/* lwf
 			var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 			if (!viewChanged && viewTypeObj.cleared) {
 				viewTypeObj.cleared.call(this, {
+					options: options
+				});
+			}
+			*/
+			if (this._view) {
+				this._view.cleared({
 					options: options
 				});
 			}
@@ -220,7 +221,7 @@ define([
 		},
 
 		disable: function disable () {
-			var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
+			//var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 
 			this.$search.plugin("lark.searchbox").disable();
 			this.$filters.plugin("lark.selectlist").disable();
@@ -231,8 +232,15 @@ define([
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.$nextBtn.attr('disabled', 'disabled');
 
+			/* lwf
 			if (viewTypeObj.enabled) {
 				viewTypeObj.enabled.call(this, {
+					status: false
+				});
+			}
+			*/
+			if (this._view) {
+				this._view.enabled({
 					status: false
 				});
 			}
@@ -243,7 +251,7 @@ define([
 		},
 
 		enable: function enable () {
-			var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
+			//var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 
 			this.$search.plugin("lark.searchbox").enable();
 			this.$filters.plugin("lark.selectlist").enable()
@@ -272,8 +280,15 @@ define([
 				this.$pageSize.plugin("lark.selectlist").disable();
 			}
 
+			/* lwf
 			if (viewTypeObj.enabled) {
 				viewTypeObj.enabled.call(this, {
+					status: true
+				});
+			}
+			*/
+			if (this._view) {
+				this._view.enabled({
 					status: true
 				});
 			}
@@ -335,11 +350,17 @@ define([
 				returnOptions.search = searchValue;
 			}
 
+			/* lwf
 			var viewType = $.fn.repeater.viewTypes[this.viewType] || {};
 			var addViewTypeData = viewType.dataOptions;
 			if (addViewTypeData) {
 				returnOptions = addViewTypeData.call(this, returnOptions);
 			}
+			*/
+			if (this._view) {
+				returnOptions = this._view.dataOptions(returnOptions);
+			}
+
 
 			returnOptions = langx.mixin(returnOptions, dataSourceOptions);
 
@@ -412,6 +433,7 @@ define([
 		},
 
 		initViewTypes: function initViewTypes (callback) {
+			/*
 			var viewTypes = [];
 
 			for (var key in $.fn.repeater.viewTypes) {
@@ -419,8 +441,21 @@ define([
 					viewTypes.push($.fn.repeater.viewTypes[key]);
 				}
 			}
+			*/
 
-			if (viewTypes.length > 0) {
+			var views = this._views = [];
+			var viewTypes = this.options.addons.views;
+			for (var i = 0; i< viewTypes.length; i++) {
+				var setting = Repeater.views[viewTypes[i]];
+				if (!setting) {
+					throw new Error("The view type " + viewTypes[i] + " is not defined!");
+				} 
+				var ctor = setting.ctor;
+				this._views.push(this._views[viewTypes[i]] = new ctor(this));
+
+			}
+
+			if (views.length > 0) {
 				initViewType.call(this, 0, viewTypes, callback);
 			} else {
 				callback();
@@ -537,14 +572,18 @@ define([
 			this.disable();
 
 			var viewChanged = false;
-			var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
+			//var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 			var options = opts || {};
 
 			if (options.changeView && (this.currentView !== options.changeView)) {
 				var prevView = this.currentView;
 				this.currentView = options.changeView;
 				this.viewType = this.currentView.split('.')[0];
-				this.setViewOptions(this.currentView);
+
+				this._view = this._views[this.viewType];
+
+				//this.setViewOptions(this.currentView);
+
 				this.$element.attr('data-currentview', this.currentView);
 				this.$element.attr('data-viewtype', this.viewType);
 				viewChanged = true;
@@ -556,12 +595,17 @@ define([
 					this.infiniteScrolling(false);
 				}
 
+				/* lwf
 				viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 				if (viewTypeObj.selected) {
 					viewTypeObj.selected.call(this, {
 						prevView: prevView
 					});
 				}
+				*/
+				this._view.selected({
+					prevView: prevView
+				})
 			}
 
 			this.syncViewButtonState();
@@ -578,8 +622,9 @@ define([
 
 			var dataOptions = this.getDataOptions(options);
 
-			var beforeRender = this.viewOptions.dataSource;
+			var beforeRender = this.options.dataSource;
 			var repeaterPrototypeContext = this;
+			var viewTypeObj = this._view;
 			beforeRender(
 				dataOptions,
 				// this serves as a bridge function to pass all required data through to the actual function
@@ -623,9 +668,9 @@ define([
 				currentElementIndex++;
 			}
 
-			if (this.viewType) {
-				viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
-			}
+			//if (this.viewType) {
+			//	viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
+			//}
 
 			if (staticHeight !== undefined && staticHeight !== false && staticHeight !== 'false') {
 				this.$canvas.addClass('scrolling');
@@ -646,8 +691,18 @@ define([
 				this.$canvas.removeClass('scrolling');
 			}
 
+
+
+			/* lwf
 			if (viewTypeObj.resize) {
 				viewTypeObj.resize.call(this, {
+					height: this.$element.outerHeight(),
+					width: this.$element.outerWidth()
+				});
+			}
+			*/
+			if (this._view) {
+				this._view.resize({
 					height: this.$element.outerHeight(),
 					width: this.$element.outerWidth()
 				});
@@ -662,7 +717,7 @@ define([
 		renderItems: function renderItems (viewTypeObj, data, callback) {
 			if (!viewTypeObj.render) {
 				if (viewTypeObj.before) {
-					var addBefore = viewTypeObj.before.call(this, {
+					var addBefore = viewTypeObj.before({
 						container: this.$canvas,
 						data: data
 					});
@@ -697,7 +752,7 @@ define([
 						}
 
 						for (var subItemIndex = 0; subItemIndex < subset.length; subItemIndex++) {
-							var addSubItem = viewTypeObj.renderItem.call(this, {
+							var addSubItem = viewTypeObj.renderItem({
 								container: $container,
 								data: data,
 								index: subItemIndex,
@@ -711,7 +766,7 @@ define([
 				}
 
 				if (viewTypeObj.after) {
-					var addAfter = viewTypeObj.after.call(this, {
+					var addAfter = viewTypeObj.after({
 						container: this.$canvas,
 						data: data
 					});
@@ -727,6 +782,7 @@ define([
 			}
 		},
 
+		/* // by lwf
 		setViewOptions: function setViewOptions (curView) {
 			var opts = {};
 			var viewName = curView.split('.')[1];
@@ -739,7 +795,7 @@ define([
 
 			this.viewOptions = langx.mixin({}, this.options, opts);
 		},
-
+		*/
 		viewChanged: function viewChanged (e) {
 			var $selected = $(e.target);
 			var val = $selected.val();
@@ -888,51 +944,8 @@ define([
 	// For backwards compatibility.
 	Repeater.prototype.runRenderer = Repeater.prototype.renderItems;
 
-	// REPEATER PLUGIN DEFINITION
-
-	$.fn.repeater = function fnrepeater (option) {
-		var args = Array.prototype.slice.call(arguments, 1);
-		var methodReturn;
-
-		var $set = this.each(function eachThis () {
-			var $this = $(this);
-			var data = $this.data('fu.repeater');
-			var options = typeof option === 'object' && option;
-
-			if (!data) {
-				$this.data('fu.repeater', (data = new Repeater(this, options)));
-			}
-
-			if (typeof option === 'string') {
-				methodReturn = data[option].apply(data, args);
-			}
-		});
-
-		return (methodReturn === undefined) ? $set : methodReturn;
-	};
-
-	$.fn.repeater.defaults = {
-		dataSource: function dataSource (options, callback) {
-			callback({ count: 0, end: 0, items: [], page: 0, pages: 1, start: 0 });
-		},
-		defaultView: -1, // should be a string value. -1 means it will grab the active view from the view controls
-		dropPagingCap: 10,
-		staticHeight: -1, // normally true or false. -1 means it will look for data-staticheight on the element
-		views: null, // can be set to an object to configure multiple views of the same type,
-		searchOnKeyPress: false,
-		allowCancel: true
-	};
-
-	$.fn.repeater.viewTypes = {};
-
-	$.fn.repeater.Constructor = Repeater;
-
-	$.fn.repeater.noConflict = function noConflict () {
-		$.fn.repeater = old;
-		return this;
-	};
 
 
-	return $.fn.repeater;
+	return skylark.attach("ui.Repeater",Repeater);
 
 });

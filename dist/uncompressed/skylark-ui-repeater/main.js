@@ -1,8 +1,14 @@
 define([
-    "skylark-utils-dom/query",
-    "./repeater",
-    "./repeater-list",
-    "./repeater-thumbnail"
-], function($) {
-    return $;
+    "./Repeater",
+    "./views",
+    "./views/ViewBase",
+    "./views/carousel",
+    "./views/flipbook",
+    "./views/lightbox",
+    "./views/masonory",
+    "./views/slider",
+    "./views/table",
+    "./views/tile"
+], function(Repeater) {
+    return Repeater;
 });

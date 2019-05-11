@@ -1,10 +1,10 @@
 define([
   'skylark-langx/langx',
-  '../../Album',
-  './SliderView'
-],function (langx,Album,SliderView) {
+  "../views",	
+  './slider'
+],function (langx,views,slider) {
 
-	var LightBoxView = SliderView.inherit({
+	var LightBoxView = slider.ctor.inherit({
 		klassName : "LightBoxView",
 		options : {
 	        // Hide the page scrollbars:
@@ -127,7 +127,7 @@ define([
 
 	});
 
-	Album.installPlugin("views",{
+	return views["lightbox"] = {
 		"name" :  "lightbox",
 		"ctor" :  LightBoxView,
 		"templates" : {
@@ -139,8 +139,6 @@ define([
 			          '<ol class="indicator"></ol>'
 
 		} 
-	});
-
-	return LightBoxView;
+	};
 
 });

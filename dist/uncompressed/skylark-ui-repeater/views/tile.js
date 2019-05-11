@@ -5,8 +5,9 @@ define([
     "skylark-utils-dom/noder",
     "skylark-utils-dom/geom",
     "skylark-utils-dom/query",
+    "../views",   
     "./ViewBase"
-], function(langx, browser, eventer, noder, geom, $, ViewBase) {
+], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
 
 
   var TileView = ViewBase.inherit({
@@ -97,101 +98,97 @@ define([
         }
     },
 
-
-    //EXTENSION DEFINITION
-    $.fn.repeater.viewTypes.thumbnail = {
-        selected: function() {
-            var infScroll = this.options.infiniteScroll;
-            var opts;
-            if (infScroll) {
-                opts = (typeof infScroll === 'object') ? infScroll : {};
-                this.infiniteScrolling(true, opts);
-            }
-        },
-        before: function(helpers) {
-            var alignment = this.options.alignment;
-            var $cont = this.$canvas.find('.repeater-thumbnail-cont');
-            var data = helpers.data;
-            var response = {};
-            var $empty, validAlignments;
-
-            if ($cont.length < 1) {
-                $cont = $('<div class="clearfix repeater-thumbnail-cont" data-container="true" data-infinite="true" data-preserve="shallow"></div>');
-                if (alignment && alignment !== 'none') {
-                    validAlignments = {
-                        'center': 1,
-                        'justify': 1,
-                        'left': 1,
-                        'right': 1
-                    };
-                    alignment = (validAlignments[alignment]) ? alignment : 'justify';
-                    $cont.addClass('align-' + alignment);
-                    this.thumbnail_injectSpacers = true;
-                } else {
-                    this.thumbnail_injectSpacers = false;
-                }
-                response.item = $cont;
-            } else {
-                response.action = 'none';
-            }
-
-            if (data.items && data.items.length < 1) {
-                $empty = $('<div class="empty"></div>');
-                $empty.append(this.options.noItemsHTML);
-                $cont.append($empty);
-            } else {
-                $cont.find('.empty:first').remove();
-            }
-
-            return response;
-        },
-        renderItem: function(helpers) {
-            var selectable = this.options.selectable;
-            var selected = 'selected';
-            var self = this;
-            var $thumbnail = $(fillTemplate(helpers.subset[helpers.index], this.options.template));
-
-            $thumbnail.data('item_data', helpers.data.items[helpers.index]);
-
-            if (selectable) {
-                $thumbnail.addClass('selectable');
-                $thumbnail.on('click', function() {
-                    if (self.isDisabled) return;
-
-                    if (!$thumbnail.hasClass(selected)) {
-                        if (selectable !== 'multi') {
-                            self.$canvas.find('.repeater-thumbnail-cont .selectable.selected').each(function() {
-                                var $itm = $(this);
-                                $itm.removeClass(selected);
-                                self.$element.trigger('deselected.fu.repeaterThumbnail', $itm);
-                            });
-                        }
-
-                        $thumbnail.addClass(selected);
-                        self.$element.trigger('selected.fu.repeaterThumbnail', $thumbnail);
-                    } else {
-                        $thumbnail.removeClass(selected);
-                        self.$element.trigger('deselected.fu.repeaterThumbnail', $thumbnail);
-                    }
-                });
-            }
-
-            helpers.container.append($thumbnail);
-            if (this.thumbnail_injectSpacers) {
-                $thumbnail.after('<span class="spacer">&nbsp;</span>');
-            }
-
-            if (this.options.itemRendered) {
-                this.options.itemRendered({
-                    container: helpers.container,
-                    item: $thumbnail,
-                    itemData: helpers.subset[helpers.index]
-                }, function() {});
-            }
-
-            return false;
+    selected: function() {
+        var infScroll = this.options.infiniteScroll;
+        var opts;
+        if (infScroll) {
+            opts = (typeof infScroll === 'object') ? infScroll : {};
+            this.infiniteScrolling(true, opts);
         }
-    };
+    },
+    before: function(helpers) {
+        var alignment = this.options.alignment;
+        var $cont = this.$canvas.find('.repeater-thumbnail-cont');
+        var data = helpers.data;
+        var response = {};
+        var $empty, validAlignments;
+
+        if ($cont.length < 1) {
+            $cont = $('<div class="clearfix repeater-thumbnail-cont" data-container="true" data-infinite="true" data-preserve="shallow"></div>');
+            if (alignment && alignment !== 'none') {
+                validAlignments = {
+                    'center': 1,
+                    'justify': 1,
+                    'left': 1,
+                    'right': 1
+                };
+                alignment = (validAlignments[alignment]) ? alignment : 'justify';
+                $cont.addClass('align-' + alignment);
+                this.thumbnail_injectSpacers = true;
+            } else {
+                this.thumbnail_injectSpacers = false;
+            }
+            response.item = $cont;
+        } else {
+            response.action = 'none';
+        }
+
+        if (data.items && data.items.length < 1) {
+            $empty = $('<div class="empty"></div>');
+            $empty.append(this.options.noItemsHTML);
+            $cont.append($empty);
+        } else {
+            $cont.find('.empty:first').remove();
+        }
+
+        return response;
+    },
+    renderItem: function(helpers) {
+        var selectable = this.options.selectable;
+        var selected = 'selected';
+        var self = this;
+        var $thumbnail = $(fillTemplate(helpers.subset[helpers.index], this.options.template));
+
+        $thumbnail.data('item_data', helpers.data.items[helpers.index]);
+
+        if (selectable) {
+            $thumbnail.addClass('selectable');
+            $thumbnail.on('click', function() {
+                if (self.isDisabled) return;
+
+                if (!$thumbnail.hasClass(selected)) {
+                    if (selectable !== 'multi') {
+                        self.$canvas.find('.repeater-thumbnail-cont .selectable.selected').each(function() {
+                            var $itm = $(this);
+                            $itm.removeClass(selected);
+                            self.$element.trigger('deselected.fu.repeaterThumbnail', $itm);
+                        });
+                    }
+
+                    $thumbnail.addClass(selected);
+                    self.$element.trigger('selected.fu.repeaterThumbnail', $thumbnail);
+                } else {
+                    $thumbnail.removeClass(selected);
+                    self.$element.trigger('deselected.fu.repeaterThumbnail', $thumbnail);
+                }
+            });
+        }
+
+        helpers.container.append($thumbnail);
+        if (this.thumbnail_injectSpacers) {
+            $thumbnail.after('<span class="spacer">&nbsp;</span>');
+        }
+
+        if (this.options.itemRendered) {
+            this.options.itemRendered({
+                container: helpers.container,
+                item: $thumbnail,
+                itemData: helpers.subset[helpers.index]
+            }, function() {});
+        }
+
+        return false;
+    }
     
   });
 
@@ -222,4 +219,8 @@ define([
         return template;
     }
 
+    return views["tile"] = {
+        name : "tile",
+        ctor : TileView
+    };
 });

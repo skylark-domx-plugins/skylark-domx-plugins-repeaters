@@ -1,9 +1,9 @@
 define([
-  '../../Album',
-  './SliderView'
-],function (Album,SliderView) {
+  "../views",	
+  './slider'
+],function (views,slider) {
 
-	var CarouselView = SliderView.inherit({
+	var CarouselView = slider.ctor.inherit({
 		klassName : "CarouselView",
 
 		options : {
@@ -25,7 +25,7 @@ define([
 
 	});
 
-	Album.installPlugin("views",{
+	return views["carousel"] = {
 		"name" :  "carousel",
 		"ctor" :  CarouselView,
 		"templates" : {
@@ -38,8 +38,6 @@ define([
 			          '<ol class="indicator"></ol>'
 
 		} 
-	});
-
-	return CarouselView;
+	};
 
 });

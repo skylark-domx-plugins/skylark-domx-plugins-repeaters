@@ -11,7 +11,8 @@ define([
 	"skylark-ui-repeater",
 	"./data/pokemon",
 	"./data/colors"
-],function (langx,sutils,$,pokemon,colors) {
+],function (langx,sutils,Repeater,pokemon,colors) {
+	var $ = sutils.query;
 
 	var columns = [
 		{
@@ -110,7 +111,7 @@ define([
 		responseData.start = firstItem + 1;
 		responseData.end = lastItem;
 
-		if (options.view === 'thumbnail') {
+		if (options.view === 'tile') {
 			for (var i = firstItem; i < lastItem; i++) {
 				responseData.items.push({
 					color: colors[items[i].type.split(', ')[0]],
@@ -133,19 +134,19 @@ define([
 	};
 
 	// REPEATER
-	$('#repeaterIllustration').repeater({
+	$('#repeaterIllustration').plugin("lark.repeater",{
 		dataSource: dataSource
 	});
 
-	$('#myRepeater').repeater({
+	$('#myRepeater').plugin("lark.repeater",{
 		dataSource: dataSource
 	});
 
-	$('#myRepeaterList').repeater({
+	$('#myRepeaterList').plugin("lark.repeater",{
 		dataSource: dataSource
 	});
 
-	$('#myRepeaterThumbnail').repeater({
+	$('#myRepeaterThumbnail').plugin("lark.repeater",{
 		dataSource: dataSource,
 		thumbnail_template: '<div class="thumbnail repeater-thumbnail" style="background: {{color}};"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
 	});

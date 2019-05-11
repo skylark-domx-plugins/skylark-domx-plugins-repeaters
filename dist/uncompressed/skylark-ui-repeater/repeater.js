@@ -8,26 +8,14 @@ define([
   "skylark-utils-dom/elmx",
   "skylark-utils-dom/query",
   "skylark-ui-swt/Widget",
-  "skylark-fuelux/loader",
   "skylark-ui-swt/SelectList",
-  "skylark-ui-swt/Combobox"  
+  "skylark-ui-swt/ComboBox",
+  "skylark-ui-swt/SearchBox"  
 ],function(skylark,langx,browser,eventer,noder,geom,elmx,$,Widget){
-
-	var ui = skylark.ui = skylark.ui || {};
-
-	/*
-	 * Repeater
-	 * https://github.com/ExactTarget/fuelux
-	 *
-	 * Copyright (c) 2014 ExactTarget
-	 * Licensed under the BSD New license.
-	 */
-
-	var old = $.fn.repeater;
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
-	var Repeater = ui.Repeater = Widget.inherit({
+	var Repeater = Widget.inherit({
 		klassName: "Repeater",
 
 		options : {
@@ -89,9 +77,9 @@ define([
 			this.viewType = null;
 
 			this.$filters.plugin("lark.selectlist");
-			this.$pageSize.selectlist();
+			this.$pageSize.plugin("lark.selectlist");
 			this.$primaryPaging.find('.combobox').plugin("lark.combobox");
-			this.$search.search({
+			this.$search.plugin("lark.searchbox",{
 				searchOnKeyPress: this.options.searchOnKeyPress,
 				allowCancel: this.options.allowCancel
 			});
@@ -147,8 +135,8 @@ define([
 				}, 75);
 			});
 
-			this.$loader.loader();
-			this.$loader.loader('pause');
+			//this.$loader.loader();
+			//this.$loader.loader('pause');
 			if (this.options.defaultView !== -1) {
 				currentView = this.options.defaultView;
 			} else {
@@ -206,7 +194,7 @@ define([
 			// destroy components and remove leftover
 			this.$element.find('.combobox').plugin("lark.combobox").destroy();
 			this.$element.find('.selectlist').plugin("lark.selectlist").destroy();
-			this.$element.find('.search').search('destroy');
+			this.$element.find('.search').plugin("lark.searchbox").destroy();
 			if (this.infiniteScrollingEnabled) {
 				$(this.infiniteScrollingCont).infinitescroll('destroy');
 			}
@@ -222,7 +210,7 @@ define([
 		disable: function disable () {
 			var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 
-			this.$search.search('disable');
+			this.$search.plugin("lark.searchbox").disable();
 			this.$filters.plugin("lark.selectlist").disable();
 			this.$views.find('label, input').addClass('disabled').attr('disabled', 'disabled');
 			this.$pageSize.plugin("lark.selectlist").disable();
@@ -245,10 +233,10 @@ define([
 		enable: function enable () {
 			var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 
-			this.$search.search('enable');
+			this.$search.plugin("lark.searchbox").enable();
 			this.$filters.plugin("lark.selectlist").enable()
 			this.$views.find('label, input').removeClass('disabled').removeAttr('disabled');
-			this.$pageSize.selectlist('enable');
+			this.$pageSize.plugin("lark.selectlist").enable()
 			this.$primaryPaging.find('.combobox').plugin("lark.combobox").enable();
 			this.$secondaryPaging.removeAttr('disabled');
 
@@ -267,9 +255,9 @@ define([
 
 			// if there are no items
 			if (parseInt(this.$count.html(), 10) !== 0) {
-				this.$pageSize.selectlist('enable');
+				this.$pageSize.plugin("lark.selectlist").enable();
 			} else {
-				this.$pageSize.selectlist('disable');
+				this.$pageSize.plugin("lark.selectlist").disable();
 			}
 
 			if (viewTypeObj.enabled) {
@@ -319,14 +307,14 @@ define([
 				}
 			};
 			if (this.$filters.length > 0) {
-				returnOptions.filter = this.$filters.selectlist('selectedItem');
+				returnOptions.filter = this.$filters.plugin("lark.selectlist").selectedItem();
 			}
 
 			if (!this.infiniteScrollingEnabled) {
 				returnOptions.pageSize = 25;
 
 				if (this.$pageSize.length > 0) {
-					returnOptions.pageSize = parseInt(this.$pageSize.selectlist('selectedItem').value, 10);
+					returnOptions.pageSize = parseInt(this.$pageSize.plugin("lark.selectlist").selectedItem().value, 10);
 				}
 			}
 
@@ -570,7 +558,10 @@ define([
 			this.clear(options);
 
 			if (!this.infiniteScrollingEnabled || (this.infiniteScrollingEnabled && viewChanged)) {
-				this.$loader.show().loader('play');
+				//this.$loader.show().loader('play');
+				this._throbber = this.throb({
+					className : "loader"
+				});
 			}
 
 			var dataOptions = this.getDataOptions(options);
@@ -835,7 +826,11 @@ define([
 			this.infiniteScrollPaging(data, state.options);
 		}
 
-		this.$loader.hide().loader('pause');
+		//this.$loader.hide().loader('pause');
+		if (this._throbber) {
+			this._throbber.remove();
+			this._throbber = null;
+		}
 		this.enable();
 
 		this.$search.trigger('rendered.fu.repeater', {
@@ -904,28 +899,10 @@ define([
 		return (methodReturn === undefined) ? $set : methodReturn;
 	};
 
-	$.fn.repeater.defaults = {
-		dataSource: function dataSource (options, callback) {
-			callback({ count: 0, end: 0, items: [], page: 0, pages: 1, start: 0 });
-		},
-		defaultView: -1, // should be a string value. -1 means it will grab the active view from the view controls
-		dropPagingCap: 10,
-		staticHeight: -1, // normally true or false. -1 means it will look for data-staticheight on the element
-		views: null, // can be set to an object to configure multiple views of the same type,
-		searchOnKeyPress: false,
-		allowCancel: true
-	};
 
 	$.fn.repeater.viewTypes = {};
 
-	$.fn.repeater.Constructor = Repeater;
 
-	$.fn.repeater.noConflict = function noConflict () {
-		$.fn.repeater = old;
-		return this;
-	};
-
-
-	return $.fn.repeater;
+	return skylark.attach("ui.Repeater",Repeater);
 
 });
