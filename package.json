@@ -3,25 +3,15 @@
   "description": "The skylark repeater widget",
   "version": "0.9.0",
   "keywords": [
-    "css",
-    "less",
-    "mobile-first",
-    "responsive",
-    "front-end",
-    "framework",
-    "web"
+    "skylark",
+    "ui",
+    "repeater"
   ],
   "homepage": "https://github.com/skylarkui/skylark-ui-repeater/",
   "author": "Hudaokeji, Inc.",
   "scripts": {
-    "build": "sbundle build .",
-    "change-version": "node grunt/change-version.js",
-    "update-shrinkwrap": "npm shrinkwrap --dev && shx mv ./npm-shrinkwrap.json ./grunt/npm-shrinkwrap.json",
-    "test": "grunt test"
+    "build": "sbundle build ."
   },
-  "style": "dist/css/bootstrap.css",
-  "less": "less/bootstrap.less",
-  "main": "./dist/js/main",
   "repository": {
     "type": "git",
     "url": "https://github.com/skylarkui/skylark-ui-repeater.git"
@@ -32,35 +22,11 @@
   "license": "MIT",
   "devDependencies": {
     "skylark-bootstrap3": "git+https://github.com/skylark-integration/skylark-bootstrap3.git#master",
-    "skylark-fuelux": "git+https://github.com/skylark-integration/skylark-fuelux.git#master",
     "skylark-langx": "git+https://github.com/skylarklangx/skylark-langx.git#master",
     "skylark-ui-swt": "git+https://github.com/skylarkui/skylark-ui-swt.git#master",
     "skylark-utils-dom": "git+https://github.com/skylarkutils/skylark-utils-dom.git#master"
   },
   "engines": {
     "node": ">=0.10.1"
-  },
-  "files": [
-    "dist",
-    "fonts",
-    "grunt",
-    "js/*.js",
-    "less/**/*.less",
-    "Gruntfile.js",
-    "LICENSE"
-  ],
-  "jspm": {
-    "main": "js/bootstrap",
-    "shim": {
-      "js/bootstrap": {
-        "deps": "jquery",
-        "exports": "$"
-      }
-    },
-    "files": [
-      "css",
-      "fonts",
-      "js"
-    ]
   }
 }

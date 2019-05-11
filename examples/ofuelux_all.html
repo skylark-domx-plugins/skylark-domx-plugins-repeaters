@@ -1025,7 +1025,8 @@
           },
          {
             name: 'skylark-utils-dom',
-            location: '../node_modules/skylark-utils-dom/dist/uncompressed/skylark-utils-dom',
+//            location: '../node_modules/skylark-utils-dom/dist/uncompressed/skylark-utils-dom',
+            location: '../../../utils/skylark-utils-dom/src',
             main: 'main'
           },
          {
@@ -1040,11 +1041,6 @@
           },         {
             name: 'skylark-bootstrap3',
             location: '../node_modules/skylark-bootstrap3/dist/uncompressed/skylark-bootstrap3',
-            main: 'main'
-          },
-         {
-            name: 'skylark-fuelux',
-            location: '../node_modules/skylark-fuelux/dist/uncompressed/skylark-fuelux',
             main: 'main'
           },
          {
@@ -1063,12 +1059,10 @@
 </script>
 <script>
   require(['skylark-utils-dom'],function(){
-    require(['skylark-fuelux'],function(){
       require(['skylark-ui-repeater'],function(){
         require(['ofuelux_all/js/application'], function($){
 
         });
-      });
     });
   });
 </script>
