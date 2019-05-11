@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="fuelux">
+<html lang="en">
 <head>
   <!-- Meta, title, CSS, favicons, etc. -->
   <meta charset="utf-8">
@@ -11,11 +11,6 @@
 
 <title>Controls &middot; Fuel UX</title>
 
-<!-- Favicons -->
-
-<!--<link rel="apple-touch-icon-precomposed" sizes="144x144" href="http://getfuelux.com/assets/ico/apple-touch-icon-144-precomposed.png">-->
-<!--<link rel="shortcut icon" href="http://getfuelux.com/assets/ico/favicon.ico">-->
-
 <!-- Styles -->
 
 <!-- Bootstrap CSS-->
@@ -23,14 +18,14 @@
 <link rel="stylesheet" href="../themes/default/repeater.css">
 
 <!-- Docs CSS -->
-<link href="./ofuelux_all/css/docs.css" rel="stylesheet">
+<link href="./css/docs.css" rel="stylesheet">
 
 <!-- Copy select -->
-<link href="./ofuelux_all/css/super-copy.css"  rel="stylesheet" type="text/css">
+<link href="./css/super-copy.css"  rel="stylesheet" type="text/css">
 
 <!-- Specific Page CSS -->
 
-<link href="./ofuelux_all/css/javascript.css" rel="stylesheet">
+<link href="./css/javascript.css" rel="stylesheet">
 
 </head>
 <body data-spy="scroll" data-offset="80">
@@ -58,7 +53,7 @@
 <!-- repeater
 ================================================== -->
 <div class="fu-docs-section">
-  <h1 id="repeater" class="page-header">Repeater <a href="https://github.com/ExactTarget/fuelux/blob/3.13.0/js/repeater.js"><small>repeater.js</small></a></h1>
+  <h1 id="repeater" class="page-header">Repeater <a href="https://github.com/skylarkui/skylark-ui-repeater"><small>repeater.js</small></a></h1>
 
   <p>Data viewer with paging, sorting, and searching. Must use at least one <a href="/extensions.html">extension</a> to display items. Fuel UX bundles a <a href="/extensions.html#bundled-extensions-list">list view extension</a> and <a href="/extensions.html#bundled-extensions-thumbnail">thumbnail view extension</a>, but you can <a href="/extensions.html#submit-community-extensions">build your own</a>. The following example uses the <a href="/extensions.html#bundled-extensions-list">list</a> and <a href="/extensions.html#bundled-extensions-thumbnail">thumbnail</a> extensions.</p>
 
@@ -1049,18 +1044,14 @@
             location: '../src',
             main: 'main'
           }
-      ],      
-      paths: {
-        //        "skylark-fuelux": "../dist/js/uncompressed/skylark-fuelux",
-
-      }
+      ]
     });
   })();
 </script>
 <script>
   require(['skylark-utils-dom'],function(){
       require(['skylark-ui-repeater'],function(){
-        require(['ofuelux_all/js/application'], function($){
+        require(['js/application'], function($){
 
         });
     });

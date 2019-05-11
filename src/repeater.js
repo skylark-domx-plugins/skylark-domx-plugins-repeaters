@@ -79,7 +79,7 @@ define([
 			this.stamp = new Date().getTime() + (Math.floor(Math.random() * 100) + 1);
 			this.storedDataSourceOpts = null;
 			this.syncingViewButtonState = false;
-			this.viewOptions = {};
+//			this.viewOptions = {};
 			this.viewType = null;
 
 			this.$filters.plugin("lark.selectlist");
@@ -502,7 +502,7 @@ define([
 			// set paging to 0 if total pages is 0, otherwise use one-based index
 			var currenPageOutput = totalPages === 0 ? 0 : this.currentPage + 1;
 
-			if (totalPages <= this.viewOptions.dropPagingCap) {
+			if (totalPages <= this.options.dropPagingCap) {
 				this.$primaryPaging.addClass('active');
 				var dropMenu = this.$primaryPaging.find('.dropdown-menu');
 				dropMenu.empty();
@@ -645,7 +645,7 @@ define([
 		},
 
 		resize: function resize () {
-			var staticHeight = (this.viewOptions.staticHeight === -1) ? this.$element.attr('data-staticheight') : this.viewOptions.staticHeight;
+			var staticHeight = (this.options.staticHeight === -1) ? this.$element.attr('data-staticheight') : this.options.staticHeight;
 			var viewTypeObj = {};
 			var height;
 			var viewportMargins;

@@ -52,7 +52,19 @@ define([
 
       	getValue : function() {
       		return this.getSelectedItems();
-      	} 
+      	},
+
+      	cleared : function() {
+
+      	},
+
+	    dataOptions: function (options) {
+	    	return options;
+	    },
+
+	    enabled : function(helpers){
+	    	
+	    }
 
 	});
 

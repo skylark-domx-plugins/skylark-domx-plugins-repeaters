@@ -24,12 +24,12 @@ define([
 
     //ADDITIONAL METHODS
     clearSelectedItems : function() {
-        this.$canvas.find('.repeater-thumbnail-cont .selectable.selected').removeClass('selected');
+        this.repeater.$canvas.find('.repeater-thumbnail-cont .selectable.selected').removeClass('selected');
     },
 
     getSelectedItems : function() {
         var selected = [];
-        this.$canvas.find('.repeater-thumbnail-cont .selectable.selected').each(function() {
+        this.repeater.$canvas.find('.repeater-thumbnail-cont .selectable.selected').each(function() {
             selected.push($(this));
         });
         return selected;
@@ -87,13 +87,13 @@ define([
             if (items[i].index !== undefined) {
                 $item = $();
                 n = 0;
-                this.$canvas.find('.repeater-thumbnail-cont .selectable').each(compareItemIndex);
+                this.repeater.$canvas.find('.repeater-thumbnail-cont .selectable').each(compareItemIndex);
                 if ($item.length > 0) {
                     selectItem($item, items[i].selected);
                 }
 
             } else if (items[i].selector) {
-                this.$canvas.find('.repeater-thumbnail-cont .selectable').each(compareItemSelector);
+                this.repeater.$canvas.find('.repeater-thumbnail-cont .selectable').each(compareItemSelector);
             }
         }
     },
@@ -108,7 +108,7 @@ define([
     },
     before: function(helpers) {
         var alignment = this.options.alignment;
-        var $cont = this.$canvas.find('.repeater-thumbnail-cont');
+        var $cont = this.repeater.$canvas.find('.repeater-thumbnail-cont');
         var data = helpers.data;
         var response = {};
         var $empty, validAlignments;
@@ -158,18 +158,18 @@ define([
 
                 if (!$thumbnail.hasClass(selected)) {
                     if (selectable !== 'multi') {
-                        self.$canvas.find('.repeater-thumbnail-cont .selectable.selected').each(function() {
+                        self.repeater.$canvas.find('.repeater-thumbnail-cont .selectable.selected').each(function() {
                             var $itm = $(this);
                             $itm.removeClass(selected);
-                            self.$element.trigger('deselected.fu.repeaterThumbnail', $itm);
+                            self.repeater.$element.trigger('deselected.fu.repeaterThumbnail', $itm);
                         });
                     }
 
                     $thumbnail.addClass(selected);
-                    self.$element.trigger('selected.fu.repeaterThumbnail', $thumbnail);
+                    self.repeater.$element.trigger('selected.fu.repeaterThumbnail', $thumbnail);
                 } else {
                     $thumbnail.removeClass(selected);
-                    self.$element.trigger('deselected.fu.repeaterThumbnail', $thumbnail);
+                    self.repeater.$element.trigger('deselected.fu.repeaterThumbnail', $thumbnail);
                 }
             });
         }
@@ -223,4 +223,5 @@ define([
         name : "tile",
         ctor : TileView
     };
+    
 });
