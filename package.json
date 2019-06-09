@@ -20,7 +20,7 @@
     "url": "https://github.com/skylarkui/skylark-bs-repeater/issues"
   },
   "license": "MIT",
-  "devDependencies": {
+  "dependencies": {
     "skylark-bootstrap3": "git+https://github.com/skylark-integration/skylark-bootstrap3.git#master",
     "skylark-langx": "git+https://github.com/skylarklangx/skylark-langx.git#master",
     "skylark-ui-swt": "git+https://github.com/skylarkui/skylark-ui-swt.git#master",
