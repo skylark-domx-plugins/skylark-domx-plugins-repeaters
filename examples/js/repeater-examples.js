@@ -8,7 +8,7 @@
 define([
 	"skylark-langx/langx",
 	"skylark-utils-dom",
-	"skylark-ui-repeater",
+	"skylark-widgets-repeater",
 	"./data/pokemon",
 	"./data/colors"
 ],function (langx,sutils,Repeater,pokemon,colors) {
