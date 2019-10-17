@@ -446,7 +446,7 @@ define([
 			var views = this._views = [];
 			var viewTypes = this.options.addons.views;
 			for (var i = 0; i< viewTypes.length; i++) {
-				var setting = Repeater.views[viewTypes[i]];
+				var setting = Repeater.addons.views[viewTypes[i]];
 				if (!setting) {
 					throw new Error("The view type " + viewTypes[i] + " is not defined!");
 				} 
@@ -944,8 +944,9 @@ define([
 	// For backwards compatibility.
 	Repeater.prototype.runRenderer = Repeater.prototype.renderItems;
 
+	Repeater.addons = {};
 
 
-	return skylark.attach("ui.Repeater",Repeater);
+	return skylark.attach("widgets.Repeater",Repeater);
 
 });

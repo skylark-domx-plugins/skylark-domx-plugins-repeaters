@@ -5,5 +5,5 @@
  * @link https://github.com/skylark-widgets/skylark-widgets-repeater/
  * @license MIT
  */
-define(["./Repeater"],function(e){return e.views={}});
+define(["./Repeater"],function(e){return e.addons.views={}});
 //# sourceMappingURL=sourcemaps/views.js.map

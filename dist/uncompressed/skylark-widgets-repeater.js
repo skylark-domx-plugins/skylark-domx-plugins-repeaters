@@ -534,7 +534,7 @@ define('skylark-widgets-repeater/Repeater',[
 			var views = this._views = [];
 			var viewTypes = this.options.addons.views;
 			for (var i = 0; i< viewTypes.length; i++) {
-				var setting = Repeater.views[viewTypes[i]];
+				var setting = Repeater.addons.views[viewTypes[i]];
 				if (!setting) {
 					throw new Error("The view type " + viewTypes[i] + " is not defined!");
 				} 
@@ -1032,16 +1032,17 @@ define('skylark-widgets-repeater/Repeater',[
 	// For backwards compatibility.
 	Repeater.prototype.runRenderer = Repeater.prototype.renderItems;
 
+	Repeater.addons = {};
 
 
-	return skylark.attach("ui.Repeater",Repeater);
+	return skylark.attach("widgets.Repeater",Repeater);
 
 });
 
 define('skylark-widgets-repeater/views',[
 	"./Repeater"
 ],function(Repeater){
-	return Repeater.views = {};
+	return Repeater.addons.views = {};
 });
 define('skylark-widgets-repeater/views/ViewBase',[
 	"skylark-langx/langx",

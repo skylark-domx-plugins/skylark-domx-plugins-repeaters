@@ -1,5 +1,5 @@
 define([
 	"./Repeater"
 ],function(Repeater){
-	return Repeater.views = {};
+	return Repeater.addons.views = {};
 });
