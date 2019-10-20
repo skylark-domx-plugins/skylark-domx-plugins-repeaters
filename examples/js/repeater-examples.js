@@ -135,7 +135,10 @@ define([
 
 	// REPEATER
 	$('#repeaterIllustration').plugin("lark.repeater",{
-		dataSource: dataSource
+		dataSource: dataSource,
+		addons : {
+			views : ["table","tile","slider"]
+		}		
 	});
 
 	$('#myRepeater').plugin("lark.repeater",{

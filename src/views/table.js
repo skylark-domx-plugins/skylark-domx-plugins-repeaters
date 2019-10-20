@@ -445,10 +445,10 @@ define([
                     revertCheckbox($(e.currentTarget));
                 } else if ($(this).is(':checked')) {
                     self.repeater.$element.find('.repeater-list-wrapper > table tbody tr:not(.selected)').click();
-                    self.repeater.$element.trigger('selected.fu.repeaterList', $checkboxes);
+                    self.repeater.$element.trigger('selected.lark.repeaterList', $checkboxes);
                 } else {
                     self.repeater.$element.find('.repeater-list-wrapper > table tbody tr.selected').click();
-                    self.repeater.$element.trigger('deselected.fu.repeaterList', $checkboxes);
+                    self.repeater.$element.trigger('deselected.lark.repeaterList', $checkboxes);
                 }
             }
         });
@@ -530,13 +530,13 @@ define([
 
         if ($listContainer.length < 1) {
             $listContainer = $('<div class="repeater-list ' + this.specialBrowserClass + '" data-preserve="shallow"><div class="repeater-list-wrapper" data-infinite="true" data-preserve="shallow"><table aria-readonly="true" class="table" data-preserve="shallow" role="grid"></table></div></div>');
-            $listContainer.find('.repeater-list-wrapper').on('scroll.fu.repeaterList', function onScrollRepeaterList () {
+            $listContainer.find('.repeater-list-wrapper').on('scroll.lark.repeaterList', function onScrollRepeaterList () {
                 if (self.options.columnSyncing) {
                     self.positionHeadings();
                 }
             });
             if (self.options.frozenColumns || self.options.actions || self.options.selectable === 'multi') {
-                helpers.container.on('scroll.fu.repeaterList', function onScrollRepeaterList () {
+                helpers.container.on('scroll.lark.repeaterList', function onScrollRepeaterList () {
                     self.positionColumns();
                 });
             }
@@ -692,7 +692,7 @@ define([
         sortable = columns[index].sortable;
         if (sortable) {
             $both.addClass('sortable');
-            $div.on('click.fu.repeaterList', function onClickRepeaterList () {
+            $div.on('click.lark.repeaterList', function onClickRepeaterList () {
                 if (!self.isDisabled) {
                     self.sortProperty = (typeof sortable === 'string') ? sortable : columns[index].property;
                     if ($div.hasClass('sorted')) {
@@ -764,13 +764,13 @@ define([
                     $item.find('.repeater-list-check').remove();
                 }
 
-                $repeater.trigger('deselected.fu.repeaterList', $item);
+                $repeater.trigger('deselected.lark.repeaterList', $item);
             } else {
                 if (!isMulti) {
                     repeater.$canvas.find('.repeater-list-check').remove();
                     repeater.$canvas.find('.repeater-list tbody tr.selected').each(function deslectRow () {
                         $(this).removeClass('selected');
-                        $repeater.trigger('deselected.fu.repeaterList', $(this));
+                        $repeater.trigger('deselected.lark.repeaterList', $(this));
                     });
                     $item.find('td:first').prepend('<div class="repeater-list-check"><span class="glyphicon glyphicon-ok"></span></div>');
                     $item.addClass('selected');
@@ -783,7 +783,7 @@ define([
                         $actionsRow.addClass('selected');
                     }
                 }
-                $repeater.trigger('selected.fu.repeaterList', $item);
+                $repeater.trigger('selected.lark.repeaterList', $item);
             }
 
             toggleActionsHeaderButton.call(repeater);
@@ -801,7 +801,7 @@ define([
                 $row.attr('tabindex', 0);   // allow items to be tabbed to / focused on
 
                 var repeater = this;
-                $row.on('click.fu.repeaterList', function callOnClickRowRepeaterList() {
+                $row.on('click.lark.repeaterList', function callOnClickRowRepeaterList() {
                     onClickRowRepeaterList.call(this, repeater);
                 });
 
@@ -809,7 +809,7 @@ define([
                 $row.keyup(function onRowKeyup (e) {
                     if (e.keyCode === 13) {
                         // triggering a standard click event to be caught by the row click handler above
-                        $row.trigger('click.fu.repeaterList');
+                        $row.trigger('click.lark.repeaterList');
                     }
                 });
             }

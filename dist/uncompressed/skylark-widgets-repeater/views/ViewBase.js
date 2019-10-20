@@ -1,8 +1,9 @@
 define([
 	"skylark-langx/langx",
-	"skylark-utils-dom/noder",
+	"skylark-domx-noder",
+	"skylark-domx-query",
 	"../views",	
-],function(langx,noder,views) {
+],function(langx,noder,$,views) {
 
 	var ViewBase = langx.Evented.inherit({
 	    klassName: "ViewBase",
@@ -14,6 +15,32 @@ define([
 		  fullScreen: false
 
 	    },
+
+
+    	_create$Item : function (template,itemData) {
+        	var invalid = false;
+
+        	function replace() {
+            	var end, start, val;
+
+            	start = template.indexOf('{{');
+            	end = template.indexOf('}}', start + 2);
+
+            	if (start > -1 && end > -1) {
+                	val = langx.trim(template.substring(start + 2, end));
+                	val = (itemData[val] !== undefined) ? itemData[val] : '';
+                	template = template.substring(0, start) + val + template.substring(end + 2);
+            	} else {
+                	invalid = true;
+            	}
+       		}
+
+        	while (!invalid && template.search('{{') >= 0) {
+            	replace(template);
+        	}
+
+        	return $(template);
+    	},	    
 	    
 		init : function (repeater,options) {
 			var that = this,
@@ -55,6 +82,10 @@ define([
       	},
 
       	cleared : function() {
+
+      	},
+
+      	selected : function() {
 
       	},
 

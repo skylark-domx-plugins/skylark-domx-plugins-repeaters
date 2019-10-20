@@ -161,15 +161,15 @@ define([
                         self.repeater.$canvas.find('.repeater-thumbnail-cont .selectable.selected').each(function() {
                             var $itm = $(this);
                             $itm.removeClass(selected);
-                            self.repeater.$element.trigger('deselected.fu.repeaterThumbnail', $itm);
+                            self.repeater.$element.trigger('deselected.lark.repeaterThumbnail', $itm);
                         });
                     }
 
                     $thumbnail.addClass(selected);
-                    self.repeater.$element.trigger('selected.fu.repeaterThumbnail', $thumbnail);
+                    self.repeater.$element.trigger('selected.lark.repeaterThumbnail', $thumbnail);
                 } else {
                     $thumbnail.removeClass(selected);
-                    self.repeater.$element.trigger('deselected.fu.repeaterThumbnail', $thumbnail);
+                    self.repeater.$element.trigger('deselected.lark.repeaterThumbnail', $thumbnail);
                 }
             });
         }

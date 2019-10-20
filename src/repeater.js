@@ -91,39 +91,39 @@ define([
 			});
 
 			this.$filters.on('changed.fu.selectlist', function onFiltersChanged (e, value) {
-				self.$element.trigger('filtered.fu.repeater', value);
+				self.$element.trigger('filtered.lark.repeater', value);
 				self.render({
 					clearInfinite: true,
 					pageIncrement: null
 				});
 			});
-			this.$nextBtn.on('click.fu.repeater', langx.proxy(this.next, this));
+			this.$nextBtn.on('click.lark.repeater', langx.proxy(this.next, this));
 			this.$pageSize.on('changed.fu.selectlist', function onPageSizeChanged (e, value) {
-				self.$element.trigger('pageSizeChanged.fu.repeater', value);
+				self.$element.trigger('pageSizeChanged.lark.repeater', value);
 				self.render({
 					pageIncrement: null
 				});
 			});
-			this.$prevBtn.on('click.fu.repeater', langx.proxy(this.previous, this));
+			this.$prevBtn.on('click.lark.repeater', langx.proxy(this.previous, this));
 			this.$primaryPaging.find('.combobox').on('changed.fu.combobox', function onPrimaryPagingChanged (evt, data) {
 				self.pageInputChange(data.text, data);
 			});
 			this.$search.on('searched.fu.search cleared.fu.search', function onSearched (e, value) {
-				self.$element.trigger('searchChanged.fu.repeater', value);
+				self.$element.trigger('searchChanged.lark.repeater', value);
 				self.render({
 					clearInfinite: true,
 					pageIncrement: null
 				});
 			});
 			this.$search.on('canceled.fu.search', function onSearchCanceled (e, value) {
-				self.$element.trigger('canceled.fu.repeater', value);
+				self.$element.trigger('canceled.lark.repeater', value);
 				self.render({
 					clearInfinite: true,
 					pageIncrement: null
 				});
 			});
 
-			this.$secondaryPaging.on('blur.fu.repeater', function onSecondaryPagingBlur () {
+			this.$secondaryPaging.on('blur.lark.repeater', function onSecondaryPagingBlur () {
 				self.pageInputChange(self.$secondaryPaging.val());
 			});
 			this.$secondaryPaging.on('keyup', function onSecondaryPagingKeyup (e) {
@@ -131,13 +131,13 @@ define([
 					self.pageInputChange(self.$secondaryPaging.val());
 				}
 			});
-			this.$views.find('input').on('change.fu.repeater', langx.proxy(this.viewChanged, this));
+			this.$views.find('input').on('change.lark.repeater', langx.proxy(this.viewChanged, this));
 
-			$(window).on('resize.fu.repeater.' + this.stamp, function onResizeRepeater () {
+			$(window).on('resize.lark.repeater.' + this.stamp, function onResizeRepeater () {
 				clearTimeout(self.resizeTimeout);
 				self.resizeTimeout = setTimeout(function resizeTimeout () {
 					self.resize();
-					self.$element.trigger('resized.fu.repeater');
+					self.$element.trigger('resized.lark.repeater');
 				}, 75);
 			});
 
@@ -154,7 +154,7 @@ define([
 
 			this.initViewTypes(function initViewTypes () {
 				self.resize();
-				self.$element.trigger('resized.fu.repeater');
+				self.$element.trigger('resized.lark.repeater');
 				self.render({
 					changeView: currentView
 				});
@@ -215,7 +215,7 @@ define([
 			this.$element.remove();
 
 			// any external events
-			$(window).off('resize.fu.repeater.' + this.stamp);
+			$(window).off('resize.lark.repeater.' + this.stamp);
 
 			return markup;
 		},
@@ -247,7 +247,7 @@ define([
 
 			this.isDisabled = true;
 			this.$element.addClass('disabled');
-			this.$element.trigger('disabled.fu.repeater');
+			this.$element.trigger('disabled.lark.repeater');
 		},
 
 		enable: function enable () {
@@ -295,7 +295,7 @@ define([
 
 			this.isDisabled = false;
 			this.$element.removeClass('disabled');
-			this.$element.trigger('enabled.fu.repeater');
+			this.$element.trigger('enabled.lark.repeater');
 		},
 
 		getDataOptions: function getDataOptions (opts) {
@@ -472,7 +472,7 @@ define([
 			this.$nextBtn.attr('disabled', 'disabled');
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.pageIncrement = 1;
-			this.$element.trigger('nextClicked.fu.repeater');
+			this.$element.trigger('nextClicked.lark.repeater');
 			this.render({
 				pageIncrement: this.pageIncrement
 			});
@@ -486,7 +486,7 @@ define([
 				this.lastPageInput = val;
 				var value = parseInt(val, 10) - 1;
 				pageInc = value - this.currentPage;
-				this.$element.trigger('pageChanged.fu.repeater', [value, dataFromCombobox]);
+				this.$element.trigger('pageChanged.lark.repeater', [value, dataFromCombobox]);
 				this.render({
 					pageIncrement: pageInc
 				});
@@ -561,7 +561,7 @@ define([
 			this.$nextBtn.attr('disabled', 'disabled');
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.pageIncrement = -1;
-			this.$element.trigger('previousClicked.fu.repeater');
+			this.$element.trigger('previousClicked.lark.repeater');
 			this.render({
 				pageIncrement: this.pageIncrement
 			});
@@ -589,7 +589,7 @@ define([
 				viewChanged = true;
 				options.viewChanged = viewChanged;
 
-				this.$element.trigger('viewChanged.fu.repeater', this.currentView);
+				this.$element.trigger('viewChanged.lark.repeater', this.currentView);
 
 				if (this.infiniteScrollingEnabled) {
 					this.infiniteScrolling(false);
@@ -775,10 +775,11 @@ define([
 
 				callback(data);
 			} else {
-				viewTypeObj.render.call(this, {
+				viewTypeObj.render({
 					container: this.$canvas,
 					data: data
 				}, callback);
+				callback(data);
 			}
 		},
 
@@ -824,7 +825,65 @@ define([
 				$itemToCheck.parents('label:first').addClass('active');
 			}
 			this.syncingViewButtonState = false;
+		},
+
+		getNestedProperty: function (obj, property) {
+			property.replace(
+				// Matches native JavaScript notation in a String,
+				// e.g. '["doubleQuoteProp"].dotProp[2]'
+				// eslint-disable-next-line no-useless-escape
+				/\[(?:'([^']+)'|"([^"]+)"|(\d+))\]|(?:(?:^|\.)([^\.\[]+))/g,
+				function (str, singleQuoteProp, doubleQuoteProp, arrayIndex, dotProp) {
+					var prop =
+						dotProp ||
+						singleQuoteProp ||
+						doubleQuoteProp ||
+						(arrayIndex && parseInt(arrayIndex, 10))
+					if (str && obj) {
+						obj = obj[prop]
+					}
+				}
+			)
+			return obj
+		},
+
+		getDataProperty: function (obj, property) {
+			var key
+			var prop
+			if (obj.dataset) {
+				key = property.replace(/-([a-z])/g, function (_, b) {
+					return b.toUpperCase()
+				})
+				prop = obj.dataset[key]
+			} else if (obj.getAttribute) {
+				prop = obj.getAttribute(
+					'data-' + property.replace(/([A-Z])/g, '-$1').toLowerCase()
+				)
+			}
+			if (typeof prop === 'string') {
+				// eslint-disable-next-line no-useless-escape
+				if (
+					/^(true|false|null|-?\d+(\.\d+)?|\{[\s\S]*\}|\[[\s\S]*\])$/.test(prop)
+				) {
+					try {
+						return $.parseJSON(prop)
+					} catch (ignore) {}
+				}
+				return prop
+			}
+		},
+
+		getItemProperty: function (obj, property) {
+			var prop = this.getDataProperty(obj, property)
+			if (prop === undefined) {
+				prop = obj[property]
+			}
+			if (prop === undefined) {
+				prop = this.getNestedProperty(obj, property)
+			}
+			return prop
 		}
+		
 		
 	});
 
@@ -901,19 +960,19 @@ define([
 		}
 		this.enable();
 
-		this.$search.trigger('rendered.fu.repeater', {
+		this.$search.trigger('rendered.lark.repeater', {
 			data: data,
 			options: state.dataOptions,
 			renderOptions: state.options
 		});
-		this.$element.trigger('rendered.fu.repeater', {
+		this.$element.trigger('rendered.lark.repeater', {
 			data: data,
 			options: state.dataOptions,
 			renderOptions: state.options
 		});
 
 		// for maintaining support of 'loaded' event
-		this.$element.trigger('loaded.fu.repeater', state.dataOptions);
+		this.$element.trigger('loaded.lark.repeater', state.dataOptions);
 	};
 
 	// This does the actual rendering of the repeater

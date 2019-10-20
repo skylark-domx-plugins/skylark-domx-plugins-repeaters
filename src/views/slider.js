@@ -2,32 +2,33 @@
 
 define([
   "skylark-langx/langx",
-  "skylark-utils-dom/noder",
+  "skylark-domx-noder",
+  "skylark-domx-query",
   "../views", 
   "./ViewBase"
-],function (langx,noder,views,ViewBase) {
+],function (langx,noder,$,views,ViewBase) {
   'use strict'
 
   var SliderView = ViewBase.inherit({
     klassName : "SliderView",
 
     options: {
-      // The Id, element or querySelector of the album view:
+      // The Id, element or querySelector of the repeater view:
       container: null,
       // The tag name, Id, element or querySelector of the slides container:
-      slidesContainer: 'div',
+      slidesContainer: 'div.slides',
       // The tag name, Id, element or querySelector of the title element:
       titleElement: 'h3',
       // The class to add when the gallery is visible:
-      displayClass: 'skylarkui-album-display',
+      displayClass: 'slider-display',
       // The class to add when the gallery only displays one element:
-      singleClass: 'skylarkui-album-single',
+      singleClass: 'slider-single',
       // The class to add when the left edge has been reached:
-      leftEdgeClass: 'skylarkui-album-left',
+      leftEdgeClass: 'slider-left',
       // The class to add when the right edge has been reached:
-      rightEdgeClass: 'skylarkui-album-right',
+      rightEdgeClass: 'slider-right',
       // The class to add when the automatic slideshow is active:
-      playingClass: 'skylarkui-album-playing',
+      playingClass: 'slider-playing',
       // The class for all slides:
       slideClass: 'slide',
       // The slide class for loading elements:
@@ -44,6 +45,7 @@ define([
       nextClass: 'next',
       // The class for the "close" control:
       closeClass: 'close',
+
       // The class for the "play-pause" toggle control:
       playPauseClass: 'play-pause',
       // The list object property (or data attribute) with the object type:
@@ -140,7 +142,48 @@ define([
       // Callback function executed when the Gallery has been closed
       // and the closing transition has been completed.
       // Is called with the gallery instance as "this" object:
-      onclosed: undefined
+      onclosed: undefined,
+
+
+      // The tag name, Id, element or querySelector of the indicator container:
+      indicatorContainer: 'ol',
+      // The class for the active indicator:
+      activeIndicatorClass: 'active',
+      // The list object property (or data attribute) with the thumbnail URL,
+      // used as alternative to a thumbnail child element:
+      thumbnailProperty: 'ThumbnailImage',
+      // Defines if the gallery indicators should display a thumbnail:
+      thumbnailIndicators: true,
+
+      indicators : {
+            // Hide the page scrollbars:
+          hidePageScrollbars: false,
+
+          // The tag name, Id, element or querySelector of the indicator container:
+          indicatorContainer: 'ol',
+          // The class for the active indicator:
+          activeIndicatorClass: 'active',
+          // The list object property (or data attribute) with the thumbnail URL,
+          // used as alternative to a thumbnail child element:
+          thumbnailProperty: 'thumbnail',
+          // Defines if the gallery indicators should display a thumbnail:
+          thumbnailIndicators: true
+      },
+
+
+
+      "template" :'<div class="repeater-slider">' + 
+                  '<div class="slides"></div>' +
+                  '<h3 class="title"></h3>' +
+                  '<a class="prev">‹</a>' +
+                  '<a class="next">›</a>' +
+                  '<a class="play-pause"></a>' +
+                  '<ol class="indicator"></ol>' +
+                  "</div>",
+
+      "item" : {
+        template : '<img height="75" src="{{ThumbnailImage}}" width="65"/>' 
+      }
     },
 
     /*---
@@ -157,11 +200,6 @@ define([
     },
     */
     
-    console:
-      window.console && typeof window.console.log === 'function'
-        ? window.console
-        : { log: function () {} },
-
     // Detect touch, transition, transform and background-size support:
     support: (function (element) {
       var support = {
@@ -254,17 +292,22 @@ define([
       window.webkitCancelAnimationFrame ||
       window.mozCancelAnimationFrame,
 
-    init: function (album,options){
-      this.overrided(album,options);
+    render: function (helper){
+      //this.overrided(repeater,options);
 
-      this.list = this.album.items;
-      this.options.container = this.album.el;
+      this.container = this.repeater.$canvas.find('.repeater-slider');
+
+      if (this.container.length < 1) {
+        this.container = $(this.options.template);
+        this.repeater.$canvas.append(this.container);
+      } 
+      this.list = helper.data.items;
+      //this.options.container = helper.container;
       this.num = this.list.length;
 
       this.initStartIndex()
-      if (this.initWidget() === false) {
-        return false
-      }
+      this.initView();
+
       this.initEventListeners()
       // Load the slide at the given index:
       this.onslide(this.index)
@@ -274,6 +317,7 @@ define([
       if (this.options.startSlideshow) {
         this.play()
       }
+
     },
 
     slide: function (to, speed) {
@@ -414,10 +458,18 @@ define([
       this.slidesContainer.empty()
       this.unloadAllSlides()
       this.slides = []
+
+      this.indicatorContainer.empty();
+      this.indicators = [];
+
     },
 
     handleClose: function () {
       var options = this.options
+      if (this.activeIndicator) {
+         this.activeIndicator.removeClass(this.options.activeIndicatorClass)
+      }
+
       this.destroyEventListeners()
       // Cancel the slideshow:
       this.pause()
@@ -574,7 +626,7 @@ define([
       if (this.touchStart) {
         var target = event.target
         var related = event.relatedTarget
-        if (!related || (related !== target && !$.contains(target, related))) {
+        if (!related || (related !== target && !noder.contains(target, related))) {
           this.onmouseup(event)
         }
       }
@@ -830,46 +882,59 @@ define([
       var options = this.options
       var target = event.target || event.srcElement
       var parent = target.parentNode
-      function isTarget (className) {
-        return $(target).hasClass(className) || $(parent).hasClass(className)
-      }
-      if (isTarget(options.toggleClass)) {
-        // Click on "toggle" control
+
+      if (parent === this.indicatorContainer[0]) {
+        // Click on indicator element
         this.preventDefault(event)
-        this.toggleControls()
-      } else if (isTarget(options.prevClass)) {
-        // Click on "prev" control
+        this.slide(this.getNodeIndex(target))
+      } else if (parent.parentNode === this.indicatorContainer[0]) {
+        // Click on indicator child element
         this.preventDefault(event)
-        this.prev()
-      } else if (isTarget(options.nextClass)) {
-        // Click on "next" control
-        this.preventDefault(event)
-        this.next()
-      } else if (isTarget(options.closeClass)) {
-        // Click on "close" control
-        this.preventDefault(event)
-        this.close()
-      } else if (isTarget(options.playPauseClass)) {
-        // Click on "play-pause" control
-        this.preventDefault(event)
-        this.toggleSlideshow()
-      } else if (parent === this.slidesContainer[0]) {
-        // Click on slide background
-        if (options.closeOnSlideClick) {
+        this.slide(this.getNodeIndex(parent))
+      } else {
+        function isTarget (className) {
+          return $(target).hasClass(className) || $(parent).hasClass(className)
+        }
+
+
+        if (isTarget(options.toggleClass)) {
+          // Click on "toggle" control
+          this.preventDefault(event)
+          this.toggleControls()
+        } else if (isTarget(options.prevClass)) {
+          // Click on "prev" control
+          this.preventDefault(event)
+          this.prev()
+        } else if (isTarget(options.nextClass)) {
+          // Click on "next" control
+          this.preventDefault(event)
+          this.next()
+        } else if (isTarget(options.closeClass)) {
+          // Click on "close" control
           this.preventDefault(event)
           this.close()
-        } else if (options.toggleControlsOnSlideClick) {
+        } else if (isTarget(options.playPauseClass)) {
+          // Click on "play-pause" control
           this.preventDefault(event)
-          this.toggleControls()
-        }
-      } else if (
-        parent.parentNode &&
-        parent.parentNode === this.slidesContainer[0]
-      ) {
-        // Click on displayed element
-        if (options.toggleControlsOnSlideClick) {
-          this.preventDefault(event)
-          this.toggleControls()
+          this.toggleSlideshow()
+        } else if (parent === this.slidesContainer[0]) {
+          // Click on slide background
+          if (options.closeOnSlideClick) {
+            this.preventDefault(event)
+            this.close()
+          } else if (options.toggleControlsOnSlideClick) {
+            this.preventDefault(event)
+            this.toggleControls()
+          }
+        } else if (
+          parent.parentNode &&
+          parent.parentNode === this.slidesContainer[0]
+        ) {
+          // Click on displayed element
+          if (options.toggleControlsOnSlideClick) {
+            this.preventDefault(event)
+            this.toggleControls()
+          }
         }
       }
     },
@@ -908,6 +973,9 @@ define([
         this.unloadElements(index)
       }
       this.setTitle(index)
+
+      this.setActiveIndicator(index)
+
     },
 
     onslide: function (index) {
@@ -939,9 +1007,11 @@ define([
     },
 
     createElement: function (obj, callback) {
-      var element = this.album.renderItem(obj,callback);
-      $(element).addClass(this.options.slideContentClass);
-      return element;
+      var $item = this._create$Item(this.options.item.template,obj);
+      $item.find("img").on('load error', callback);
+
+      $item.addClass(this.options.slideContentClass);
+      return $item;
     },
 
     loadElement: function (index) {
@@ -954,10 +1024,12 @@ define([
             : 2
         } else {
           this.elements[index] = 1 // Loading
-          $(this.slides[index]).addClass(this.options.slideLoadingClass)
-          this.slides[index].appendChild(
+          $(this.slides[index]).append(            
             this.createElement(this.list[index], this.proxyListener)
-          )
+          );
+          //$(this.slides[index]).addClass(this.options.slideLoadingClass).append(            
+          //  this.createElement(this.list[index], this.proxyListener)
+          //);
         }
       }
     },
@@ -995,11 +1067,61 @@ define([
       }
     },
 
+
+    createIndicator: function (obj) {
+      var repeater = this.repeater,
+          indicator = this.indicatorPrototype.cloneNode(false)
+      var title = repeater.getItemProperty(obj,"title")
+      var thumbnailProperty = this.options.thumbnailProperty
+      var thumbnailUrl
+      var thumbnail
+      if (this.options.thumbnailIndicators) {
+        if (thumbnailProperty) {
+          thumbnailUrl = repeater.getItemProperty(obj, thumbnailProperty)
+        }
+        if (thumbnailUrl === undefined) {
+          thumbnail = obj.getElementsByTagName && $(obj).find('img')[0]
+          if (thumbnail) {
+            thumbnailUrl = thumbnail.src
+          }
+        }
+        if (thumbnailUrl) {
+          indicator.style.backgroundImage = 'url("' + thumbnailUrl + '")'
+        }
+      }
+      if (title) {
+        indicator.title = title;
+      }
+      return indicator;
+    },
+
+    addIndicator: function (index) {
+      if (this.indicatorContainer.length) {
+        var indicator = this.createIndicator(this.list[index])
+        indicator.setAttribute('data-index', index)
+        this.indicatorContainer[0].appendChild(indicator)
+        this.indicators.push(indicator)
+      }
+    },
+
+    setActiveIndicator: function (index) {
+      if (this.indicators) {
+        if (this.activeIndicator) {
+          this.activeIndicator.removeClass(this.options.activeIndicatorClass)
+        }
+        this.activeIndicator = $(this.indicators[index])
+        this.activeIndicator.addClass(this.options.activeIndicatorClass)
+      }
+    },
+
+
     addSlide: function (index) {
       var slide = this.slidePrototype.cloneNode(false)
       slide.setAttribute('data-index', index)
       this.slidesContainer[0].appendChild(slide)
       this.slides.push(slide)
+
+      this.addIndicator(index)
     },
 
     positionSlide: function (index) {
@@ -1020,6 +1142,15 @@ define([
     initSlides: function (reload) {
       var clearSlides, i
       if (!reload) {
+        // indicator
+        this.indicatorContainer = this.container.find(
+          this.options.indicatorContainer
+        )
+        if (this.indicatorContainer.length) {
+          this.indicatorPrototype = document.createElement('li')
+          this.indicators = this.indicatorContainer[0].children
+        }
+
         this.positions = []
         this.positions.length = this.num
         this.elements = {}
@@ -1093,14 +1224,14 @@ define([
     },
 
     initStartIndex: function () {
-      var album = this.album,
+      var repeater = this.repeater,
           index = this.options.index;
       var i
       // Check if the index is given as a list object:
       if (index && typeof index !== 'number') {
         for (i = 0; i < this.num; i += 1) {
           if (
-            this.list[i] === index || album.getItemUrl(this.list[i]) ===  album.getItemUrl(index) ) {
+            this.list[i] === index || repeater.getItemUrl(this.list[i]) ===  repeater.getItemUrl(index) ) {
             index = i
             break
           }
@@ -1168,7 +1299,7 @@ define([
       }
     },
 
-    initWidget: function () {
+    initView: function () {
       var that = this
       function openHandler (event) {
         if (event.target === that.container[0]) {
@@ -1176,19 +1307,23 @@ define([
           that.handleOpen()
         }
       }
+
+      /*
       this.container = $(this.options.container)
       if (!this.container.length) {
-        this.console.log(
+        console.log(
           'blueimp Gallery: Widget container not found.',
           this.options.container
         )
         return false
       }
+      */
+
       this.slidesContainer = this.container
         .find(this.options.slidesContainer)
         .first()
       if (!this.slidesContainer.length) {
-        this.console.log(
+        console.log(
           'blueimp Gallery: Slides container not found.',
           this.options.slidesContainer
         )
