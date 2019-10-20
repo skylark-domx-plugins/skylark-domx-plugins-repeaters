@@ -100,7 +100,7 @@ define([
       // Remove elements outside of the preload range from the DOM:
       unloadElements: true,
       // Start with the automatic slideshow:
-      startSlideshow: false,
+      startSlideshow: true,
       // Delay in milliseconds between slides for the automatic slideshow:
       slideshowInterval: 5000,
       // The starting index as integer.
@@ -117,13 +117,7 @@ define([
       // The event object for which the default action will be canceled
       // on Gallery initialization (e.g. the click event to open the Gallery):
       event: undefined,
-      // Callback function executed when the Gallery is initialized.
-      // Is called with the gallery instance as "this" object:
-      onopen: undefined,
-      // Callback function executed when the Gallery has been initialized
-      // and the initialization transition has been completed.
-      // Is called with the gallery instance as "this" object:
-      onopened: undefined,
+
       // Callback function executed on slide change.
       // Is called with the gallery instance as "this" object and the
       // current index and slide as arguments:
@@ -136,13 +130,6 @@ define([
       // Is called with the gallery instance as "this" object and the
       // slide index and slide element as arguments:
       onslidecomplete: undefined,
-      // Callback function executed when the Gallery is about to be closed.
-      // Is called with the gallery instance as "this" object:
-      onclose: undefined,
-      // Callback function executed when the Gallery has been closed
-      // and the closing transition has been completed.
-      // Is called with the gallery instance as "this" object:
-      onclosed: undefined,
 
 
       // The tag name, Id, element or querySelector of the indicator container:
@@ -395,120 +382,6 @@ define([
       }
     },
 
-    play: function (time) {
-      var that = this
-      window.clearTimeout(this.timeout)
-      this.interval = time || this.options.slideshowInterval
-      if (this.elements[this.index] > 1) {
-        this.timeout = this.setTimeout(
-          (!this.requestAnimationFrame && this.slide) ||
-            function (to, speed) {
-              that.animationFrameId = that.requestAnimationFrame.call(
-                window,
-                function () {
-                  that.slide(to, speed)
-                }
-              )
-            },
-          [this.index + 1, this.options.slideshowTransitionSpeed],
-          this.interval
-        )
-      }
-      this.container.addClass(this.options.playingClass)
-    },
-
-    pause: function () {
-      window.clearTimeout(this.timeout)
-      this.interval = null
-      if (this.cancelAnimationFrame) {
-        this.cancelAnimationFrame.call(window, this.animationFrameId)
-        this.animationFrameId = null
-      }
-      this.container.removeClass(this.options.playingClass)
-    },
-
-    add: function (list) {
-      var i
-      if (!list.concat) {
-        // Make a real array out of the list to add:
-        list = Array.prototype.slice.call(list)
-      }
-      if (!this.list.concat) {
-        // Make a real array out of the Gallery list:
-        this.list = Array.prototype.slice.call(this.list)
-      }
-      this.list = this.list.concat(list)
-      this.num = this.list.length
-      if (this.num > 2 && this.options.continuous === null) {
-        this.options.continuous = true
-        this.container.removeClass(this.options.leftEdgeClass)
-      }
-      this.container
-        .removeClass(this.options.rightEdgeClass)
-        .removeClass(this.options.singleClass)
-      for (i = this.num - list.length; i < this.num; i += 1) {
-        this.addSlide(i)
-        this.positionSlide(i)
-      }
-      this.positions.length = this.num
-      this.initSlides(true)
-    },
-
-    resetSlides: function () {
-      this.slidesContainer.empty()
-      this.unloadAllSlides()
-      this.slides = []
-
-      this.indicatorContainer.empty();
-      this.indicators = [];
-
-    },
-
-    handleClose: function () {
-      var options = this.options
-      if (this.activeIndicator) {
-         this.activeIndicator.removeClass(this.options.activeIndicatorClass)
-      }
-
-      this.destroyEventListeners()
-      // Cancel the slideshow:
-      this.pause()
-      this.container[0].style.display = 'none'
-      this.container
-        .removeClass(options.displayClass)
-        .removeClass(options.singleClass)
-        .removeClass(options.leftEdgeClass)
-        .removeClass(options.rightEdgeClass)
-      if (options.hidePageScrollbars) {
-        document.body.style.overflow = this.bodyOverflowStyle
-      }
-      if (this.options.clearSlides) {
-        this.resetSlides()
-      }
-      if (this.options.onclosed) {
-        this.options.onclosed.call(this)
-      }
-    },
-
-    close: function () {
-      var that = this
-      function closeHandler (event) {
-        if (event.target === that.container[0]) {
-          that.container.off(that.support.transition.end, closeHandler)
-          that.handleClose()
-        }
-      }
-      if (this.options.onclose) {
-        this.options.onclose.call(this)
-      }
-      if (this.support.transition && this.options.displayTransition) {
-        this.container.on(this.support.transition.end, closeHandler)
-        this.container.removeClass(this.options.displayClass)
-      } else {
-        this.handleClose()
-      }
-    },
-
     circle: function (index) {
       // Always return a number inside of the slides index range:
       return (this.num + index % this.num) % this.num
@@ -559,6 +432,74 @@ define([
         that.slidesContainer[0].style.left =
           (to - from) * (Math.floor(timeElap / speed * 100) / 100) + from + 'px'
       }, 4)
+    },
+
+    play: function (time) {
+      var that = this
+      window.clearTimeout(this.timeout)
+      this.interval = time || this.options.slideshowInterval;
+      this.timeout = this.setTimeout(
+        (!this.requestAnimationFrame && this.slide) ||
+          function (to, speed) {
+            that.animationFrameId = that.requestAnimationFrame.call(
+              window,
+              function () {
+                that.slide(to, speed)
+              }
+            )
+          },
+        [this.index + 1, this.options.slideshowTransitionSpeed],
+        this.interval
+      )
+
+      this.container.addClass(this.options.playingClass)
+    },
+
+    pause: function () {
+      window.clearTimeout(this.timeout)
+      this.interval = null
+      if (this.cancelAnimationFrame) {
+        this.cancelAnimationFrame.call(window, this.animationFrameId)
+        this.animationFrameId = null
+      }
+      this.container.removeClass(this.options.playingClass)
+    },
+
+    add: function (list) {
+      var i
+      if (!list.concat) {
+        // Make a real array out of the list to add:
+        list = Array.prototype.slice.call(list)
+      }
+      if (!this.list.concat) {
+        // Make a real array out of the Gallery list:
+        this.list = Array.prototype.slice.call(this.list)
+      }
+      this.list = this.list.concat(list)
+      this.num = this.list.length
+      if (this.num > 2 && this.options.continuous === null) {
+        this.options.continuous = true
+        this.container.removeClass(this.options.leftEdgeClass)
+      }
+      this.container
+        .removeClass(this.options.rightEdgeClass)
+        .removeClass(this.options.singleClass)
+      for (i = this.num - list.length; i < this.num; i += 1) {
+        this.addSlide(i)
+        this.positionSlide(i)
+      }
+      this.positions.length = this.num
+      this.initSlides(true)
+    },
+
+    resetSlides: function () {
+      this.slidesContainer.empty()
+      this.unloadAllSlides()
+      this.slides = []
+
+      this.indicatorContainer.empty();
+      this.indicators = [];
+
     },
 
     preventDefault: function (event) {
@@ -783,12 +724,8 @@ define([
           }
         }
       } else {
-        if (isValidClose) {
-          this.close()
-        } else {
           // Move back into position
           this.translateY(index, 0, speed)
-        }
       }
     },
 
@@ -809,39 +746,6 @@ define([
       }
     },
 
-    oncomplete: function (event) {
-      var target = event.target || event.srcElement
-      var parent = target && target.parentNode
-      var index
-      if (!target || !parent) {
-        return
-      }
-      index = this.getNodeIndex(parent)
-      $(parent).removeClass(this.options.slideLoadingClass)
-      if (event.type === 'error') {
-        $(parent).addClass(this.options.slideErrorClass)
-        this.elements[index] = 3 // Fail
-      } else {
-        this.elements[index] = 2 // Done
-      }
-      // Fix for IE7's lack of support for percentage max-height:
-      if (target.clientHeight > this.container[0].clientHeight) {
-        target.style.maxHeight = this.container[0].clientHeight
-      }
-      if (this.interval && this.slides[this.index] === parent) {
-        this.play()
-      }
-      this.setTimeout(this.options.onslidecomplete, [index, parent])
-    },
-
-    onload: function (event) {
-      this.oncomplete(event)
-    },
-
-    onerror: function (event) {
-      this.oncomplete(event)
-    },
-
     onkeydown: function (event) {
       switch (event.which || event.keyCode) {
         case 13: // Return
@@ -851,11 +755,6 @@ define([
           }
           break
         case 27: // Esc
-          if (this.options.closeOnEscape) {
-            this.close()
-            // prevent Esc from closing other things
-            event.stopImmediatePropagation()
-          }
           break
         case 32: // Space
           if (this.options.toggleSlideshowOnSpace) {
@@ -909,20 +808,13 @@ define([
           // Click on "next" control
           this.preventDefault(event)
           this.next()
-        } else if (isTarget(options.closeClass)) {
-          // Click on "close" control
-          this.preventDefault(event)
-          this.close()
         } else if (isTarget(options.playPauseClass)) {
           // Click on "play-pause" control
           this.preventDefault(event)
           this.toggleSlideshow()
         } else if (parent === this.slidesContainer[0]) {
           // Click on slide background
-          if (options.closeOnSlideClick) {
-            this.preventDefault(event)
-            this.close()
-          } else if (options.toggleControlsOnSlideClick) {
+          if (options.toggleControlsOnSlideClick) {
             this.preventDefault(event)
             this.toggleControls()
           }
@@ -1293,20 +1185,9 @@ define([
       }
     },
 
-    handleOpen: function () {
-      if (this.options.onopened) {
-        this.options.onopened.call(this)
-      }
-    },
 
     initView: function () {
       var that = this
-      function openHandler (event) {
-        if (event.target === that.container[0]) {
-          that.container.off(that.support.transition.end, openHandler)
-          that.handleOpen()
-        }
-      }
 
       /*
       this.container = $(this.options.container)
@@ -1332,14 +1213,6 @@ define([
       this.titleElement = this.container.find(this.options.titleElement).first()
       if (this.num === 1) {
         this.container.addClass(this.options.singleClass)
-      }
-      if (this.options.onopen) {
-        this.options.onopen.call(this)
-      }
-      if (this.support.transition && this.options.displayTransition) {
-        this.container.on(this.support.transition.end, openHandler)
-      } else {
-        this.handleOpen()
       }
       if (this.options.hidePageScrollbars) {
         // Hide the page scrollbars:
@@ -1369,19 +1242,11 @@ define([
     }
   });
 
-  return views["slider"] = {
+  views["slider"] = {
     "name" :  "slider",
-    "ctor" :  SliderView,
-    "templates" : {
-      "default" : '<div class="slides"></div>' +
-                  '<h3 class="title"></h3>' +
-                  '<a class="prev">‹</a>' +
-                  '<a class="next">›</a>' +
-                  '<a class="close">×</a>' + 
-                  '<a class="play-pause"></a>' +
-                  '<ol class="indicator"></ol>'
-
-    } 
+    "ctor" :  SliderView
   };
+
+  return SliderView;
 
 });

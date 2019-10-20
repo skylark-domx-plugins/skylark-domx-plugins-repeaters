@@ -1,12 +1,12 @@
 define([
   "skylark-langx/skylark",
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/elmx",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-velm",
+  "skylark-domx-query",
   "skylark-widgets-swt/Widget",
   "skylark-widgets-swt/SelectList",
   "skylark-widgets-swt/ComboBox",
@@ -883,7 +883,7 @@ define([
 			}
 			return prop
 		}
-		
+
 		
 	});
 
@@ -997,11 +997,6 @@ define([
 			}
 		);
 	};
-
-
-
-	// For backwards compatibility.
-	Repeater.prototype.runRenderer = Repeater.prototype.renderItems;
 
 	Repeater.addons = {};
 

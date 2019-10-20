@@ -4107,14 +4107,6 @@ define('skylark-langx/langx',[
 
     return skylark.langx = langx;
 });
-define('skylark-utils-dom/skylark',["skylark-langx/skylark"], function(skylark) {
-    return skylark;
-});
-
-define('skylark-utils-dom/dom',["./skylark"], function(skylark) {
-	return skylark.dom = skylark.attach("dom",{});
-});
-
 define('skylark-domx-browser/browser',[
     "skylark-langx/skylark",
     "skylark-langx/langx"
@@ -4250,15 +4242,6 @@ define('skylark-domx-browser/main',[
 	return browser;
 });
 define('skylark-domx-browser', ['skylark-domx-browser/main'], function (main) { return main; });
-
-define('skylark-utils-dom/browser',[
-    "./dom",
-    "skylark-domx-browser"
-], function(dom,browser) {
-    "use strict";
-
-    return dom.browser = browser;
-});
 
 define('skylark-domx-styler/styler',[
     "skylark-langx/skylark",
@@ -7547,20 +7530,6 @@ define('skylark-domx-eventer/main',[
 });
 define('skylark-domx-eventer', ['skylark-domx-eventer/main'], function (main) { return main; });
 
-define('skylark-utils-dom/eventer',[
-    "./dom",
-    "skylark-domx-eventer"
-], function(dom, eventer) {
- 
-    return dom.eventer = eventer;
-});
-define('skylark-utils-dom/noder',[
-    "./dom",
-    "skylark-domx-noder"
-], function(dom, noder) {
-
-    return dom.noder = noder;
-});
 define('skylark-domx-geom/geom',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
@@ -8630,13 +8599,6 @@ define('skylark-domx-geom/main',[
 });
 define('skylark-domx-geom', ['skylark-domx-geom/main'], function (main) { return main; });
 
-define('skylark-utils-dom/geom',[
-    "./dom",
-    "skylark-domx-geom"
-], function(dom, geom) {
-
-    return dom.geom = geom;
-});
 define('skylark-domx-fx/fx',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
@@ -10628,20 +10590,6 @@ define('skylark-domx-velm/main',[
 });
 define('skylark-domx-velm', ['skylark-domx-velm/main'], function (main) { return main; });
 
-define('skylark-utils-dom/elmx',[
-    "./dom",
-    "skylark-domx-velm"
-], function(dom, elmx) {
-     return dom.elmx = elmx;
-});
-define('skylark-utils-dom/query',[
-    "./dom",
-    "skylark-domx-query"
-], function(dom, query) {
-
-    return dom.query = query;
-
-});
 define('skylark-domx-plugins/plugins',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
@@ -12773,12 +12721,12 @@ define('skylark-widgets-swt/SearchBox',[
 define('skylark-widgets-repeater/Repeater',[
   "skylark-langx/skylark",
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/elmx",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-velm",
+  "skylark-domx-query",
   "skylark-widgets-swt/Widget",
   "skylark-widgets-swt/SelectList",
   "skylark-widgets-swt/ComboBox",
@@ -13655,7 +13603,7 @@ define('skylark-widgets-repeater/Repeater',[
 			}
 			return prop
 		}
-		
+
 		
 	});
 
@@ -13769,11 +13717,6 @@ define('skylark-widgets-repeater/Repeater',[
 			}
 		);
 	};
-
-
-
-	// For backwards compatibility.
-	Repeater.prototype.runRenderer = Repeater.prototype.renderItems;
 
 	Repeater.addons = {};
 
@@ -13893,7 +13836,7 @@ define('skylark-widgets-repeater/views/ViewBase',[
 
 /* global define, window, document, DocumentTouch */
 
-define('skylark-widgets-repeater/views/slider',[
+define('skylark-widgets-repeater/views/SliderView',[
   "skylark-langx/langx",
   "skylark-domx-noder",
   "skylark-domx-query",
@@ -13993,7 +13936,7 @@ define('skylark-widgets-repeater/views/slider',[
       // Remove elements outside of the preload range from the DOM:
       unloadElements: true,
       // Start with the automatic slideshow:
-      startSlideshow: false,
+      startSlideshow: true,
       // Delay in milliseconds between slides for the automatic slideshow:
       slideshowInterval: 5000,
       // The starting index as integer.
@@ -14010,13 +13953,7 @@ define('skylark-widgets-repeater/views/slider',[
       // The event object for which the default action will be canceled
       // on Gallery initialization (e.g. the click event to open the Gallery):
       event: undefined,
-      // Callback function executed when the Gallery is initialized.
-      // Is called with the gallery instance as "this" object:
-      onopen: undefined,
-      // Callback function executed when the Gallery has been initialized
-      // and the initialization transition has been completed.
-      // Is called with the gallery instance as "this" object:
-      onopened: undefined,
+
       // Callback function executed on slide change.
       // Is called with the gallery instance as "this" object and the
       // current index and slide as arguments:
@@ -14029,13 +13966,6 @@ define('skylark-widgets-repeater/views/slider',[
       // Is called with the gallery instance as "this" object and the
       // slide index and slide element as arguments:
       onslidecomplete: undefined,
-      // Callback function executed when the Gallery is about to be closed.
-      // Is called with the gallery instance as "this" object:
-      onclose: undefined,
-      // Callback function executed when the Gallery has been closed
-      // and the closing transition has been completed.
-      // Is called with the gallery instance as "this" object:
-      onclosed: undefined,
 
 
       // The tag name, Id, element or querySelector of the indicator container:
@@ -14288,120 +14218,6 @@ define('skylark-widgets-repeater/views/slider',[
       }
     },
 
-    play: function (time) {
-      var that = this
-      window.clearTimeout(this.timeout)
-      this.interval = time || this.options.slideshowInterval
-      if (this.elements[this.index] > 1) {
-        this.timeout = this.setTimeout(
-          (!this.requestAnimationFrame && this.slide) ||
-            function (to, speed) {
-              that.animationFrameId = that.requestAnimationFrame.call(
-                window,
-                function () {
-                  that.slide(to, speed)
-                }
-              )
-            },
-          [this.index + 1, this.options.slideshowTransitionSpeed],
-          this.interval
-        )
-      }
-      this.container.addClass(this.options.playingClass)
-    },
-
-    pause: function () {
-      window.clearTimeout(this.timeout)
-      this.interval = null
-      if (this.cancelAnimationFrame) {
-        this.cancelAnimationFrame.call(window, this.animationFrameId)
-        this.animationFrameId = null
-      }
-      this.container.removeClass(this.options.playingClass)
-    },
-
-    add: function (list) {
-      var i
-      if (!list.concat) {
-        // Make a real array out of the list to add:
-        list = Array.prototype.slice.call(list)
-      }
-      if (!this.list.concat) {
-        // Make a real array out of the Gallery list:
-        this.list = Array.prototype.slice.call(this.list)
-      }
-      this.list = this.list.concat(list)
-      this.num = this.list.length
-      if (this.num > 2 && this.options.continuous === null) {
-        this.options.continuous = true
-        this.container.removeClass(this.options.leftEdgeClass)
-      }
-      this.container
-        .removeClass(this.options.rightEdgeClass)
-        .removeClass(this.options.singleClass)
-      for (i = this.num - list.length; i < this.num; i += 1) {
-        this.addSlide(i)
-        this.positionSlide(i)
-      }
-      this.positions.length = this.num
-      this.initSlides(true)
-    },
-
-    resetSlides: function () {
-      this.slidesContainer.empty()
-      this.unloadAllSlides()
-      this.slides = []
-
-      this.indicatorContainer.empty();
-      this.indicators = [];
-
-    },
-
-    handleClose: function () {
-      var options = this.options
-      if (this.activeIndicator) {
-         this.activeIndicator.removeClass(this.options.activeIndicatorClass)
-      }
-
-      this.destroyEventListeners()
-      // Cancel the slideshow:
-      this.pause()
-      this.container[0].style.display = 'none'
-      this.container
-        .removeClass(options.displayClass)
-        .removeClass(options.singleClass)
-        .removeClass(options.leftEdgeClass)
-        .removeClass(options.rightEdgeClass)
-      if (options.hidePageScrollbars) {
-        document.body.style.overflow = this.bodyOverflowStyle
-      }
-      if (this.options.clearSlides) {
-        this.resetSlides()
-      }
-      if (this.options.onclosed) {
-        this.options.onclosed.call(this)
-      }
-    },
-
-    close: function () {
-      var that = this
-      function closeHandler (event) {
-        if (event.target === that.container[0]) {
-          that.container.off(that.support.transition.end, closeHandler)
-          that.handleClose()
-        }
-      }
-      if (this.options.onclose) {
-        this.options.onclose.call(this)
-      }
-      if (this.support.transition && this.options.displayTransition) {
-        this.container.on(this.support.transition.end, closeHandler)
-        this.container.removeClass(this.options.displayClass)
-      } else {
-        this.handleClose()
-      }
-    },
-
     circle: function (index) {
       // Always return a number inside of the slides index range:
       return (this.num + index % this.num) % this.num
@@ -14452,6 +14268,74 @@ define('skylark-widgets-repeater/views/slider',[
         that.slidesContainer[0].style.left =
           (to - from) * (Math.floor(timeElap / speed * 100) / 100) + from + 'px'
       }, 4)
+    },
+
+    play: function (time) {
+      var that = this
+      window.clearTimeout(this.timeout)
+      this.interval = time || this.options.slideshowInterval;
+      this.timeout = this.setTimeout(
+        (!this.requestAnimationFrame && this.slide) ||
+          function (to, speed) {
+            that.animationFrameId = that.requestAnimationFrame.call(
+              window,
+              function () {
+                that.slide(to, speed)
+              }
+            )
+          },
+        [this.index + 1, this.options.slideshowTransitionSpeed],
+        this.interval
+      )
+
+      this.container.addClass(this.options.playingClass)
+    },
+
+    pause: function () {
+      window.clearTimeout(this.timeout)
+      this.interval = null
+      if (this.cancelAnimationFrame) {
+        this.cancelAnimationFrame.call(window, this.animationFrameId)
+        this.animationFrameId = null
+      }
+      this.container.removeClass(this.options.playingClass)
+    },
+
+    add: function (list) {
+      var i
+      if (!list.concat) {
+        // Make a real array out of the list to add:
+        list = Array.prototype.slice.call(list)
+      }
+      if (!this.list.concat) {
+        // Make a real array out of the Gallery list:
+        this.list = Array.prototype.slice.call(this.list)
+      }
+      this.list = this.list.concat(list)
+      this.num = this.list.length
+      if (this.num > 2 && this.options.continuous === null) {
+        this.options.continuous = true
+        this.container.removeClass(this.options.leftEdgeClass)
+      }
+      this.container
+        .removeClass(this.options.rightEdgeClass)
+        .removeClass(this.options.singleClass)
+      for (i = this.num - list.length; i < this.num; i += 1) {
+        this.addSlide(i)
+        this.positionSlide(i)
+      }
+      this.positions.length = this.num
+      this.initSlides(true)
+    },
+
+    resetSlides: function () {
+      this.slidesContainer.empty()
+      this.unloadAllSlides()
+      this.slides = []
+
+      this.indicatorContainer.empty();
+      this.indicators = [];
+
     },
 
     preventDefault: function (event) {
@@ -14676,12 +14560,8 @@ define('skylark-widgets-repeater/views/slider',[
           }
         }
       } else {
-        if (isValidClose) {
-          this.close()
-        } else {
           // Move back into position
           this.translateY(index, 0, speed)
-        }
       }
     },
 
@@ -14702,39 +14582,6 @@ define('skylark-widgets-repeater/views/slider',[
       }
     },
 
-    oncomplete: function (event) {
-      var target = event.target || event.srcElement
-      var parent = target && target.parentNode
-      var index
-      if (!target || !parent) {
-        return
-      }
-      index = this.getNodeIndex(parent)
-      $(parent).removeClass(this.options.slideLoadingClass)
-      if (event.type === 'error') {
-        $(parent).addClass(this.options.slideErrorClass)
-        this.elements[index] = 3 // Fail
-      } else {
-        this.elements[index] = 2 // Done
-      }
-      // Fix for IE7's lack of support for percentage max-height:
-      if (target.clientHeight > this.container[0].clientHeight) {
-        target.style.maxHeight = this.container[0].clientHeight
-      }
-      if (this.interval && this.slides[this.index] === parent) {
-        this.play()
-      }
-      this.setTimeout(this.options.onslidecomplete, [index, parent])
-    },
-
-    onload: function (event) {
-      this.oncomplete(event)
-    },
-
-    onerror: function (event) {
-      this.oncomplete(event)
-    },
-
     onkeydown: function (event) {
       switch (event.which || event.keyCode) {
         case 13: // Return
@@ -14744,11 +14591,6 @@ define('skylark-widgets-repeater/views/slider',[
           }
           break
         case 27: // Esc
-          if (this.options.closeOnEscape) {
-            this.close()
-            // prevent Esc from closing other things
-            event.stopImmediatePropagation()
-          }
           break
         case 32: // Space
           if (this.options.toggleSlideshowOnSpace) {
@@ -14802,20 +14644,13 @@ define('skylark-widgets-repeater/views/slider',[
           // Click on "next" control
           this.preventDefault(event)
           this.next()
-        } else if (isTarget(options.closeClass)) {
-          // Click on "close" control
-          this.preventDefault(event)
-          this.close()
         } else if (isTarget(options.playPauseClass)) {
           // Click on "play-pause" control
           this.preventDefault(event)
           this.toggleSlideshow()
         } else if (parent === this.slidesContainer[0]) {
           // Click on slide background
-          if (options.closeOnSlideClick) {
-            this.preventDefault(event)
-            this.close()
-          } else if (options.toggleControlsOnSlideClick) {
+          if (options.toggleControlsOnSlideClick) {
             this.preventDefault(event)
             this.toggleControls()
           }
@@ -15186,20 +15021,9 @@ define('skylark-widgets-repeater/views/slider',[
       }
     },
 
-    handleOpen: function () {
-      if (this.options.onopened) {
-        this.options.onopened.call(this)
-      }
-    },
 
     initView: function () {
       var that = this
-      function openHandler (event) {
-        if (event.target === that.container[0]) {
-          that.container.off(that.support.transition.end, openHandler)
-          that.handleOpen()
-        }
-      }
 
       /*
       this.container = $(this.options.container)
@@ -15225,14 +15049,6 @@ define('skylark-widgets-repeater/views/slider',[
       this.titleElement = this.container.find(this.options.titleElement).first()
       if (this.num === 1) {
         this.container.addClass(this.options.singleClass)
-      }
-      if (this.options.onopen) {
-        this.options.onopen.call(this)
-      }
-      if (this.support.transition && this.options.displayTransition) {
-        this.container.on(this.support.transition.end, openHandler)
-      } else {
-        this.handleOpen()
       }
       if (this.options.hidePageScrollbars) {
         // Hide the page scrollbars:
@@ -15262,30 +15078,22 @@ define('skylark-widgets-repeater/views/slider',[
     }
   });
 
-  return views["slider"] = {
+  views["slider"] = {
     "name" :  "slider",
-    "ctor" :  SliderView,
-    "templates" : {
-      "default" : '<div class="slides"></div>' +
-                  '<h3 class="title"></h3>' +
-                  '<a class="prev">‹</a>' +
-                  '<a class="next">›</a>' +
-                  '<a class="close">×</a>' + 
-                  '<a class="play-pause"></a>' +
-                  '<ol class="indicator"></ol>'
-
-    } 
+    "ctor" :  SliderView
   };
+
+  return SliderView;
 
 });
 
-define('skylark-widgets-repeater/views/table',[
+define('skylark-widgets-repeater/views/TableView',[
     "skylark-langx/langx",
-    "skylark-utils-dom/browser",
-    "skylark-utils-dom/eventer",
-    "skylark-utils-dom/noder",
-    "skylark-utils-dom/geom",
-    "skylark-utils-dom/query",
+    "skylark-domx-browser",
+    "skylark-domx-eventer",
+    "skylark-domx-noder",
+    "skylark-domx-geom",
+    "skylark-domx-query",
     "../views",   
     "./ViewBase"
 ], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
@@ -15308,12 +15116,12 @@ define('skylark-widgets-repeater/views/table',[
     },
 
     clearSelectedItems : function listClearSelectedItems () {
-        this.repeater.$canvas.find('.repeater-list-check').remove();
-        this.repeater.$canvas.find('.repeater-list table tbody tr.selected').removeClass('selected');
+        this.repeater.$canvas.find('.repeater-table-check').remove();
+        this.repeater.$canvas.find('.repeater-table table tbody tr.selected').removeClass('selected');
     },
 
     highlightColumn : function listHighlightColumn (index, force) {
-        var tbody = this.repeater.$canvas.find('.repeater-list-wrapper > table tbody');
+        var tbody = this.repeater.$canvas.find('.repeater-table-wrapper > table tbody');
         if (this.options.highlightSortedColumn || force) {
             tbody.find('td.sorted').removeClass('sorted');
             tbody.find('tr').each(function eachTR () {
@@ -15325,7 +15133,7 @@ define('skylark-widgets-repeater/views/table',[
 
     getSelectedItems : function listGetSelectedItems () {
         var selected = [];
-        this.repeater.$canvas.find('.repeater-list .repeater-list-wrapper > table tbody tr.selected').each(function eachSelectedTR () {
+        this.repeater.$canvas.find('.repeater-table .repeater-table-wrapper > table tbody tr.selected').each(function eachSelectedTR () {
             var $item = $(this);
             selected.push({
                 data: $item.data('item_data'),
@@ -15336,17 +15144,17 @@ define('skylark-widgets-repeater/views/table',[
     },
 
     positionHeadings : function listPositionHeadings () {
-        var $wrapper = this.repeater.$element.find('.repeater-list-wrapper');
+        var $wrapper = this.repeater.$element.find('.repeater-table-wrapper');
         var offsetLeft = $wrapper.offset().left;
         var scrollLeft = $wrapper.scrollLeft();
         if (scrollLeft > 0) {
-            $wrapper.find('.repeater-list-heading').each(function eachListHeading () {
+            $wrapper.find('.repeater-table-heading').each(function eachListHeading () {
                 var $heading = $(this);
                 var left = ($heading.parents('th:first').offset().left - offsetLeft) + 'px';
                 $heading.addClass('shifted').css('left', left);
             });
         } else {
-            $wrapper.find('.repeater-list-heading').each(function eachListHeading () {
+            $wrapper.find('.repeater-table-heading').each(function eachListHeading () {
                 $(this).removeClass('shifted').css('left', '');
             });
         }
@@ -15398,7 +15206,7 @@ define('skylark-widgets-repeater/views/table',[
                         self.repeater.$element.find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').addClass('selected');
                     }
 
-                    $itm.find('td:first').prepend('<div class="repeater-list-check"><span class="glyphicon glyphicon-ok"></span></div>');
+                    $itm.find('td:first').prepend('<div class="repeater-table-check"><span class="glyphicon glyphicon-ok"></span></div>');
                 }
             } else {
                 if (self.options.frozenColumns) {
@@ -15412,7 +15220,7 @@ define('skylark-widgets-repeater/views/table',[
                     self.repeater.$element.find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').removeClass('selected');
                 }
 
-                $itm.find('.repeater-list-check').remove();
+                $itm.find('.repeater-table-check').remove();
                 $itm.removeClass('selected');
             }
         };
@@ -15427,21 +15235,21 @@ define('skylark-widgets-repeater/views/table',[
 
         for (i = 0; i < length; i++) {
             if (items[i].index !== undefined) {
-                $item = this.repeater.$canvas.find('.repeater-list .repeater-list-wrapper > table tbody tr:nth-child(' + (items[i].index + 1) + ')');
+                $item = this.repeater.$canvas.find('.repeater-table .repeater-table-wrapper > table tbody tr:nth-child(' + (items[i].index + 1) + ')');
                 if ($item.length > 0) {
                     selectItem($item, items[i].selected, items[i].index);
                 }
             } else if (items[i].property !== undefined && items[i].value !== undefined) {
-                this.repeater.$canvas.find('.repeater-list .repeater-list-wrapper > table tbody tr').each(checkIfItemMatchesValue);
+                this.repeater.$canvas.find('.repeater-table .repeater-table-wrapper > table tbody tr').each(checkIfItemMatchesValue);
             }
         }
     },
 
     sizeHeadings : function listSizeHeadings () {
-        var $table = this.repeater.$element.find('.repeater-list table');
+        var $table = this.repeater.$element.find('.repeater-table table');
         $table.find('thead th').each(function eachTH () {
             var $th = $(this);
-            var $heading = $th.find('.repeater-list-heading');
+            var $heading = $th.find('.repeater-table-heading');
             $heading.css({ height: $th.outerHeight() });
             $heading.outerWidth($heading.data('forced-width') || $th.outerWidth());
         });
@@ -15450,8 +15258,8 @@ define('skylark-widgets-repeater/views/table',[
     setFrozenColumns : function listSetFrozenColumns () {
         var frozenTable = this.repeater.$canvas.find('.table-frozen');
         var $wrapper = this.repeater.$element.find('.repeater-canvas');
-        var $table = this.repeater.$element.find('.repeater-list .repeater-list-wrapper > table');
-        var repeaterWrapper = this.repeater.$element.find('.repeater-list');
+        var $table = this.repeater.$element.find('.repeater-table .repeater-table-wrapper > table');
+        var repeaterWrapper = this.repeater.$element.find('.repeater-table');
         var numFrozenColumns = this.options.frozenColumns;
         var self = this;
 
@@ -15485,10 +15293,10 @@ define('skylark-widgets-repeater/views/table',[
 
         this.sizeFrozenColumns();
 
-        $('.frozen-thead-wrapper .repeater-list-heading').on('click', function onClickHeading () {
+        $('.frozen-thead-wrapper .repeater-table-heading').on('click', function onClickHeading () {
             var index = $(this).parent('th').index();
             index = index + 1;
-            self.repeater.$element.find('.repeater-list-wrapper > table thead th:nth-child(' + index + ') .repeater-list-heading')[0].click();
+            self.repeater.$element.find('.repeater-table-wrapper > table thead th:nth-child(' + index + ') .repeater-table-heading')[0].click();
         });
     },
 
@@ -15500,7 +15308,7 @@ define('skylark-widgets-repeater/views/table',[
         var actionsEnabled = this.options.actions;
 
         var canvasWidth = this.repeater.$element.find('.repeater-canvas').outerWidth();
-        var tableWidth = this.repeater.$element.find('.repeater-list .repeater-list-wrapper > table').outerWidth();
+        var tableWidth = this.repeater.$element.find('.repeater-table .repeater-table-wrapper > table').outerWidth();
 
         var actionsWidth = this.repeater.$element.find('.table-actions') ? this.repeater.$element.find('.table-actions').outerWidth() : 0;
 
@@ -15508,9 +15316,9 @@ define('skylark-widgets-repeater/views/table',[
 
 
         if (scrollTop > 0) {
-            $wrapper.find('.repeater-list-heading').css('top', scrollTop);
+            $wrapper.find('.repeater-table-heading').css('top', scrollTop);
         } else {
-            $wrapper.find('.repeater-list-heading').css('top', '0');
+            $wrapper.find('.repeater-table-heading').css('top', '0');
         }
 
         if (scrollLeft > 0) {
@@ -15539,7 +15347,7 @@ define('skylark-widgets-repeater/views/table',[
         var self = this;
         var i;
         var length;
-        var $table = this.repeater.$element.find('.repeater-list .repeater-list-wrapper > table');
+        var $table = this.repeater.$element.find('.repeater-table .repeater-table-wrapper > table');
         var $actionsTable = this.repeater.$canvas.find('.table-actions');
 
         for (i = 0, length = this.options.actions.items.length; i < length; i++) {
@@ -15565,7 +15373,7 @@ define('skylark-widgets-repeater/views/table',[
 
             // Dont show actions dropdown in header if not multi select
             if (this.options.selectable === 'multi' || this.options.selectable === 'action') {
-                $actionsColumn.find('thead tr').html('<th><div class="repeater-list-heading">' + actionsDropdown + '</div></th>');
+                $actionsColumn.find('thead tr').html('<th><div class="repeater-table-heading">' + actionsDropdown + '</div></th>');
 
                 if (this.options.selectable !== 'action') {
                     // disable the header dropdown until an item is selected
@@ -15573,7 +15381,7 @@ define('skylark-widgets-repeater/views/table',[
                 }
             } else {
                 var label = this.options.actions.label || '<span class="actions-hidden">a</span>';
-                $actionsColumn.find('thead tr').addClass('empty-heading').html('<th>' + label + '<div class="repeater-list-heading">' + label + '</div></th>');
+                $actionsColumn.find('thead tr').addClass('empty-heading').html('<th>' + label + '<div class="repeater-table-heading">' + label + '</div></th>');
             }
 
             // Create Actions dropdown for each cell in actions table
@@ -15611,10 +15419,10 @@ define('skylark-widgets-repeater/views/table',[
                     actionName: actionName,
                     rows: []
                 };
-                var selector = '.repeater-list-wrapper > table .selected';
+                var selector = '.repeater-table-wrapper > table .selected';
 
                 if ( self.options.selectable === 'action' ) {
-                    selector = '.repeater-list-wrapper > table tr';
+                    selector = '.repeater-table-wrapper > table tr';
                 }
                 self.repeater.$element.find(selector).each(function eachSelector (selectorIndex) {
                     selected.rows.push(selectorIndex + 1);
@@ -15631,7 +15439,7 @@ define('skylark-widgets-repeater/views/table',[
             return actions.name === selected.actionName;
         })[0];
         for (var i = 0, selectedRowsL = selected.rows.length; i < selectedRowsL; i++) {
-            var clickedRow = this.repeater.$canvas.find('.repeater-list-wrapper > table tbody tr:nth-child(' + selected.rows[i] + ')');
+            var clickedRow = this.repeater.$canvas.find('.repeater-table-wrapper > table tbody tr:nth-child(' + selected.rows[i] + ')');
             selectedObj.push({
                 item: clickedRow,
                 rowData: clickedRow.data('item_data')
@@ -15648,21 +15456,21 @@ define('skylark-widgets-repeater/views/table',[
     },
 
     sizeActionsTable : function listSizeActionsTable () {
-        var $actionsTable = this.repeater.$element.find('.repeater-list table.table-actions');
+        var $actionsTable = this.repeater.$element.find('.repeater-table table.table-actions');
         var $actionsTableHeader = $actionsTable.find('thead tr th');
-        var $table = this.repeater.$element.find('.repeater-list-wrapper > table');
+        var $table = this.repeater.$element.find('.repeater-table-wrapper > table');
 
         $actionsTableHeader.outerHeight($table.find('thead tr th').outerHeight());
-        $actionsTableHeader.find('.repeater-list-heading').outerHeight($actionsTableHeader.outerHeight());
+        $actionsTableHeader.find('.repeater-table-heading').outerHeight($actionsTableHeader.outerHeight());
         $actionsTable.find('tbody tr td:first-child').each(function eachFirstChild (i) {
             $(this).outerHeight($table.find('tbody tr:eq(' + i + ') td').outerHeight());
         });
     },
 
     sizeFrozenColumns : function listSizeFrozenColumns () {
-        var $table = this.repeater.$element.find('.repeater-list .repeater-list-wrapper > table');
+        var $table = this.repeater.$element.find('.repeater-table .repeater-table-wrapper > table');
 
-        this.repeater.$element.find('.repeater-list table.table-frozen tr').each(function eachTR (i) {
+        this.repeater.$element.find('.repeater-table table.table-frozen tr').each(function eachTR (i) {
             $(this).height($table.find('tr:eq(' + i + ')').height());
         });
 
@@ -15673,7 +15481,7 @@ define('skylark-widgets-repeater/views/table',[
     frozenOptionsInitialize : function listFrozenOptionsInitialize () {
         var $checkboxes = this.repeater.$element.find('.frozen-column-wrapper .checkbox-inline');
         var $headerCheckbox = this.repeater.$element.find('.header-checkbox .checkbox-custom');
-        var $everyTable = this.repeater.$element.find('.repeater-list table');
+        var $everyTable = this.repeater.$element.find('.repeater-table table');
         var self = this;
 
         // Make sure if row is hovered that it is shown in frozen column as well
@@ -15702,7 +15510,7 @@ define('skylark-widgets-repeater/views/table',[
                 } else {
                     var row = $(this).attr('data-row');
                     row = parseInt(row, 10) + 1;
-                    self.repeater.$element.find('.repeater-list-wrapper > table tbody tr:nth-child(' + row + ')').click();
+                    self.repeater.$element.find('.repeater-table-wrapper > table tbody tr:nth-child(' + row + ')').click();
 
                     var numSelected = self.repeater.$element.find('.table-frozen tbody .checkbox-inline.checked').length;
                     if (numSelected === 0) {
@@ -15725,10 +15533,10 @@ define('skylark-widgets-repeater/views/table',[
                 if (self.isDisabled) {
                     revertCheckbox($(e.currentTarget));
                 } else if ($(this).is(':checked')) {
-                    self.repeater.$element.find('.repeater-list-wrapper > table tbody tr:not(.selected)').click();
+                    self.repeater.$element.find('.repeater-table-wrapper > table tbody tr:not(.selected)').click();
                     self.repeater.$element.trigger('selected.lark.repeaterList', $checkboxes);
                 } else {
-                    self.repeater.$element.find('.repeater-list-wrapper > table tbody tr.selected').click();
+                    self.repeater.$element.find('.repeater-table-wrapper > table tbody tr.selected').click();
                     self.repeater.$element.trigger('deselected.lark.repeaterList', $checkboxes);
                 }
             }
@@ -15774,7 +15582,7 @@ define('skylark-widgets-repeater/views/table',[
         callback();
     },
     resize: function resize () {
-        sizeColumns.call(this, this.repeater.$element.find('.repeater-list-wrapper > table thead tr'));
+        sizeColumns.call(this, this.repeater.$element.find('.repeater-table-wrapper > table thead tr'));
         if (this.options.actions) {
             this.sizeActionsTable();
         }
@@ -15798,7 +15606,7 @@ define('skylark-widgets-repeater/views/table',[
         }
     },
     before: function before (helpers) {
-        var $listContainer = helpers.container.find('.repeater-list');
+        var $listContainer = helpers.container.find('.repeater-table');
         var self = this;
         var $table;
 
@@ -15810,8 +15618,8 @@ define('skylark-widgets-repeater/views/table',[
         }
 
         if ($listContainer.length < 1) {
-            $listContainer = $('<div class="repeater-list ' + this.specialBrowserClass + '" data-preserve="shallow"><div class="repeater-list-wrapper" data-infinite="true" data-preserve="shallow"><table aria-readonly="true" class="table" data-preserve="shallow" role="grid"></table></div></div>');
-            $listContainer.find('.repeater-list-wrapper').on('scroll.lark.repeaterList', function onScrollRepeaterList () {
+            $listContainer = $('<div class="repeater-table ' + this.specialBrowserClass + '" data-preserve="shallow"><div class="repeater-table-wrapper" data-infinite="true" data-preserve="shallow"><table aria-readonly="true" class="table" data-preserve="shallow" role="grid"></table></div></div>');
+            $listContainer.find('.repeater-table-wrapper').on('scroll.lark.repeaterList', function onScrollRepeaterList () {
                 if (self.options.columnSyncing) {
                     self.positionHeadings();
                 }
@@ -15858,7 +15666,7 @@ define('skylark-widgets-repeater/views/table',[
             this.positionHeadings();
         }
 
-        $sorted = this.repeater.$canvas.find('.repeater-list-wrapper > table .repeater-list-heading.sorted');
+        $sorted = this.repeater.$canvas.find('.repeater-table-wrapper > table .repeater-table-heading.sorted');
         if ($sorted.length > 0) {
             this.highlightColumn($sorted.data('fu_item_index'));
         }
@@ -15901,7 +15709,7 @@ define('skylark-widgets-repeater/views/table',[
 
         var property = columns[columnIndex].property;
         if (this.options.actions !== false && property === '@_ACTIONS_@') {
-            content = '<div class="repeater-list-actions-placeholder" style="width: ' + this.actions_width  + 'px"></div>';
+            content = '<div class="repeater-table-actions-placeholder" style="width: ' + this.actions_width  + 'px"></div>';
         }
 
         content = (content !== undefined) ? content : '';
@@ -15927,10 +15735,10 @@ define('skylark-widgets-repeater/views/table',[
         var chevDown = 'glyphicon-chevron-down';
         var chevron = '.glyphicon.rlc:first';
         var chevUp = 'glyphicon-chevron-up';
-        var $div = $('<div class="repeater-list-heading"><span class="glyphicon rlc"></span></div>');
+        var $div = $('<div class="repeater-table-heading"><span class="glyphicon rlc"></span></div>');
         var checkAllID = (this.repeater.$element.attr('id') + '_' || '') + 'checkall';
 
-        var checkBoxMarkup = '<div class="repeater-list-heading header-checkbox">' +
+        var checkBoxMarkup = '<div class="repeater-table-heading header-checkbox">' +
                 '<label id="' + checkAllID + '" class="checkbox-custom checkbox-inline">' +
                     '<input class="sr-only" type="checkbox" value="">' +
                     '<span class="checkbox-label">&nbsp;</span>' +
@@ -15990,7 +15798,7 @@ define('skylark-widgets-repeater/views/table',[
                             self.sortProperty = null;
                         }
                     } else {
-                        $tr.find('th, .repeater-list-heading').removeClass('sorted');
+                        $tr.find('th, .repeater-table-heading').removeClass('sorted');
                         $spans.removeClass(chevDown).addClass(chevUp);
                         self.sortDirection = 'asc';
                         $both.addClass('sorted');
@@ -16005,7 +15813,7 @@ define('skylark-widgets-repeater/views/table',[
         }
 
         if (columns[index].sortDirection === 'asc' || columns[index].sortDirection === 'desc') {
-            $tr.find('th, .repeater-list-heading').removeClass('sorted');
+            $tr.find('th, .repeater-table-heading').removeClass('sorted');
             $both.addClass('sortable sorted');
             if (columns[index].sortDirection === 'asc') {
                 $spans.addClass(chevUp);
@@ -16042,18 +15850,18 @@ define('skylark-widgets-repeater/views/table',[
                         $actionsRow.removeClass('selected');
                     }
                 } else {
-                    $item.find('.repeater-list-check').remove();
+                    $item.find('.repeater-table-check').remove();
                 }
 
                 $repeater.trigger('deselected.lark.repeaterList', $item);
             } else {
                 if (!isMulti) {
-                    repeater.$canvas.find('.repeater-list-check').remove();
-                    repeater.$canvas.find('.repeater-list tbody tr.selected').each(function deslectRow () {
+                    repeater.$canvas.find('.repeater-table-check').remove();
+                    repeater.$canvas.find('.repeater-table tbody tr.selected').each(function deslectRow () {
                         $(this).removeClass('selected');
                         $repeater.trigger('deselected.lark.repeaterList', $(this));
                     });
-                    $item.find('td:first').prepend('<div class="repeater-list-check"><span class="glyphicon glyphicon-ok"></span></div>');
+                    $item.find('td:first').prepend('<div class="repeater-table-check"><span class="glyphicon glyphicon-ok"></span></div>');
                     $item.addClass('selected');
                     $frozenRow.addClass('selected');
                 } else {
@@ -16196,7 +16004,7 @@ define('skylark-widgets-repeater/views/table',[
             if (this.options.selectable === 'multi' && !this.noItems) {
                 // after checkbox column is created need to get width of checkbox column from
                 // its css class
-                var checkboxWidth = this.repeater.$element.find('.repeater-list-wrapper .header-checkbox').outerWidth();
+                var checkboxWidth = this.repeater.$element.find('.repeater-table-wrapper .header-checkbox').outerWidth();
                 var selectColumn = $.grep(columns, function grepColumn (column) {
                     return column.property === '@_CHECKBOX_@';
                 })[0];
@@ -16226,7 +16034,7 @@ define('skylark-widgets-repeater/views/table',[
                     widthTaken += $th.outerWidth();
                     self.columns[i]._auto_width = width;
                 } else {
-                    var outerWidth = $th.find('.repeater-list-heading').outerWidth();
+                    var outerWidth = $th.find('.repeater-table-heading').outerWidth();
                     automaticallyGeneratedWidths.push({
                         col: $th,
                         index: i,
@@ -16239,7 +16047,7 @@ define('skylark-widgets-repeater/views/table',[
 
             length = automaticallyGeneratedWidths.length;
             if (length > 0) {
-                var canvasWidth = this.repeater.$canvas.find('.repeater-list-wrapper').outerWidth();
+                var canvasWidth = this.repeater.$canvas.find('.repeater-table-wrapper').outerWidth();
                 newWidth = Math.floor((canvasWidth - widthTaken) / length);
                 for (i = 0; i < length; i++) {
                     if (automaticallyGeneratedWidths[i].minWidth > newWidth) {
@@ -16267,12 +16075,12 @@ define('skylark-widgets-repeater/views/table',[
     };
 
     var toggleActionsHeaderButton = function toggleActionsHeaderButton () {
-        var selectedSelector = '.repeater-list-wrapper > table .selected';
+        var selectedSelector = '.repeater-table-wrapper > table .selected';
         var $actionsColumn = this.repeater.$element.find('.table-actions');
         var $selected;
 
         if (this.options.selectable === 'action') {
-            selectedSelector = '.repeater-list-wrapper > table tr';
+            selectedSelector = '.repeater-table-wrapper > table tr';
         }
 
         $selected = this.repeater.$canvas.find( selectedSelector );
@@ -16285,19 +16093,21 @@ define('skylark-widgets-repeater/views/table',[
     };
 
 
-     return views["table"] = {
+     views["table"] = {
         name : "table",
         ctor : TableView
-    };   
+    }; 
+
+    return TableView;
 
 });
-define('skylark-widgets-repeater/views/tile',[
+define('skylark-widgets-repeater/views/TileView',[
     "skylark-langx/langx",
-    "skylark-utils-dom/browser",
-    "skylark-utils-dom/eventer",
-    "skylark-utils-dom/noder",
-    "skylark-utils-dom/geom",
-    "skylark-utils-dom/query",
+    "skylark-domx-browser",
+    "skylark-domx-eventer",
+    "skylark-domx-noder",
+    "skylark-domx-geom",
+    "skylark-domx-query",
     "../views",   
     "./ViewBase"
 ], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
@@ -16317,12 +16127,12 @@ define('skylark-widgets-repeater/views/tile',[
 
     //ADDITIONAL METHODS
     clearSelectedItems : function() {
-        this.repeater.$canvas.find('.repeater-thumbnail-cont .selectable.selected').removeClass('selected');
+        this.repeater.$canvas.find('.repeater-tile .selectable.selected').removeClass('selected');
     },
 
     getSelectedItems : function() {
         var selected = [];
-        this.repeater.$canvas.find('.repeater-thumbnail-cont .selectable.selected').each(function() {
+        this.repeater.$canvas.find('.repeater-tile .selectable.selected').each(function() {
             selected.push($(this));
         });
         return selected;
@@ -16380,13 +16190,13 @@ define('skylark-widgets-repeater/views/tile',[
             if (items[i].index !== undefined) {
                 $item = $();
                 n = 0;
-                this.repeater.$canvas.find('.repeater-thumbnail-cont .selectable').each(compareItemIndex);
+                this.repeater.$canvas.find('.repeater-tile .selectable').each(compareItemIndex);
                 if ($item.length > 0) {
                     selectItem($item, items[i].selected);
                 }
 
             } else if (items[i].selector) {
-                this.repeater.$canvas.find('.repeater-thumbnail-cont .selectable').each(compareItemSelector);
+                this.repeater.$canvas.find('.repeater-tile .selectable').each(compareItemSelector);
             }
         }
     },
@@ -16401,13 +16211,13 @@ define('skylark-widgets-repeater/views/tile',[
     },
     before: function(helpers) {
         var alignment = this.options.alignment;
-        var $cont = this.repeater.$canvas.find('.repeater-thumbnail-cont');
+        var $cont = this.repeater.$canvas.find('.repeater-tile');
         var data = helpers.data;
         var response = {};
         var $empty, validAlignments;
 
         if ($cont.length < 1) {
-            $cont = $('<div class="clearfix repeater-thumbnail-cont" data-container="true" data-infinite="true" data-preserve="shallow"></div>');
+            $cont = $('<div class="clearfix repeater-tile" data-container="true" data-infinite="true" data-preserve="shallow"></div>');
             if (alignment && alignment !== 'none') {
                 validAlignments = {
                     'center': 1,
@@ -16451,7 +16261,7 @@ define('skylark-widgets-repeater/views/tile',[
 
                 if (!$thumbnail.hasClass(selected)) {
                     if (selectable !== 'multi') {
-                        self.repeater.$canvas.find('.repeater-thumbnail-cont .selectable.selected').each(function() {
+                        self.repeater.$canvas.find('.repeater-tile .selectable.selected').each(function() {
                             var $itm = $(this);
                             $itm.removeClass(selected);
                             self.repeater.$element.trigger('deselected.lark.repeaterThumbnail', $itm);
@@ -16512,19 +16322,21 @@ define('skylark-widgets-repeater/views/tile',[
         return template;
     }
 
-    return views["tile"] = {
+    views["tile"] = {
         name : "tile",
         ctor : TileView
     };
+
+    return TileView;
     
 });
 define('skylark-widgets-repeater/main',[
     "./Repeater",
     "./views",
     "./views/ViewBase",
-    "./views/slider",
-    "./views/table",
-    "./views/tile"
+    "./views/SliderView",
+    "./views/TableView",
+    "./views/TileView"
 ], function(Repeater) {
     return Repeater;
 });

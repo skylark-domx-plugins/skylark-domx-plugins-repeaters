@@ -7,13 +7,11 @@
 
 define([
 	"skylark-langx/langx",
-	"skylark-utils-dom",
+	"skylark-domx-query",
 	"skylark-widgets-repeater",
 	"./data/pokemon",
 	"./data/colors"
-],function (langx,sutils,Repeater,pokemon,colors) {
-	var $ = sutils.query;
-
+],function (langx,$,Repeater,pokemon,colors) {
 	var columns = [
 		{
 			label: 'Name',

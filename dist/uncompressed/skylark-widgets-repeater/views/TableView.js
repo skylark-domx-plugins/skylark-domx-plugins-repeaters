@@ -1,10 +1,10 @@
 define([
     "skylark-langx/langx",
-    "skylark-utils-dom/browser",
-    "skylark-utils-dom/eventer",
-    "skylark-utils-dom/noder",
-    "skylark-utils-dom/geom",
-    "skylark-utils-dom/query",
+    "skylark-domx-browser",
+    "skylark-domx-eventer",
+    "skylark-domx-noder",
+    "skylark-domx-geom",
+    "skylark-domx-query",
     "../views",   
     "./ViewBase"
 ], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
@@ -27,12 +27,12 @@ define([
     },
 
     clearSelectedItems : function listClearSelectedItems () {
-        this.repeater.$canvas.find('.repeater-list-check').remove();
-        this.repeater.$canvas.find('.repeater-list table tbody tr.selected').removeClass('selected');
+        this.repeater.$canvas.find('.repeater-table-check').remove();
+        this.repeater.$canvas.find('.repeater-table table tbody tr.selected').removeClass('selected');
     },
 
     highlightColumn : function listHighlightColumn (index, force) {
-        var tbody = this.repeater.$canvas.find('.repeater-list-wrapper > table tbody');
+        var tbody = this.repeater.$canvas.find('.repeater-table-wrapper > table tbody');
         if (this.options.highlightSortedColumn || force) {
             tbody.find('td.sorted').removeClass('sorted');
             tbody.find('tr').each(function eachTR () {
@@ -44,7 +44,7 @@ define([
 
     getSelectedItems : function listGetSelectedItems () {
         var selected = [];
-        this.repeater.$canvas.find('.repeater-list .repeater-list-wrapper > table tbody tr.selected').each(function eachSelectedTR () {
+        this.repeater.$canvas.find('.repeater-table .repeater-table-wrapper > table tbody tr.selected').each(function eachSelectedTR () {
             var $item = $(this);
             selected.push({
                 data: $item.data('item_data'),
@@ -55,17 +55,17 @@ define([
     },
 
     positionHeadings : function listPositionHeadings () {
-        var $wrapper = this.repeater.$element.find('.repeater-list-wrapper');
+        var $wrapper = this.repeater.$element.find('.repeater-table-wrapper');
         var offsetLeft = $wrapper.offset().left;
         var scrollLeft = $wrapper.scrollLeft();
         if (scrollLeft > 0) {
-            $wrapper.find('.repeater-list-heading').each(function eachListHeading () {
+            $wrapper.find('.repeater-table-heading').each(function eachListHeading () {
                 var $heading = $(this);
                 var left = ($heading.parents('th:first').offset().left - offsetLeft) + 'px';
                 $heading.addClass('shifted').css('left', left);
             });
         } else {
-            $wrapper.find('.repeater-list-heading').each(function eachListHeading () {
+            $wrapper.find('.repeater-table-heading').each(function eachListHeading () {
                 $(this).removeClass('shifted').css('left', '');
             });
         }
@@ -117,7 +117,7 @@ define([
                         self.repeater.$element.find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').addClass('selected');
                     }
 
-                    $itm.find('td:first').prepend('<div class="repeater-list-check"><span class="glyphicon glyphicon-ok"></span></div>');
+                    $itm.find('td:first').prepend('<div class="repeater-table-check"><span class="glyphicon glyphicon-ok"></span></div>');
                 }
             } else {
                 if (self.options.frozenColumns) {
@@ -131,7 +131,7 @@ define([
                     self.repeater.$element.find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').removeClass('selected');
                 }
 
-                $itm.find('.repeater-list-check').remove();
+                $itm.find('.repeater-table-check').remove();
                 $itm.removeClass('selected');
             }
         };
@@ -146,21 +146,21 @@ define([
 
         for (i = 0; i < length; i++) {
             if (items[i].index !== undefined) {
-                $item = this.repeater.$canvas.find('.repeater-list .repeater-list-wrapper > table tbody tr:nth-child(' + (items[i].index + 1) + ')');
+                $item = this.repeater.$canvas.find('.repeater-table .repeater-table-wrapper > table tbody tr:nth-child(' + (items[i].index + 1) + ')');
                 if ($item.length > 0) {
                     selectItem($item, items[i].selected, items[i].index);
                 }
             } else if (items[i].property !== undefined && items[i].value !== undefined) {
-                this.repeater.$canvas.find('.repeater-list .repeater-list-wrapper > table tbody tr').each(checkIfItemMatchesValue);
+                this.repeater.$canvas.find('.repeater-table .repeater-table-wrapper > table tbody tr').each(checkIfItemMatchesValue);
             }
         }
     },
 
     sizeHeadings : function listSizeHeadings () {
-        var $table = this.repeater.$element.find('.repeater-list table');
+        var $table = this.repeater.$element.find('.repeater-table table');
         $table.find('thead th').each(function eachTH () {
             var $th = $(this);
-            var $heading = $th.find('.repeater-list-heading');
+            var $heading = $th.find('.repeater-table-heading');
             $heading.css({ height: $th.outerHeight() });
             $heading.outerWidth($heading.data('forced-width') || $th.outerWidth());
         });
@@ -169,8 +169,8 @@ define([
     setFrozenColumns : function listSetFrozenColumns () {
         var frozenTable = this.repeater.$canvas.find('.table-frozen');
         var $wrapper = this.repeater.$element.find('.repeater-canvas');
-        var $table = this.repeater.$element.find('.repeater-list .repeater-list-wrapper > table');
-        var repeaterWrapper = this.repeater.$element.find('.repeater-list');
+        var $table = this.repeater.$element.find('.repeater-table .repeater-table-wrapper > table');
+        var repeaterWrapper = this.repeater.$element.find('.repeater-table');
         var numFrozenColumns = this.options.frozenColumns;
         var self = this;
 
@@ -204,10 +204,10 @@ define([
 
         this.sizeFrozenColumns();
 
-        $('.frozen-thead-wrapper .repeater-list-heading').on('click', function onClickHeading () {
+        $('.frozen-thead-wrapper .repeater-table-heading').on('click', function onClickHeading () {
             var index = $(this).parent('th').index();
             index = index + 1;
-            self.repeater.$element.find('.repeater-list-wrapper > table thead th:nth-child(' + index + ') .repeater-list-heading')[0].click();
+            self.repeater.$element.find('.repeater-table-wrapper > table thead th:nth-child(' + index + ') .repeater-table-heading')[0].click();
         });
     },
 
@@ -219,7 +219,7 @@ define([
         var actionsEnabled = this.options.actions;
 
         var canvasWidth = this.repeater.$element.find('.repeater-canvas').outerWidth();
-        var tableWidth = this.repeater.$element.find('.repeater-list .repeater-list-wrapper > table').outerWidth();
+        var tableWidth = this.repeater.$element.find('.repeater-table .repeater-table-wrapper > table').outerWidth();
 
         var actionsWidth = this.repeater.$element.find('.table-actions') ? this.repeater.$element.find('.table-actions').outerWidth() : 0;
 
@@ -227,9 +227,9 @@ define([
 
 
         if (scrollTop > 0) {
-            $wrapper.find('.repeater-list-heading').css('top', scrollTop);
+            $wrapper.find('.repeater-table-heading').css('top', scrollTop);
         } else {
-            $wrapper.find('.repeater-list-heading').css('top', '0');
+            $wrapper.find('.repeater-table-heading').css('top', '0');
         }
 
         if (scrollLeft > 0) {
@@ -258,7 +258,7 @@ define([
         var self = this;
         var i;
         var length;
-        var $table = this.repeater.$element.find('.repeater-list .repeater-list-wrapper > table');
+        var $table = this.repeater.$element.find('.repeater-table .repeater-table-wrapper > table');
         var $actionsTable = this.repeater.$canvas.find('.table-actions');
 
         for (i = 0, length = this.options.actions.items.length; i < length; i++) {
@@ -284,7 +284,7 @@ define([
 
             // Dont show actions dropdown in header if not multi select
             if (this.options.selectable === 'multi' || this.options.selectable === 'action') {
-                $actionsColumn.find('thead tr').html('<th><div class="repeater-list-heading">' + actionsDropdown + '</div></th>');
+                $actionsColumn.find('thead tr').html('<th><div class="repeater-table-heading">' + actionsDropdown + '</div></th>');
 
                 if (this.options.selectable !== 'action') {
                     // disable the header dropdown until an item is selected
@@ -292,7 +292,7 @@ define([
                 }
             } else {
                 var label = this.options.actions.label || '<span class="actions-hidden">a</span>';
-                $actionsColumn.find('thead tr').addClass('empty-heading').html('<th>' + label + '<div class="repeater-list-heading">' + label + '</div></th>');
+                $actionsColumn.find('thead tr').addClass('empty-heading').html('<th>' + label + '<div class="repeater-table-heading">' + label + '</div></th>');
             }
 
             // Create Actions dropdown for each cell in actions table
@@ -330,10 +330,10 @@ define([
                     actionName: actionName,
                     rows: []
                 };
-                var selector = '.repeater-list-wrapper > table .selected';
+                var selector = '.repeater-table-wrapper > table .selected';
 
                 if ( self.options.selectable === 'action' ) {
-                    selector = '.repeater-list-wrapper > table tr';
+                    selector = '.repeater-table-wrapper > table tr';
                 }
                 self.repeater.$element.find(selector).each(function eachSelector (selectorIndex) {
                     selected.rows.push(selectorIndex + 1);
@@ -350,7 +350,7 @@ define([
             return actions.name === selected.actionName;
         })[0];
         for (var i = 0, selectedRowsL = selected.rows.length; i < selectedRowsL; i++) {
-            var clickedRow = this.repeater.$canvas.find('.repeater-list-wrapper > table tbody tr:nth-child(' + selected.rows[i] + ')');
+            var clickedRow = this.repeater.$canvas.find('.repeater-table-wrapper > table tbody tr:nth-child(' + selected.rows[i] + ')');
             selectedObj.push({
                 item: clickedRow,
                 rowData: clickedRow.data('item_data')
@@ -367,21 +367,21 @@ define([
     },
 
     sizeActionsTable : function listSizeActionsTable () {
-        var $actionsTable = this.repeater.$element.find('.repeater-list table.table-actions');
+        var $actionsTable = this.repeater.$element.find('.repeater-table table.table-actions');
         var $actionsTableHeader = $actionsTable.find('thead tr th');
-        var $table = this.repeater.$element.find('.repeater-list-wrapper > table');
+        var $table = this.repeater.$element.find('.repeater-table-wrapper > table');
 
         $actionsTableHeader.outerHeight($table.find('thead tr th').outerHeight());
-        $actionsTableHeader.find('.repeater-list-heading').outerHeight($actionsTableHeader.outerHeight());
+        $actionsTableHeader.find('.repeater-table-heading').outerHeight($actionsTableHeader.outerHeight());
         $actionsTable.find('tbody tr td:first-child').each(function eachFirstChild (i) {
             $(this).outerHeight($table.find('tbody tr:eq(' + i + ') td').outerHeight());
         });
     },
 
     sizeFrozenColumns : function listSizeFrozenColumns () {
-        var $table = this.repeater.$element.find('.repeater-list .repeater-list-wrapper > table');
+        var $table = this.repeater.$element.find('.repeater-table .repeater-table-wrapper > table');
 
-        this.repeater.$element.find('.repeater-list table.table-frozen tr').each(function eachTR (i) {
+        this.repeater.$element.find('.repeater-table table.table-frozen tr').each(function eachTR (i) {
             $(this).height($table.find('tr:eq(' + i + ')').height());
         });
 
@@ -392,7 +392,7 @@ define([
     frozenOptionsInitialize : function listFrozenOptionsInitialize () {
         var $checkboxes = this.repeater.$element.find('.frozen-column-wrapper .checkbox-inline');
         var $headerCheckbox = this.repeater.$element.find('.header-checkbox .checkbox-custom');
-        var $everyTable = this.repeater.$element.find('.repeater-list table');
+        var $everyTable = this.repeater.$element.find('.repeater-table table');
         var self = this;
 
         // Make sure if row is hovered that it is shown in frozen column as well
@@ -421,7 +421,7 @@ define([
                 } else {
                     var row = $(this).attr('data-row');
                     row = parseInt(row, 10) + 1;
-                    self.repeater.$element.find('.repeater-list-wrapper > table tbody tr:nth-child(' + row + ')').click();
+                    self.repeater.$element.find('.repeater-table-wrapper > table tbody tr:nth-child(' + row + ')').click();
 
                     var numSelected = self.repeater.$element.find('.table-frozen tbody .checkbox-inline.checked').length;
                     if (numSelected === 0) {
@@ -444,10 +444,10 @@ define([
                 if (self.isDisabled) {
                     revertCheckbox($(e.currentTarget));
                 } else if ($(this).is(':checked')) {
-                    self.repeater.$element.find('.repeater-list-wrapper > table tbody tr:not(.selected)').click();
+                    self.repeater.$element.find('.repeater-table-wrapper > table tbody tr:not(.selected)').click();
                     self.repeater.$element.trigger('selected.lark.repeaterList', $checkboxes);
                 } else {
-                    self.repeater.$element.find('.repeater-list-wrapper > table tbody tr.selected').click();
+                    self.repeater.$element.find('.repeater-table-wrapper > table tbody tr.selected').click();
                     self.repeater.$element.trigger('deselected.lark.repeaterList', $checkboxes);
                 }
             }
@@ -493,7 +493,7 @@ define([
         callback();
     },
     resize: function resize () {
-        sizeColumns.call(this, this.repeater.$element.find('.repeater-list-wrapper > table thead tr'));
+        sizeColumns.call(this, this.repeater.$element.find('.repeater-table-wrapper > table thead tr'));
         if (this.options.actions) {
             this.sizeActionsTable();
         }
@@ -517,7 +517,7 @@ define([
         }
     },
     before: function before (helpers) {
-        var $listContainer = helpers.container.find('.repeater-list');
+        var $listContainer = helpers.container.find('.repeater-table');
         var self = this;
         var $table;
 
@@ -529,8 +529,8 @@ define([
         }
 
         if ($listContainer.length < 1) {
-            $listContainer = $('<div class="repeater-list ' + this.specialBrowserClass + '" data-preserve="shallow"><div class="repeater-list-wrapper" data-infinite="true" data-preserve="shallow"><table aria-readonly="true" class="table" data-preserve="shallow" role="grid"></table></div></div>');
-            $listContainer.find('.repeater-list-wrapper').on('scroll.lark.repeaterList', function onScrollRepeaterList () {
+            $listContainer = $('<div class="repeater-table ' + this.specialBrowserClass + '" data-preserve="shallow"><div class="repeater-table-wrapper" data-infinite="true" data-preserve="shallow"><table aria-readonly="true" class="table" data-preserve="shallow" role="grid"></table></div></div>');
+            $listContainer.find('.repeater-table-wrapper').on('scroll.lark.repeaterList', function onScrollRepeaterList () {
                 if (self.options.columnSyncing) {
                     self.positionHeadings();
                 }
@@ -577,7 +577,7 @@ define([
             this.positionHeadings();
         }
 
-        $sorted = this.repeater.$canvas.find('.repeater-list-wrapper > table .repeater-list-heading.sorted');
+        $sorted = this.repeater.$canvas.find('.repeater-table-wrapper > table .repeater-table-heading.sorted');
         if ($sorted.length > 0) {
             this.highlightColumn($sorted.data('fu_item_index'));
         }
@@ -620,7 +620,7 @@ define([
 
         var property = columns[columnIndex].property;
         if (this.options.actions !== false && property === '@_ACTIONS_@') {
-            content = '<div class="repeater-list-actions-placeholder" style="width: ' + this.actions_width  + 'px"></div>';
+            content = '<div class="repeater-table-actions-placeholder" style="width: ' + this.actions_width  + 'px"></div>';
         }
 
         content = (content !== undefined) ? content : '';
@@ -646,10 +646,10 @@ define([
         var chevDown = 'glyphicon-chevron-down';
         var chevron = '.glyphicon.rlc:first';
         var chevUp = 'glyphicon-chevron-up';
-        var $div = $('<div class="repeater-list-heading"><span class="glyphicon rlc"></span></div>');
+        var $div = $('<div class="repeater-table-heading"><span class="glyphicon rlc"></span></div>');
         var checkAllID = (this.repeater.$element.attr('id') + '_' || '') + 'checkall';
 
-        var checkBoxMarkup = '<div class="repeater-list-heading header-checkbox">' +
+        var checkBoxMarkup = '<div class="repeater-table-heading header-checkbox">' +
                 '<label id="' + checkAllID + '" class="checkbox-custom checkbox-inline">' +
                     '<input class="sr-only" type="checkbox" value="">' +
                     '<span class="checkbox-label">&nbsp;</span>' +
@@ -709,7 +709,7 @@ define([
                             self.sortProperty = null;
                         }
                     } else {
-                        $tr.find('th, .repeater-list-heading').removeClass('sorted');
+                        $tr.find('th, .repeater-table-heading').removeClass('sorted');
                         $spans.removeClass(chevDown).addClass(chevUp);
                         self.sortDirection = 'asc';
                         $both.addClass('sorted');
@@ -724,7 +724,7 @@ define([
         }
 
         if (columns[index].sortDirection === 'asc' || columns[index].sortDirection === 'desc') {
-            $tr.find('th, .repeater-list-heading').removeClass('sorted');
+            $tr.find('th, .repeater-table-heading').removeClass('sorted');
             $both.addClass('sortable sorted');
             if (columns[index].sortDirection === 'asc') {
                 $spans.addClass(chevUp);
@@ -761,18 +761,18 @@ define([
                         $actionsRow.removeClass('selected');
                     }
                 } else {
-                    $item.find('.repeater-list-check').remove();
+                    $item.find('.repeater-table-check').remove();
                 }
 
                 $repeater.trigger('deselected.lark.repeaterList', $item);
             } else {
                 if (!isMulti) {
-                    repeater.$canvas.find('.repeater-list-check').remove();
-                    repeater.$canvas.find('.repeater-list tbody tr.selected').each(function deslectRow () {
+                    repeater.$canvas.find('.repeater-table-check').remove();
+                    repeater.$canvas.find('.repeater-table tbody tr.selected').each(function deslectRow () {
                         $(this).removeClass('selected');
                         $repeater.trigger('deselected.lark.repeaterList', $(this));
                     });
-                    $item.find('td:first').prepend('<div class="repeater-list-check"><span class="glyphicon glyphicon-ok"></span></div>');
+                    $item.find('td:first').prepend('<div class="repeater-table-check"><span class="glyphicon glyphicon-ok"></span></div>');
                     $item.addClass('selected');
                     $frozenRow.addClass('selected');
                 } else {
@@ -915,7 +915,7 @@ define([
             if (this.options.selectable === 'multi' && !this.noItems) {
                 // after checkbox column is created need to get width of checkbox column from
                 // its css class
-                var checkboxWidth = this.repeater.$element.find('.repeater-list-wrapper .header-checkbox').outerWidth();
+                var checkboxWidth = this.repeater.$element.find('.repeater-table-wrapper .header-checkbox').outerWidth();
                 var selectColumn = $.grep(columns, function grepColumn (column) {
                     return column.property === '@_CHECKBOX_@';
                 })[0];
@@ -945,7 +945,7 @@ define([
                     widthTaken += $th.outerWidth();
                     self.columns[i]._auto_width = width;
                 } else {
-                    var outerWidth = $th.find('.repeater-list-heading').outerWidth();
+                    var outerWidth = $th.find('.repeater-table-heading').outerWidth();
                     automaticallyGeneratedWidths.push({
                         col: $th,
                         index: i,
@@ -958,7 +958,7 @@ define([
 
             length = automaticallyGeneratedWidths.length;
             if (length > 0) {
-                var canvasWidth = this.repeater.$canvas.find('.repeater-list-wrapper').outerWidth();
+                var canvasWidth = this.repeater.$canvas.find('.repeater-table-wrapper').outerWidth();
                 newWidth = Math.floor((canvasWidth - widthTaken) / length);
                 for (i = 0; i < length; i++) {
                     if (automaticallyGeneratedWidths[i].minWidth > newWidth) {
@@ -986,12 +986,12 @@ define([
     };
 
     var toggleActionsHeaderButton = function toggleActionsHeaderButton () {
-        var selectedSelector = '.repeater-list-wrapper > table .selected';
+        var selectedSelector = '.repeater-table-wrapper > table .selected';
         var $actionsColumn = this.repeater.$element.find('.table-actions');
         var $selected;
 
         if (this.options.selectable === 'action') {
-            selectedSelector = '.repeater-list-wrapper > table tr';
+            selectedSelector = '.repeater-table-wrapper > table tr';
         }
 
         $selected = this.repeater.$canvas.find( selectedSelector );
@@ -1004,9 +1004,11 @@ define([
     };
 
 
-     return views["table"] = {
+     views["table"] = {
         name : "table",
         ctor : TableView
-    };   
+    }; 
+
+    return TableView;
 
 });

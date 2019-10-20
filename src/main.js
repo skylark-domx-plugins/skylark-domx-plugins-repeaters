@@ -2,9 +2,9 @@ define([
     "./Repeater",
     "./views",
     "./views/ViewBase",
-    "./views/slider",
-    "./views/table",
-    "./views/tile"
+    "./views/SliderView",
+    "./views/TableView",
+    "./views/TileView"
 ], function(Repeater) {
     return Repeater;
 });
