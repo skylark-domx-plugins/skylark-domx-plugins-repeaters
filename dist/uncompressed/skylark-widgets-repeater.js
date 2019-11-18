@@ -1202,6 +1202,192 @@ define('skylark-widgets-repeater/views/ViewBase',[
 	return views.ViewBase = ViewBase;
 });
 
+define('skylark-widgets-repeater/views/ListView',[
+    "skylark-langx/langx",
+    "skylark-domx-browser",
+    "skylark-domx-eventer",
+    "skylark-domx-noder",
+    "skylark-domx-geom",
+    "skylark-domx-query",
+    "../views",   
+    "./ViewBase"
+], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
+
+
+  var ListView = ViewBase.inherit({
+    klassName : "ListView",
+
+    options: {
+        alignment: 'left',
+        infiniteScroll: false,
+        itemRendered: null,
+        noItemsHTML: 'no items found',
+        selectable: false,
+
+        template : '<ul class="clearfix repeater-list" data-container="true" data-infinite="true" data-preserve="shallow"></ul>',
+        item : {
+            template: '<li class="repeater-item"><img  src="{{ThumbnailImage}}" class="thumb"/><h4 class="title">{{name}}</h4></div>'
+        },
+    },
+
+    //ADDITIONAL METHODS
+    clearSelectedItems : function() {
+        this.repeater.$canvas.find('.repeater-list .selectable.selected').removeClass('selected');
+    },
+
+    getSelectedItems : function() {
+        var selected = [];
+        this.repeater.$canvas.find('.repeater-list .selectable.selected').each(function() {
+            selected.push($(this));
+        });
+        return selected;
+    },
+
+    setSelectedItems : function(items, force) {
+        var selectable = this.options.selectable;
+        var self = this;
+        var i, $item, l, n;
+
+        //this function is necessary because lint yells when a function is in a loop
+        function compareItemIndex() {
+            if (n === items[i].index) {
+                $item = $(this);
+                return false;
+            } else {
+                n++;
+            }
+        }
+
+        //this function is necessary because lint yells when a function is in a loop
+        function compareItemSelector() {
+            $item = $(this);
+            if ($item.is(items[i].selector)) {
+                selectItem($item, items[i].selected);
+            }
+        }
+
+        function selectItem($itm, select) {
+            select = (select !== undefined) ? select : true;
+            if (select) {
+                if (!force && selectable !== 'multi') {
+                    self.thumbnail_clearSelectedItems();
+                }
+
+                $itm.addClass('selected');
+            } else {
+                $itm.removeClass('selected');
+            }
+        }
+
+        if (!langx.isArray(items)) {
+            items = [items];
+        }
+
+        if (force === true || selectable === 'multi') {
+            l = items.length;
+        } else if (selectable) {
+            l = (items.length > 0) ? 1 : 0;
+        } else {
+            l = 0;
+        }
+
+        for (i = 0; i < l; i++) {
+            if (items[i].index !== undefined) {
+                $item = $();
+                n = 0;
+                this.repeater.$canvas.find('.repeater-list .selectable').each(compareItemIndex);
+                if ($item.length > 0) {
+                    selectItem($item, items[i].selected);
+                }
+
+            } else if (items[i].selector) {
+                this.repeater.$canvas.find('.repeater-list .selectable').each(compareItemSelector);
+            }
+        }
+    },
+
+    selected: function() {
+        var infScroll = this.options.infiniteScroll;
+        var opts;
+        if (infScroll) {
+            opts = (typeof infScroll === 'object') ? infScroll : {};
+            this.infiniteScrolling(true, opts);
+        }
+    },
+    before: function(helpers) {
+        var alignment = this.options.alignment;
+        var $cont = this.repeater.$canvas.find('.repeater-list');
+        var data = helpers.data;
+        var response = {};
+        var $empty, validAlignments;
+
+        if ($cont.length < 1) {
+            $cont = $(this.options.template);
+
+            response.item = $cont;
+        } else {
+            response.action = 'none';
+        }
+
+        return response;
+    },
+
+    renderItem: function(helpers) {
+        var selectable = this.options.selectable;
+        var selected = 'selected';
+        var self = this;
+        var $item = this._create$Item(this.options.item.template,helpers.subset[helpers.index]);
+
+        $item.data('item_data', helpers.data.items[helpers.index]);
+
+        if (selectable) {
+            $item.addClass('selectable');
+            $item.on('click', function() {
+                if (self.isDisabled) return;
+
+                if (!$item.hasClass(selected)) {
+                    if (selectable !== 'multi') {
+                        self.repeater.$canvas.find('.repeater-list .selectable.selected').each(function() {
+                            var $itm = $(this);
+                            $itm.removeClass(selected);
+                            self.repeater.$element.trigger('deselected.lark.repeaterList', $itm);
+                        });
+                    }
+
+                    $item.addClass(selected);
+                    self.repeater.$element.trigger('selected.lark.repeaterList', $item);
+                } else {
+                    $item.removeClass(selected);
+                    self.repeater.$element.trigger('deselected.lark.repeaterList', $item);
+                }
+            });
+        }
+
+        helpers.container.append($item);
+
+
+        if (this.options.itemRendered) {
+            this.options.itemRendered({
+                container: helpers.container,
+                item: $thumbnail,
+                itemData: helpers.subset[helpers.index]
+            }, function() {});
+        }
+
+        return false;
+    }
+    
+  });
+
+
+    views["list"] = {
+        name : "list",
+        ctor : ListView
+    };
+
+    return ListView;
+    
+});
 /* global define, window, document, DocumentTouch */
 
 define('skylark-widgets-repeater/views/SliderView',[
@@ -3490,7 +3676,10 @@ define('skylark-widgets-repeater/views/TileView',[
         itemRendered: null,
         noItemsHTML: 'no items found',
         selectable: false,
-        template: '<div class="thumbnail repeater-thumbnail"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
+        template : '<div class="clearfix repeater-tile" data-container="true" data-infinite="true" data-preserve="shallow"></div>',
+        item : {
+            template: '<div class="thumbnail repeater-thumbnail"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
+        }
     },
 
     //ADDITIONAL METHODS
@@ -3585,7 +3774,7 @@ define('skylark-widgets-repeater/views/TileView',[
         var $empty, validAlignments;
 
         if ($cont.length < 1) {
-            $cont = $('<div class="clearfix repeater-tile" data-container="true" data-infinite="true" data-preserve="shallow"></div>');
+            $cont = $(this.options.template);
             if (alignment && alignment !== 'none') {
                 validAlignments = {
                     'center': 1,
@@ -3618,7 +3807,7 @@ define('skylark-widgets-repeater/views/TileView',[
         var selectable = this.options.selectable;
         var selected = 'selected';
         var self = this;
-        var $thumbnail = $(fillTemplate(helpers.subset[helpers.index], this.options.template));
+        var $thumbnail = this._create$Item(this.options.item.template,helpers.subset[helpers.index]);
 
         $thumbnail.data('item_data', helpers.data.items[helpers.index]);
 
@@ -3664,32 +3853,6 @@ define('skylark-widgets-repeater/views/TileView',[
   });
 
 
-    //ADDITIONAL METHODS
-    function fillTemplate(itemData, template) {
-        var invalid = false;
-
-        function replace() {
-            var end, start, val;
-
-            start = template.indexOf('{{');
-            end = template.indexOf('}}', start + 2);
-
-            if (start > -1 && end > -1) {
-                val = langx.trim(template.substring(start + 2, end));
-                val = (itemData[val] !== undefined) ? itemData[val] : '';
-                template = template.substring(0, start) + val + template.substring(end + 2);
-            } else {
-                invalid = true;
-            }
-        }
-
-        while (!invalid && template.search('{{') >= 0) {
-            replace(template);
-        }
-
-        return template;
-    }
-
     views["tile"] = {
         name : "tile",
         ctor : TileView
@@ -3702,6 +3865,7 @@ define('skylark-widgets-repeater/main',[
     "./Repeater",
     "./views",
     "./views/ViewBase",
+    "./views/ListView",
     "./views/SliderView",
     "./views/TableView",
     "./views/TileView"

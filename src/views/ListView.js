@@ -10,8 +10,8 @@ define([
 ], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
 
 
-  var TileView = ViewBase.inherit({
-    klassName : "TileView",
+  var ListView = ViewBase.inherit({
+    klassName : "ListView",
 
     options: {
         alignment: 'left',
@@ -19,20 +19,21 @@ define([
         itemRendered: null,
         noItemsHTML: 'no items found',
         selectable: false,
-        template : '<div class="clearfix repeater-tile" data-container="true" data-infinite="true" data-preserve="shallow"></div>',
+
+        template : '<ul class="clearfix repeater-list" data-container="true" data-infinite="true" data-preserve="shallow"></ul>',
         item : {
-            template: '<div class="thumbnail repeater-thumbnail"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
-        }
+            template: '<li class="repeater-item"><img  src="{{ThumbnailImage}}" class="thumb"/><h4 class="title">{{name}}</h4></div>'
+        },
     },
 
     //ADDITIONAL METHODS
     clearSelectedItems : function() {
-        this.repeater.$canvas.find('.repeater-tile .selectable.selected').removeClass('selected');
+        this.repeater.$canvas.find('.repeater-list .selectable.selected').removeClass('selected');
     },
 
     getSelectedItems : function() {
         var selected = [];
-        this.repeater.$canvas.find('.repeater-tile .selectable.selected').each(function() {
+        this.repeater.$canvas.find('.repeater-list .selectable.selected').each(function() {
             selected.push($(this));
         });
         return selected;
@@ -90,13 +91,13 @@ define([
             if (items[i].index !== undefined) {
                 $item = $();
                 n = 0;
-                this.repeater.$canvas.find('.repeater-tile .selectable').each(compareItemIndex);
+                this.repeater.$canvas.find('.repeater-list .selectable').each(compareItemIndex);
                 if ($item.length > 0) {
                     selectItem($item, items[i].selected);
                 }
 
             } else if (items[i].selector) {
-                this.repeater.$canvas.find('.repeater-tile .selectable').each(compareItemSelector);
+                this.repeater.$canvas.find('.repeater-list .selectable').each(compareItemSelector);
             }
         }
     },
@@ -111,76 +112,55 @@ define([
     },
     before: function(helpers) {
         var alignment = this.options.alignment;
-        var $cont = this.repeater.$canvas.find('.repeater-tile');
+        var $cont = this.repeater.$canvas.find('.repeater-list');
         var data = helpers.data;
         var response = {};
         var $empty, validAlignments;
 
         if ($cont.length < 1) {
             $cont = $(this.options.template);
-            if (alignment && alignment !== 'none') {
-                validAlignments = {
-                    'center': 1,
-                    'justify': 1,
-                    'left': 1,
-                    'right': 1
-                };
-                alignment = (validAlignments[alignment]) ? alignment : 'justify';
-                $cont.addClass('align-' + alignment);
-                this.thumbnail_injectSpacers = true;
-            } else {
-                this.thumbnail_injectSpacers = false;
-            }
+
             response.item = $cont;
         } else {
             response.action = 'none';
         }
 
-        if (data.items && data.items.length < 1) {
-            $empty = $('<div class="empty"></div>');
-            $empty.append(this.options.noItemsHTML);
-            $cont.append($empty);
-        } else {
-            $cont.find('.empty:first').remove();
-        }
-
         return response;
     },
+
     renderItem: function(helpers) {
         var selectable = this.options.selectable;
         var selected = 'selected';
         var self = this;
-        var $thumbnail = this._create$Item(this.options.item.template,helpers.subset[helpers.index]);
+        var $item = this._create$Item(this.options.item.template,helpers.subset[helpers.index]);
 
-        $thumbnail.data('item_data', helpers.data.items[helpers.index]);
+        $item.data('item_data', helpers.data.items[helpers.index]);
 
         if (selectable) {
-            $thumbnail.addClass('selectable');
-            $thumbnail.on('click', function() {
+            $item.addClass('selectable');
+            $item.on('click', function() {
                 if (self.isDisabled) return;
 
-                if (!$thumbnail.hasClass(selected)) {
+                if (!$item.hasClass(selected)) {
                     if (selectable !== 'multi') {
-                        self.repeater.$canvas.find('.repeater-tile .selectable.selected').each(function() {
+                        self.repeater.$canvas.find('.repeater-list .selectable.selected').each(function() {
                             var $itm = $(this);
                             $itm.removeClass(selected);
-                            self.repeater.$element.trigger('deselected.lark.repeaterThumbnail', $itm);
+                            self.repeater.$element.trigger('deselected.lark.repeaterList', $itm);
                         });
                     }
 
-                    $thumbnail.addClass(selected);
-                    self.repeater.$element.trigger('selected.lark.repeaterThumbnail', $thumbnail);
+                    $item.addClass(selected);
+                    self.repeater.$element.trigger('selected.lark.repeaterList', $item);
                 } else {
-                    $thumbnail.removeClass(selected);
-                    self.repeater.$element.trigger('deselected.lark.repeaterThumbnail', $thumbnail);
+                    $item.removeClass(selected);
+                    self.repeater.$element.trigger('deselected.lark.repeaterList', $item);
                 }
             });
         }
 
-        helpers.container.append($thumbnail);
-        if (this.thumbnail_injectSpacers) {
-            $thumbnail.after('<span class="spacer">&nbsp;</span>');
-        }
+        helpers.container.append($item);
+
 
         if (this.options.itemRendered) {
             this.options.itemRendered({
@@ -196,11 +176,11 @@ define([
   });
 
 
-    views["tile"] = {
-        name : "tile",
-        ctor : TileView
+    views["list"] = {
+        name : "list",
+        ctor : ListView
     };
 
-    return TileView;
+    return ListView;
     
 });

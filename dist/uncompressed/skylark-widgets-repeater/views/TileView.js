@@ -19,7 +19,10 @@ define([
         itemRendered: null,
         noItemsHTML: 'no items found',
         selectable: false,
-        template: '<div class="thumbnail repeater-thumbnail"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
+        template : '<div class="clearfix repeater-tile" data-container="true" data-infinite="true" data-preserve="shallow"></div>',
+        item : {
+            template: '<div class="thumbnail repeater-thumbnail"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
+        }
     },
 
     //ADDITIONAL METHODS
@@ -114,7 +117,7 @@ define([
         var $empty, validAlignments;
 
         if ($cont.length < 1) {
-            $cont = $('<div class="clearfix repeater-tile" data-container="true" data-infinite="true" data-preserve="shallow"></div>');
+            $cont = $(this.options.template);
             if (alignment && alignment !== 'none') {
                 validAlignments = {
                     'center': 1,
@@ -147,7 +150,7 @@ define([
         var selectable = this.options.selectable;
         var selected = 'selected';
         var self = this;
-        var $thumbnail = $(fillTemplate(helpers.subset[helpers.index], this.options.template));
+        var $thumbnail = this._create$Item(this.options.item.template,helpers.subset[helpers.index]);
 
         $thumbnail.data('item_data', helpers.data.items[helpers.index]);
 
@@ -192,32 +195,6 @@ define([
     
   });
 
-
-    //ADDITIONAL METHODS
-    function fillTemplate(itemData, template) {
-        var invalid = false;
-
-        function replace() {
-            var end, start, val;
-
-            start = template.indexOf('{{');
-            end = template.indexOf('}}', start + 2);
-
-            if (start > -1 && end > -1) {
-                val = langx.trim(template.substring(start + 2, end));
-                val = (itemData[val] !== undefined) ? itemData[val] : '';
-                template = template.substring(0, start) + val + template.substring(end + 2);
-            } else {
-                invalid = true;
-            }
-        }
-
-        while (!invalid && template.search('{{') >= 0) {
-            replace(template);
-        }
-
-        return template;
-    }
 
     views["tile"] = {
         name : "tile",
