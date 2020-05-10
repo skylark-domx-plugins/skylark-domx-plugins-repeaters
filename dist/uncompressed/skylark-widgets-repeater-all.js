@@ -75,7 +75,7 @@
   factory(define,require);
 
   if (!isAmd) {
-    var skylarkjs = require("skylark-langx/skylark");
+    var skylarkjs = require("skylark-langx-ns");
 
     if (isCmd) {
       module.exports = skylarkjs;
@@ -264,7 +264,6 @@ define('skylark-langx-types/types',[
         }
     }
 
-
     function isNull(obj) {
         return obj === null;
     }
@@ -346,7 +345,12 @@ define('skylark-langx-types/types',[
 
         isHtmlNode: isHtmlNode,
 
+        isNaN : function (obj) {
+            return isNaN(obj);
+        },
+
         isNull: isNull,
+
 
         isNumber: isNumber,
 
@@ -2666,13 +2670,69 @@ define('skylark-langx/Deferred',[
 ],function(Deferred){
     return Deferred;
 });
+define('skylark-langx-emitter/Event',[
+  "skylark-langx-objects",
+  "skylark-langx-funcs",
+  "skylark-langx-klass",
+],function(objects,funcs,klass){
+    var eventMethods = {
+        preventDefault: "isDefaultPrevented",
+        stopImmediatePropagation: "isImmediatePropagationStopped",
+        stopPropagation: "isPropagationStopped"
+     };
+        
+
+    function compatible(event, source) {
+        if (source || !event.isDefaultPrevented) {
+            if (!source) {
+                source = event;
+            }
+
+            objects.each(eventMethods, function(name, predicate) {
+                var sourceMethod = source[name];
+                event[name] = function() {
+                    this[predicate] = funcs.returnTrue;
+                    return sourceMethod && sourceMethod.apply(source, arguments);
+                }
+                event[predicate] = funcs.returnFalse;
+            });
+        }
+        return event;
+    }
+
+
+    /*
+    var Event = klass({
+        _construct : function(type,props) {
+            CustomEvent.call(this,type.props);
+            objects.safeMixin(this, props);
+            compatible(this);
+        }
+    },CustomEvent);
+    */
+
+    class Event extends CustomEvent {
+        constructor(type,props) {
+            super(type,props);
+            objects.safeMixin(this, props);
+            compatible(this);
+        } 
+    }
+
+
+    Event.compatible = compatible;
+
+    return Event;
+    
+});
 define('skylark-langx-emitter/Emitter',[
   "skylark-langx-ns/ns",
   "skylark-langx-types",
   "skylark-langx-objects",
   "skylark-langx-arrays",
-  "skylark-langx-klass"
-],function(skylark,types,objects,arrays,klass){
+  "skylark-langx-klass",
+  "./Event"
+],function(skylark,types,objects,arrays,klass,Event){
     var slice = Array.prototype.slice,
         compact = arrays.compact,
         isDefined = types.isDefined,
@@ -2751,7 +2811,7 @@ define('skylark-langx-emitter/Emitter',[
             var self = this;
 
             if (isString(e)) {
-                e = new CustomEvent(e);
+                e = new Event(e); //new CustomEvent(e);
             }
 
             Object.defineProperty(e,"target",{
@@ -2778,6 +2838,9 @@ define('skylark-langx-emitter/Emitter',[
                     reCompact = false;
 
                 for (var i = 0; i < len; i++) {
+                    if (e.isImmediatePropagationStopped && e.isImmediatePropagationStopped()) {
+                        return this;
+                    }
                     var listener = listeners[i];
                     if (ns && (!listener.ns ||  !listener.ns.startsWith(ns))) {
                         continue;
@@ -2952,9 +3015,12 @@ define('skylark-langx-emitter/Emitter',[
     });
 
     Emitter.createEvent = function (type,props) {
-        var e = new CustomEvent(type,props);
-        return safeMixin(e, props);
+        //var e = new CustomEvent(type,props);
+        //return safeMixin(e, props);
+        return new Event(type,props);
     };
+
+    Emitter.Event = Event;
 
     return skylark.attach("langx.Emitter",Emitter);
 
@@ -3380,8 +3446,159 @@ define('skylark-langx-strings/strings',[
 	}) ; 
 
 });
-define('skylark-langx-strings/main',[
+define('skylark-langx-strings/base64',[
 	"./strings"
+],function(strings) {
+
+	// private property
+	const _keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+
+	// private method for UTF-8 encoding
+	function _utf8_encode(string) {
+		string = string.replace(/\r\n/g,"\n");
+		var utftext = "";
+
+		for (var n = 0; n < string.length; n++) {
+
+			var c = string.charCodeAt(n);
+
+			if (c < 128) {
+				utftext += String.fromCharCode(c);
+			}
+			else if((c > 127) && (c < 2048)) {
+				utftext += String.fromCharCode((c >> 6) | 192);
+				utftext += String.fromCharCode((c & 63) | 128);
+			}
+			else {
+				utftext += String.fromCharCode((c >> 12) | 224);
+				utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+				utftext += String.fromCharCode((c & 63) | 128);
+			}
+
+		}
+
+		return utftext;
+	}
+
+	// private method for UTF-8 decoding
+	function _utf8_decode(utftext) {
+		var string = "";
+		var i = 0;
+		var c = c1 = c2 = 0;
+
+		while ( i < utftext.length ) {
+
+			c = utftext.charCodeAt(i);
+
+			if (c < 128) {
+				string += String.fromCharCode(c);
+				i++;
+			}
+			else if((c > 191) && (c < 224)) {
+				c2 = utftext.charCodeAt(i+1);
+				string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+				i += 2;
+			}
+			else {
+				c2 = utftext.charCodeAt(i+1);
+				c3 = utftext.charCodeAt(i+2);
+				string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+				i += 3;
+			}
+
+		}
+
+		return string;
+	}
+
+	// public method for encoding
+	function encode(input, binary) {
+		binary = (binary != null) ? binary : false;
+		var output = "";
+		var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+		var i = 0;
+
+		if (!binary)
+		{
+			input = _utf8_encode(input);
+		}
+
+		while (i < input.length) {
+
+			chr1 = input.charCodeAt(i++);
+			chr2 = input.charCodeAt(i++);
+			chr3 = input.charCodeAt(i++);
+
+			enc1 = chr1 >> 2;
+			enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+			enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+			enc4 = chr3 & 63;
+
+			if (isNaN(chr2)) {
+				enc3 = enc4 = 64;
+			} else if (isNaN(chr3)) {
+				enc4 = 64;
+			}
+
+			output = output +
+			this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
+			this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
+
+		}
+
+		return output;
+	}
+
+	// public method for decoding
+	function decode(input, binary) {
+		binary = (binary != null) ? binary : false;
+		var output = "";
+		var chr1, chr2, chr3;
+		var enc1, enc2, enc3, enc4;
+		var i = 0;
+
+		input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+
+		while (i < input.length) {
+
+			enc1 = this._keyStr.indexOf(input.charAt(i++));
+			enc2 = this._keyStr.indexOf(input.charAt(i++));
+			enc3 = this._keyStr.indexOf(input.charAt(i++));
+			enc4 = this._keyStr.indexOf(input.charAt(i++));
+
+			chr1 = (enc1 << 2) | (enc2 >> 4);
+			chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+			chr3 = ((enc3 & 3) << 6) | enc4;
+
+			output = output + String.fromCharCode(chr1);
+
+			if (enc3 != 64) {
+				output = output + String.fromCharCode(chr2);
+			}
+			if (enc4 != 64) {
+				output = output + String.fromCharCode(chr3);
+			}
+
+		}
+
+		if (!binary) {
+			output = _utf8_decode(output);
+		}
+
+		return output;
+
+	}
+
+
+	return strings.base64 = {
+		decode,
+		encode
+	};
+	
+});
+define('skylark-langx-strings/main',[
+	"./strings",
+	"./base64"
 ],function(strings){
 	return strings;
 });
@@ -4304,6 +4521,9 @@ function removeSelfClosingTags(xml) {
         return new RegExp("^(" + (blockNodes.join('|')) + ")$").test(node.nodeName.toLowerCase());
     }
 
+    function isActive (elem) {
+            return elem === document.activeElement && (elem.type || elem.href);
+    }
 
     /*   
      * Get the owner document object for the specified element.
@@ -4427,6 +4647,18 @@ function removeSelfClosingTags(xml) {
     }
 
 
+    function selectable(elem, selectable) {
+        if (elem === undefined || elem.style === undefined)
+            return;
+        elem.onselectstart = selectable ? function () {
+            return false;
+        } : function () {
+        };
+        elem.style.MozUserSelect = selectable ? 'auto' : 'none';
+        elem.style.KhtmlUserSelect = selectable ? 'auto' : 'none';
+        elem.unselectable = selectable ? 'on' : 'off';
+    }
+
     /*   
      * traverse the specified node and its descendants, perform the callback function on each
      * @param {Node} node
@@ -4500,6 +4732,12 @@ function removeSelfClosingTags(xml) {
     langx.mixin(noder, {
         active  : activeElement,
 
+        after: after,
+
+        append: append,
+
+        before: before,
+
         blur : function(el) {
             el.blur();
         },
@@ -4509,14 +4747,16 @@ function removeSelfClosingTags(xml) {
         },
 
         clone: clone,
+
+        contains: contains,
+
         contents: contents,
 
         createElement: createElement,
 
         createFragment: createFragment,
 
-        contains: contains,
-
+     
         createTextNode: createTextNode,
 
         doc: doc,
@@ -4528,6 +4768,8 @@ function removeSelfClosingTags(xml) {
         focusable: focusable,
 
         html: html,
+
+        isActive,
 
         isChildOf: isChildOf,
 
@@ -4545,13 +4787,7 @@ function removeSelfClosingTags(xml) {
 
         ownerWindow: ownerWindow,
 
-        after: after,
-
-        before: before,
-
         prepend: prepend,
-
-        append: append,
 
         reflow: reflow,
 
@@ -4560,6 +4796,8 @@ function removeSelfClosingTags(xml) {
         removeChild : removeChild,
 
         replace: replace,
+
+        selectable,
 
         traverse: traverse,
 
@@ -8556,6 +8794,27 @@ define('skylark-domx-geom/geom',[
         };
     }
 
+
+    function fullCover(elem, hor, vert) {
+        let vertical = vert;
+        let horizontal = hor;
+        if (langx.isUndefined(horizontal)) {
+            horizontal = true;
+        }
+        if (langx.isUndefined(vertical)) {
+            vertical = true;
+        }
+        elem.style.position = 'absolute';
+        if (horizontal) {
+            elem.style.left = 0;
+            elem.style.right = 0;
+        }
+        if (vertical) {
+            elem.style.top = 0;
+            elem.style.bottom = 0;
+        }
+    }
+
     /*
      * Get the document size.
      * @param {HTMLDocument} doc
@@ -8937,6 +9196,8 @@ define('skylark-domx-geom/geom',[
         clientWidth: clientWidth,
 
         contentRect: contentRect,
+
+        fullCover,
 
         getDocumentSize: getDocumentSize,
 
@@ -9568,7 +9829,7 @@ define('skylark-domx-files/files',[
 
     return skylark.attach("domx.files", files);
 });
-define('skylark-storages-diskfs/diskfs',[
+define('skylark-io-diskfs/diskfs',[
     "skylark-langx/skylark"
 ], function(skylark) {
 
@@ -9591,7 +9852,7 @@ define('skylark-storages-diskfs/diskfs',[
 
     return skylark.attach("storages.diskfs", diskfs);
 });
- define('skylark-storages-diskfs/webentry',[
+ define('skylark-io-diskfs/webentry',[
     "skylark-langx/arrays",
     "skylark-langx/Deferred",
     "./diskfs"
@@ -9652,7 +9913,7 @@ define('skylark-storages-diskfs/diskfs',[
     "skylark-domx-styler",
     "skylark-domx-eventer",
     "./files",
-    "skylark-storages-diskfs/webentry"
+    "skylark-io-diskfs/webentry"
 ],function(arrays,Deferred, styler, eventer, files, webentry){  /*
      * Make the specified element to could accept HTML5 file drag and drop.
      * @param {HTMLElement} elm
@@ -9749,7 +10010,7 @@ define('skylark-domx-files/pastezone',[
 
 });
 
-define('skylark-storages-diskfs/select',[
+define('skylark-io-diskfs/select',[
     "./diskfs"
 ],function(diskfs){
     var fileInput,
@@ -9813,7 +10074,7 @@ define('skylark-domx-files/picker',[
     "skylark-langx/objects",
     "skylark-domx-eventer",
     "./files",
-    "skylark-storages-diskfs/select"
+    "skylark-io-diskfs/select"
 ],function(objects, eventer, files, select){
     /*
      * Make the specified element to pop-up the file selection dialog box when clicked , and read the contents the files selected from client file system by user.
@@ -9834,28 +10095,645 @@ define('skylark-domx-files/picker',[
 
 
 
-define('skylark-domx-files/main',[
-	"./files",
-	"skylark-domx-velm",
-	"skylark-domx-query",
-	"./dropzone",
-	"./pastezone",
-	"./picker"
-],function(files,velm,$){
-	velm.delegate([
-		"dropzone",
-		"pastezone",
-		"picker"
-	],files);
-
-    $.fn.pastezone = $.wraps.wrapper_every_act(files.pastezone, files);
-    $.fn.dropzone = $.wraps.wrapper_every_act(files.dropzone, files);
-    $.fn.picker = $.wraps.wrapper_every_act(files.picker, files);
-
-	return files;
+define('skylark-net-http/http',[
+  "skylark-langx-ns/ns",
+],function(skylark){
+	return skylark.attach("net.http",{});
 });
-define('skylark-domx-files', ['skylark-domx-files/main'], function (main) { return main; });
+define('skylark-net-http/Xhr',[
+  "skylark-langx-ns/ns",
+  "skylark-langx-types",
+  "skylark-langx-objects",
+  "skylark-langx-arrays",
+  "skylark-langx-funcs",
+  "skylark-langx-async/Deferred",
+  "skylark-langx-emitter/Evented",
+  "./http"
+],function(skylark,types,objects,arrays,funcs,Deferred,Evented,http){
 
+    var each = objects.each,
+        mixin = objects.mixin,
+        noop = funcs.noop,
+        isArray = types.isArray,
+        isFunction = types.isFunction,
+        isPlainObject = types.isPlainObject,
+        type = types.type;
+ 
+     var getAbsoluteUrl = (function() {
+        var a;
+
+        return function(url) {
+            if (!a) a = document.createElement('a');
+            a.href = url;
+
+            return a.href;
+        };
+    })();
+   
+    var Xhr = (function(){
+        var jsonpID = 0,
+            key,
+            name,
+            rscript = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+            scriptTypeRE = /^(?:text|application)\/javascript/i,
+            xmlTypeRE = /^(?:text|application)\/xml/i,
+            jsonType = 'application/json',
+            htmlType = 'text/html',
+            blankRE = /^\s*$/;
+
+        var XhrDefaultOptions = {
+            async: true,
+
+            // Default type of request
+            type: 'GET',
+            // Callback that is executed before request
+            beforeSend: noop,
+            // Callback that is executed if the request succeeds
+            success: noop,
+            // Callback that is executed the the server drops error
+            error: noop,
+            // Callback that is executed on request complete (both: error and success)
+            complete: noop,
+            // The context for the callbacks
+            context: null,
+            // Whether to trigger "global" Ajax events
+            global: true,
+
+            // MIME types mapping
+            // IIS returns Javascript as "application/x-javascript"
+            accepts: {
+                script: 'text/javascript, application/javascript, application/x-javascript',
+                json: 'application/json',
+                xml: 'application/xml, text/xml',
+                html: 'text/html',
+                text: 'text/plain'
+            },
+            // Whether the request is to another domain
+            crossDomain: false,
+            // Default timeout
+            timeout: 0,
+            // Whether data should be serialized to string
+            processData: false,
+            // Whether the browser should be allowed to cache GET responses
+            cache: true,
+
+            traditional : false,
+            
+            xhrFields : {
+                withCredentials : false
+            }
+        };
+
+        function mimeToDataType(mime) {
+            if (mime) {
+                mime = mime.split(';', 2)[0];
+            }
+            if (mime) {
+                if (mime == htmlType) {
+                    return "html";
+                } else if (mime == jsonType) {
+                    return "json";
+                } else if (scriptTypeRE.test(mime)) {
+                    return "script";
+                } else if (xmlTypeRE.test(mime)) {
+                    return "xml";
+                }
+            }
+            return "text";
+        }
+
+        function appendQuery(url, query) {
+            if (query == '') return url
+            return (url + '&' + query).replace(/[&?]{1,2}/, '?')
+        }
+
+        // serialize payload and append it to the URL for GET requests
+        function serializeData(options) {
+            options.data = options.data || options.query;
+            if (options.processData && options.data && type(options.data) != "string") {
+                options.data = param(options.data, options.traditional);
+            }
+            if (options.data && (!options.type || options.type.toUpperCase() == 'GET')) {
+                if (type(options.data) != "string") {
+                    options.data = param(options.data, options.traditional);
+                }
+                options.url = appendQuery(options.url, options.data);
+                options.data = undefined;
+            }
+        }
+        
+        function serialize(params, obj, traditional, scope) {
+            var t, array = isArray(obj),
+                hash = isPlainObject(obj)
+            each(obj, function(key, value) {
+                t =type(value);
+                if (scope) key = traditional ? scope :
+                    scope + '[' + (hash || t == 'object' || t == 'array' ? key : '') + ']'
+                // handle data in serializeArray() format
+                if (!scope && array) params.add(value.name, value.value)
+                // recurse into nested objects
+                else if (t == "array" || (!traditional && t == "object"))
+                    serialize(params, value, traditional, key)
+                else params.add(key, value)
+            })
+        }
+
+        var param = function(obj, traditional) {
+            var params = []
+            params.add = function(key, value) {
+                if (isFunction(value)) {
+                  value = value();
+                }
+                if (value == null) {
+                  value = "";
+                }
+                this.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+            };
+            serialize(params, obj, traditional)
+            return params.join('&').replace(/%20/g, '+')
+        };
+
+        var Xhr = Evented.inherit({
+            klassName : "Xhr",
+
+            _request  : function(args) {
+                var _ = this._,
+                    self = this,
+                    options = mixin({},XhrDefaultOptions,_.options,args),
+                    xhr = _.xhr = new XMLHttpRequest();
+
+                serializeData(options)
+
+                if (options.beforeSend) {
+                    options.beforeSend.call(this, xhr, options);
+                }                
+
+                var dataType = options.dataType || options.handleAs,
+                    mime = options.mimeType || options.accepts[dataType],
+                    headers = options.headers,
+                    xhrFields = options.xhrFields,
+                    isFormData = options.data && options.data instanceof FormData,
+                    basicAuthorizationToken = options.basicAuthorizationToken,
+                    type = options.type,
+                    url = options.url,
+                    async = options.async,
+                    user = options.user , 
+                    password = options.password,
+                    deferred = new Deferred(),
+                    contentType = options.contentType || (isFormData ? false : 'application/x-www-form-urlencoded');
+
+                if (xhrFields) {
+                    for (name in xhrFields) {
+                        xhr[name] = xhrFields[name];
+                    }
+                }
+
+                if (mime && mime.indexOf(',') > -1) {
+                    mime = mime.split(',', 2)[0];
+                }
+                if (mime && xhr.overrideMimeType) {
+                    xhr.overrideMimeType(mime);
+                }
+
+                //if (dataType) {
+                //    xhr.responseType = dataType;
+                //}
+
+                var finish = function() {
+                    xhr.onloadend = noop;
+                    xhr.onabort = noop;
+                    xhr.onprogress = noop;
+                    xhr.ontimeout = noop;
+                    xhr = null;
+                }
+                var onloadend = function() {
+                    var result, error = false
+                    if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304 || (xhr.status == 0 && getAbsoluteUrl(url).startsWith('file:'))) {
+                        dataType = dataType || mimeToDataType(options.mimeType || xhr.getResponseHeader('content-type'));
+
+                        result = xhr.responseText;
+                        try {
+                            if (dataType == 'script') {
+                                eval(result);
+                            } else if (dataType == 'xml') {
+                                result = xhr.responseXML;
+                            } else if (dataType == 'json') {
+                                result = blankRE.test(result) ? null : JSON.parse(result);
+                            } else if (dataType == "blob") {
+                                result = Blob([xhrObj.response]);
+                            } else if (dataType == "arraybuffer") {
+                                result = xhr.reponse;
+                            }
+                        } catch (e) { 
+                            error = e;
+                        }
+
+                        if (error) {
+                            deferred.reject(error,xhr.status,xhr);
+                        } else {
+                            deferred.resolve(result,xhr.status,xhr);
+                        }
+                    } else {
+                        deferred.reject(new Error(xhr.statusText),xhr.status,xhr);
+                    }
+                    finish();
+                };
+
+                var onabort = function() {
+                    if (deferred) {
+                        deferred.reject(new Error("abort"),xhr.status,xhr);
+                    }
+                    finish();                 
+                }
+ 
+                var ontimeout = function() {
+                    if (deferred) {
+                        deferred.reject(new Error("timeout"),xhr.status,xhr);
+                    }
+                    finish();                 
+                }
+
+                var onprogress = function(evt) {
+                    if (deferred) {
+                        deferred.notify(evt,xhr.status,xhr);
+                    }
+                }
+
+                xhr.onloadend = onloadend;
+                xhr.onabort = onabort;
+                xhr.ontimeout = ontimeout;
+                xhr.onprogress = onprogress;
+
+                xhr.open(type, url, async, user, password);
+               
+                if (headers) {
+                    for ( var key in headers) {
+                        var value = headers[key];
+ 
+                        if(key.toLowerCase() === 'content-type'){
+                            contentType = value;
+                        } else {
+                           xhr.setRequestHeader(key, value);
+                        }
+                    }
+                }   
+
+                if  (contentType && contentType !== false){
+                    xhr.setRequestHeader('Content-Type', contentType);
+                }
+
+                if(!headers || !('X-Requested-With' in headers)){
+                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                }
+
+
+                //If basicAuthorizationToken is defined set its value into "Authorization" header
+                if (basicAuthorizationToken) {
+                    xhr.setRequestHeader("Authorization", basicAuthorizationToken);
+                }
+
+                xhr.send(options.data ? options.data : null);
+
+                return deferred.promise;
+
+            },
+
+            "abort": function() {
+                var _ = this._,
+                    xhr = _.xhr;
+
+                if (xhr) {
+                    xhr.abort();
+                }    
+            },
+
+
+            "request": function(args) {
+                return this._request(args);
+            },
+
+            get : function(args) {
+                args = args || {};
+                args.type = "GET";
+                return this._request(args);
+            },
+
+            post : function(args) {
+                args = args || {};
+                args.type = "POST";
+                return this._request(args);
+            },
+
+            patch : function(args) {
+                args = args || {};
+                args.type = "PATCH";
+                return this._request(args);
+            },
+
+            put : function(args) {
+                args = args || {};
+                args.type = "PUT";
+                return this._request(args);
+            },
+
+            del : function(args) {
+                args = args || {};
+                args.type = "DELETE";
+                return this._request(args);
+            },
+
+            "init": function(options) {
+                this._ = {
+                    options : options || {}
+                };
+            }
+        });
+
+        ["request","get","post","put","del","patch"].forEach(function(name){
+            Xhr[name] = function(url,args) {
+                var xhr = new Xhr({"url" : url});
+                return xhr[name](args);
+            };
+        });
+
+        Xhr.defaultOptions = XhrDefaultOptions;
+        Xhr.param = param;
+
+        return Xhr;
+    })();
+
+	return http.Xhr = Xhr;	
+});
+define('skylark-net-http/Upload',[
+    "skylark-langx-types",
+    "skylark-langx-objects",
+    "skylark-langx-arrays",
+    "skylark-langx-async/Deferred",
+    "skylark-langx-emitter/Evented",    
+    "./Xhr",
+    "./http"
+],function(types, objects, arrays, Deferred, Evented,Xhr, http){
+
+    var blobSlice = Blob.prototype.slice || Blob.prototype.webkitSlice || Blob.prototype.mozSlice;
+
+
+    /*
+     *Class for uploading files using xhr.
+     */
+    var Upload = Evented.inherit({
+        klassName : "Upload",
+
+        _construct : function(options) {
+            this._options = objects.mixin({
+                debug: false,
+                url: '/upload',
+                // maximum number of concurrent uploads
+                maxConnections: 999,
+                // To upload large files in smaller chunks, set the following option
+                // to a preferred maximum chunk size. If set to 0, null or undefined,
+                // or the browser does not support the required Blob API, files will
+                // be uploaded as a whole.
+                maxChunkSize: undefined,
+
+                onProgress: function(id, fileName, loaded, total){
+                },
+                onComplete: function(id, fileName){
+                },
+                onCancel: function(id, fileName){
+                },
+                onFailure : function(id,fileName,e) {                    
+                }
+            },options);
+
+            this._queue = [];
+            // params for files in queue
+            this._params = [];
+
+            this._files = [];
+            this._xhrs = [];
+
+            // current loaded size in bytes for each file
+            this._loaded = [];
+
+        },
+
+        /**
+         * Adds file to the queue
+         * Returns id to use with upload, cancel
+         **/
+        add: function(file){
+            return this._files.push(file) - 1;
+        },
+
+        /**
+         * Sends the file identified by id and additional query params to the server.
+         */
+        send: function(id, params){
+            if (!this._files[id]) {
+                // Already sended or canceled
+                return ;
+            }
+            if (this._queue.indexOf(id)>-1) {
+                // Already in the queue
+                return;
+            }
+            var len = this._queue.push(id);
+
+            var copy = objects.clone(params);
+
+            this._params[id] = copy;
+
+            // if too many active uploads, wait...
+            if (len <= this._options.maxConnections){
+                this._send(id, this._params[id]);
+            }     
+        },
+
+        /**
+         * Sends all files  and additional query params to the server.
+         */
+        sendAll: function(params){
+           for( var id = 0; id <this._files.length; id++) {
+                this.send(id,params);
+            }
+        },
+
+        /**
+         * Cancels file upload by id
+         */
+        cancel: function(id){
+            this._cancel(id);
+            this._dequeue(id);
+        },
+
+        /**
+         * Cancells all uploads
+         */
+        cancelAll: function(){
+            for (var i=0; i<this._queue.length; i++){
+                this._cancel(this._queue[i]);
+            }
+            this._queue = [];
+        },
+
+        getName: function(id){
+            var file = this._files[id];
+            return file.fileName != null ? file.fileName : file.name;
+        },
+
+        getSize: function(id){
+            var file = this._files[id];
+            return file.fileSize != null ? file.fileSize : file.size;
+        },
+
+        /**
+         * Returns uploaded bytes for file identified by id
+         */
+        getLoaded: function(id){
+            return this._loaded[id] || 0;
+        },
+
+
+        /**
+         * Sends the file identified by id and additional query params to the server
+         * @param {Object} params name-value string pairs
+         */
+        _send: function(id, params){
+            var options = this._options,
+                name = this.getName(id),
+                size = this.getSize(id),
+                chunkSize = options.maxChunkSize || 0,
+                curUploadingSize,
+                curLoadedSize = 0,
+                file = this._files[id],
+                args = {
+                    headers : {
+                    }                    
+                };
+
+            this._loaded[id] = this._loaded[id] || 0;
+
+            var xhr = this._xhrs[id] = new Xhr({
+                url : options.url
+            });
+
+            if (chunkSize)  {
+
+                args.data = blobSlice.call(
+                    file,
+                    this._loaded[id],
+                    this._loaded[id] + chunkSize,
+                    file.type
+                );
+                // Store the current chunk size, as the blob itself
+                // will be dereferenced after data processing:
+                curUploadingSize = args.data.size;
+                // Expose the chunk bytes position range:
+                args.headers["content-range"] = 'bytes ' + this._loaded[id] + '-' +
+                    (this._loaded[id] + curUploadingSize - 1) + '/' + size;
+                args.headers["Content-Type"] = "application/octet-stream";
+            }  else {
+                curUploadingSize = size;
+                var formParamName =  params.formParamName,
+                    formData = params.formData;
+
+                if (formParamName) {
+                    if (!formData) {
+                        formData = new FormData();
+                    }
+                    formData.append(formParamName,file);
+                    args.data = formData;
+    
+                } else {
+                    args.headers["Content-Type"] = file.type || "application/octet-stream";
+                    args.data = file;
+                }
+            }
+
+
+            var self = this;
+            xhr.post(
+                args
+            ).progress(function(e){
+                if (e.lengthComputable){
+                    curLoadedSize = curLoadedSize + e.loaded;
+                    self._loaded[id] = self._loaded[id] + e.loaded;
+                    self._options.onProgress(id, name, self._loaded[id], size);
+                }
+            }).then(function(){
+                if (!self._files[id]) {
+                    // the request was aborted/cancelled
+                    return;
+                }
+
+                if (curLoadedSize < curUploadingSize) {
+                    // Create a progress event if no final progress event
+                    // with loaded equaling total has been triggered
+                    // for this chunk:
+                    self._loaded[id] = self._loaded[id] + curUploadingSize - curLoadedSize;
+                    self._options.onProgress(id, name, self._loaded[id], size);                    
+                }
+
+                if (self._loaded[id] <size) {
+                    // File upload not yet complete,
+                    // continue with the next chunk:
+                    self._send(id,params);
+                } else {
+                    self._options.onComplete(id,name);
+
+                    self._files[id] = null;
+                    self._xhrs[id] = null;
+                    self._dequeue(id);
+                }
+
+
+            }).catch(function(e){
+                self._options.onFailure(id,name,e);
+
+                self._files[id] = null;
+                self._xhrs[id] = null;
+                self._dequeue(id);
+            });
+        },
+
+        _cancel: function(id){
+            this._options.onCancel(id, this.getName(id));
+
+            this._files[id] = null;
+
+            if (this._xhrs[id]){
+                this._xhrs[id].abort();
+                this._xhrs[id] = null;
+            }
+        },
+
+        /**
+         * Returns id of files being uploaded or
+         * waiting for their turn
+         */
+        getQueue: function(){
+            return this._queue;
+        },
+
+
+        /**
+         * Removes element from queue, starts upload of next
+         */
+        _dequeue: function(id){
+            var i = arrays.inArray(id,this._queue);
+            this._queue.splice(i, 1);
+
+            var max = this._options.maxConnections;
+
+            if (this._queue.length >= max && i < max){
+                var nextId = this._queue[max-1];
+                this._send(nextId, this._params[nextId]);
+            }
+        }
+    });
+
+    return http.Upload = Upload;    
+});
 define('skylark-domx-fx/fx',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
@@ -10857,6 +11735,485 @@ define('skylark-domx-plugins/main',[
 	return plugins;
 });
 define('skylark-domx-plugins', ['skylark-domx-plugins/main'], function (main) { return main; });
+
+define('skylark-domx-files/MultiUploader',[
+  "skylark-langx/skylark",
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "skylark-domx-velm",
+  "skylark-net-http/Upload",
+  "skylark-domx-plugins",
+  "./files"
+]  ,function(skylark,langx,$, elmx,FileUpload, plugins,files){
+
+    var fileListTemplate = '<div class="lark-multiuploader">' + 
+        '    <h3 class="popover-title">Upload files</h3>' + 
+        '    <div class="popover-content container-fluid" class="file-list file-dropzone file-pastezone">' + 
+        '        <div class="no-data"><em>Add files.</em></div>' + 
+        '    </div>' + 
+        '    <footer>' + 
+        '        <button class="btn btn-warning pull-right btn-sm" id="cancel-uploads-button"><i class="icon-cancel"></i>Cancel uploads</button>' + 
+        '        <span class="btn btn-success fileinput-button btn-sm" id="fileinput-button">' + 
+        '            <i class="icon-plus"></i>' + 
+        '            <span>Add files...</span>' + 
+        '            <input id="fileupload" type="file" name="files[]" multiple="multiple">' + 
+        '        </span>' + 
+        '        <button class="btn btn-primary btn-sm" id="start-uploads-button"><i class="icon-start"></i>Start uploads</button>' + 
+        '    </footer>' + 
+        '</div>',
+        fileItemTemplate = '<div class="file-item row">' +
+        '   <div class="col-md-6"><span class="name"></span></div>' + 
+        '   <div class="col-md-3">' +
+        '    <span class="size"></span>' +
+        '    <div class="progress hidden">' +
+        '        <div class="progress-label"></div>' +
+        '        <div class="bar"></div>' +
+        '    </div>' +
+        '    <span class="message hidden"></span>' +
+        '   </div>' +
+        '   <div class="col-md-3">' +
+        '    <button class="btn btn-warning btn-xs cancel"><i class="icon-remove"></i>Cancel</button>' +
+        '    <button class="btn btn-xs clear hidden">Clear</button>' +
+        '   </div>' +
+        '</div>';
+
+    var MultiUploader =  plugins.Plugin.inherit({
+        klassName : "Uploader",
+        pluginName : "lark.multiuploader",
+
+        options: {
+            uploadUrl: '/upload',
+
+        	params: {
+                formParamName : "file"
+            },
+
+    	    maxConnections: 3,
+        	// validation
+        	allowedExtensions: [],
+        	sizeLimit: 0,
+        	minSizeLimit: 0,
+
+            autoUpload: false,
+            selectors : {
+              fileList : ".file-list",
+              fileItem : ".file-item",
+              nodata : ".file-list .no-data",
+
+              picker   : ".file-picker",
+              dropzone : ".file-dropzone",
+              pastezone: ".file-pastezone",
+
+              startUploads: '.start-uploads',
+              cancelUploads: '.cancel-uploads',
+            },
+
+            template : fileListTemplate,
+
+            dataType: 'json',
+
+            fileItem : {
+            	selectors : {
+                    name : ".name",
+                    size : ".size",
+                    cancel: ".cancel",
+                    clear : ".clear",
+                    progress : ".progress",
+                    message : ".message"                   
+            	},
+
+            	template : fileItemTemplate
+            }
+        },
+
+
+        _construct : function(elm,options) {
+            var self = this;
+
+
+            // Render current files
+            /*
+            this.files.forEach(function (file) {
+                self.renderFile(file);
+            });
+            */
+
+            //this._refresh({files:true});
+        
+
+            //this._files.on('all', function(){
+            //  self._refresh({files:true});
+            //});
+
+
+           this.overrided(elm,options);
+
+
+           this._velm = elmx(this._elm);
+        
+
+
+            this._initEventHandler();
+            this._initFileHandlers();
+            this._initUpoadHandler();
+            this._updateFileList();
+        },
+
+        _initFileHandlers : function() {
+            var self = this;
+
+            var selectors = this.options.selectors,
+            	dzSelector = selectors.dropzone,
+            	pzSelector = selectors.pastezone,
+            	pkSelector = selectors.picker;
+
+            if (dzSelector) {
+				this._velm.$(dzSelector).dropzone({
+	                dropped : function (files) {
+                        self._addFiles(files);
+	                }
+				});
+            }
+
+
+            if (pzSelector) {
+                this._velm.$(pzSelector).pastezone({
+                    pasted : function (files) {
+                        self._addFiles(files);
+                    }
+                });                
+            }
+
+            if (pkSelector) {
+                this._velm.$(pkSelector).picker({
+                    multiple: true,
+                    picked : function (files) {
+                        self._addFiles(files);
+                    }
+                });                
+            }
+        },
+
+        _initUpoadHandler: function(){
+            var self = this,
+                handlerClass;
+
+            this._handler = new FileUpload({
+                url: this.options.uploadUrl,
+                maxConnections: this.options.maxConnections,
+                onProgress: function(id, fileName, loaded, total){
+                    self._onProgress(id, fileName, loaded, total);
+                },
+                onComplete: function(id, fileName, result){
+                    self._onComplete(id, fileName, result);
+                },
+                onCancel: function(id, fileName){
+                    self._onCancel(id, fileName);
+                },
+                onFailure: function(id,fileName,e){
+                    self._onFailure(id,fileName,e);
+                }
+            });
+        },
+        
+         /**
+         * delegate click event for cancel link
+         **/
+        _initEventHandler: function(){
+            var self = this,
+               selectors = this.options.selectors,
+               itemSelectors = this.options.fileItem.selectors, 
+               list = this._listElement;
+
+            // Add cancel handler
+            this._velm.$(selectors.fileList).on("click",itemSelectors.cancel,function(e){
+                var $fileItem = $(this).closest(selectors.fileItem),
+                    fileId = $fileItem.data("fileId");
+                self._handler.cancel(fileId);
+                $fileItem.remove();
+                self._updateFileList();
+            });
+
+            // Add clear handler
+            this._velm.$(selectors.fileList).on("click",itemSelectors.clear,function(e){
+                var $fileItem = $(this).closest(selectors.fileItem),
+                    fileId = $fileItem.data("fileId");
+                $fileItem.remove();
+                self._updateFileList();
+            });
+
+            // Add cancel all handler
+            this._velm.$(selectors.cancelUploads).click(function(){
+                var $files = self._velm.$(selectors.fileList).find(selectors.fileItem);           
+                $files.forEach(function(fileItem){
+                    var $fileItem = $(fileItem),
+                        fileId = $fileItem.data("fileId");
+                    self._handler.cancel(fileId);
+                    $fileItem.remove();
+                });
+                self._updateFileList();
+
+            });
+
+            // Add start uploads handler
+            this._velm.$(selectors.startUploads).click(function(){
+                var $files = self._velm.$(selectors.fileList).find(selectors.fileItem);           
+                $files.forEach(function(fileItem){
+                    var $fileItem = $(fileItem),
+                        fileId = $fileItem.data("fileId");
+                    if (!$fileItem.data("status")) {
+                        // The file has not yet been sent
+                        self._handler.send(fileId,self.options.params);
+                    }
+                });
+
+            });
+            
+
+        },       
+
+        _onProgress: function(id, fileName, loaded, total){          
+            var $item = this._getItemByFileId(id);
+
+            var percent = parseInt(loaded / total * 100, 10);
+            var progressHTML = this._formatSize(loaded)+' of '+ this._formatSize(total);
+
+            $item.data("status","running");
+            $item.find('.progress')
+                .find('.bar')
+                .css('width', percent+'%')
+                .parent()
+                .find('.progress-label')
+                .html(progressHTML);
+            this._updateFile($item);
+
+        },
+
+        _onComplete: function(id, fileName, result){
+            this._filesInProgress--;
+            var $item = this._getItemByFileId(id);
+            $item.data("status","done");
+            $item.find('.message').html('<i class="icon-success"></i> ' + (this.doneMsg || 'Uploaded'));
+            this._updateFile($item);
+        },
+
+        _onFailure : function(id,fileName,e) {
+            this._filesInProgress--;
+            var $item = this._getItemByFileId(id);
+            $item.data("status","error");
+            $item.find('.message').html('<i class="icon-error"></i> ');;
+            this._updateFile($item)
+
+        },
+
+        _onCancel: function(id, fileName){
+            this._filesInProgress--;
+            var $item = this._getItemByFileId(id);
+            $item.data("status","cancel");
+            this._updateFile($item)
+        },
+
+        _addToList: function(id, fileName){
+            var self = this;
+
+
+            var fileName = this._handler.getName(id),
+                fileSize = this._handler.getSize(id);
+
+            var item = $(this.options.fileItem.template);
+            item.data("fileId",id);
+
+            item.find(this.options.fileItem.selectors.name).html(this._formatFileName(fileName));
+            item.find(this.options.fileItem.selectors.size).html(this._formatSize(fileSize));
+
+            this._velm.$(this.options.selectors.fileList).append(item);
+
+            this._updateFileList();
+        },
+    
+        _updateFileList : function ()  {
+            var selectors = this.options.selectors,
+                itemSelectors = this.options.fileItem.selectors,
+                files = this._velm.$(selectors.fileList).find(selectors.fileItem);
+
+            var with_files_elements = this._velm.$(selectors.cancelUploads + ',' + selectors.startUploads);
+            var without_files_elements = this._velm.$(selectors.nodata);
+            if (files.length > 0) {
+                with_files_elements.removeClass('hidden');
+                without_files_elements.addClass('hidden');
+            } else {
+                with_files_elements.addClass('hidden');
+                without_files_elements.removeClass('hidden');
+            }
+        },
+        
+        _updateFile: function ($item) {
+            var selectors = this.options.fileItem.selectors,
+                when_pending = $item.find(selectors.size + "," + selectors.cancel),
+                when_running = $item.find(selectors.progress + "," + selectors.cancel),
+                when_done = $item.find(selectors.message + "," + selectors.clear);
+
+            var status = $item.data("status");    
+            if (status == "pending") {
+                when_running.add(when_done).addClass('hidden');
+                when_pending.removeClass('hidden');
+            } else if (status == "running") {
+                when_pending.add(when_done).addClass('hidden');
+                when_running.removeClass('hidden');
+            } else if (status == "done" || status == "error") {
+                when_pending.add(when_running).addClass('hidden');
+                when_done.removeClass('hidden');
+            }
+        },
+
+        _getItemByFileId: function(id){
+            var selectors = this.options.selectors,
+                files = this._velm.$(selectors.fileList).find(selectors.fileItem),
+                item;
+
+            // there can't be txt nodes in dynamically created list
+            // and we can  use nextSibling
+
+            for (var i = 0; i<files.length;i++){
+                var item2 = files[i];
+                if ($(item2).data("fileId") == id) {
+                    item = item2;
+                    break;
+                }
+            }
+            if (item) {
+                return $(item);
+            }
+        },
+
+
+            
+        _addFiles: function(files){
+            for (var i=0; i<files.length; i++){
+                if ( !this._validateFile(files[i])){
+                    return;
+                }
+            }
+
+            for (var i=0; i<files.length; i++){
+                this._addFile(files[i]);
+            }
+        },
+
+        _addFile: function(file){
+            var id = this._handler.add(file);
+
+            this._filesInProgress++;
+            this._addToList(id);
+
+            //this._handler.upload(id, this.options.params);
+        },
+
+        _validateFile: function(file){
+            var name, size;
+
+            if (file.value){
+                // it is a file input
+                // get input value and remove path to normalize
+                name = file.value.replace(/.*(\/|\\)/, "");
+            } else {
+                // fix missing properties in Safari
+                name = file.fileName != null ? file.fileName : file.name;
+                size = file.fileSize != null ? file.fileSize : file.size;
+            }
+
+            if (! this._isAllowedExtension(name)){
+                this._error('typeError', name);
+                return false;
+
+            } else if (size === 0){
+                this._error('emptyError', name);
+                return false;
+
+            } else if (size && this.options.sizeLimit && size > this.options.sizeLimit){
+                this._error('sizeError', name);
+                return false;
+
+            } else if (size && size < this.options.minSizeLimit){
+                this._error('minSizeError', name);
+                return false;
+            }
+
+            return true;
+        },
+
+        _error: function(code, fileName){
+            var message = this.options.messages[code];
+            function r(name, replacement){ message = message.replace(name, replacement); }
+
+            r('{file}', this._formatFileName(fileName));
+            r('{extensions}', this.options.allowedExtensions.join(', '));
+            r('{sizeLimit}', this._formatSize(this.options.sizeLimit));
+            r('{minSizeLimit}', this._formatSize(this.options.minSizeLimit));
+
+            this.options.showMessage(message);
+        },
+
+        _formatFileName: function(name){
+            if (name.length > 33){
+                name = name.slice(0, 19) + '...' + name.slice(-13);
+            }
+            return name;
+        },
+
+        _isAllowedExtension: function(fileName){
+            var ext = (-1 !== fileName.indexOf('.')) ? fileName.replace(/.*[.]/, '').toLowerCase() : '';
+            var allowed = this.options.allowedExtensions;
+
+            if (!allowed.length){return true;}
+
+            for (var i=0; i<allowed.length; i++){
+                if (allowed[i].toLowerCase() == ext){ return true;}
+            }
+
+            return false;
+        },
+
+        _formatSize: function(bytes){
+            var i = -1;
+            do {
+                bytes = bytes / 1024;
+                i++;
+            } while (bytes > 99);
+
+            return Math.max(bytes, 0.1).toFixed(1) + ['KB', 'MB', 'GB', 'TB', 'PB', 'EB'][i];
+        }
+
+    });
+
+   plugins.register(MultiUploader);
+
+
+
+	return files.MultiUploader = MultiUploader;
+});
+define('skylark-domx-files/main',[
+	"./files",
+	"skylark-domx-velm",
+	"skylark-domx-query",
+	"./dropzone",
+	"./pastezone",
+	"./picker",
+	"./MultiUploader"
+],function(files,velm,$){
+	velm.delegate([
+		"dropzone",
+		"pastezone",
+		"picker"
+	],files);
+
+    $.fn.pastezone = $.wraps.wrapper_every_act(files.pastezone, files);
+    $.fn.dropzone = $.wraps.wrapper_every_act(files.dropzone, files);
+    $.fn.picker = $.wraps.wrapper_every_act(files.picker, files);
+
+	return files;
+});
+define('skylark-domx-files', ['skylark-domx-files/main'], function (main) { return main; });
 
 define('skylark-data-collection/collections',[
 	"skylark-langx/skylark"
