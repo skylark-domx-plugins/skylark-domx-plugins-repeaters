@@ -21,8 +21,10 @@
   },
   "license": "MIT",
   "dependencies": {
+    "skylark-domx-panels": "git+https://github.com/skylark-domx/skylark-domx-panels.git#master",
+    "skylark-domx-popups": "git+https://github.com/skylark-domx/skylark-domx-popups.git#master",
     "skylark-langx": "git+https://github.com/skylark-langx/skylark-langx.git#master",
-    "skylark-widgets-swt": "git+https://github.com/skylark-widgets/skylark-widgets-swt.git#master"
+    "skylark-widgets-base": "git+https://github.com/skylark-widgets/skylark-widgets-base.git#master"
   },
   "engines": {
     "node": ">=0.10.1"

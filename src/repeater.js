@@ -7,11 +7,11 @@ define([
   "skylark-domx-geom",
   "skylark-domx-velm",
   "skylark-domx-query",
-  "skylark-widgets-swt/Widget",
-  "skylark-widgets-swt/SelectList",
-  "skylark-widgets-swt/ComboBox",
-  "skylark-widgets-swt/SearchBox"  
-],function(skylark,langx,browser,eventer,noder,geom,elmx,$,Widget){
+  "skylark-domx-popups/SelectList",
+  "skylark-widgets-base/Widget",
+  "./ComboBox",
+  "./SearchBox"  
+],function(skylark,langx,browser,eventer,noder,geom,elmx,$,SelectList,Widget){
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
@@ -82,8 +82,8 @@ define([
 //			this.viewOptions = {};
 			this.viewType = null;
 
-			this.$filters.plugin("lark.selectlist");
-			this.$pageSize.plugin("lark.selectlist");
+			this.$filters.plugin("domx.selectlist");
+			this.$pageSize.plugin("domx.selectlist");
 			this.$primaryPaging.find('.combobox').plugin("lark.combobox");
 			this.$search.plugin("lark.searchbox",{
 				searchOnKeyPress: this.options.searchOnKeyPress,
@@ -206,7 +206,7 @@ define([
 
 			// destroy components and remove leftover
 			this.$element.find('.combobox').plugin("lark.combobox").destroy();
-			this.$element.find('.selectlist').plugin("lark.selectlist").destroy();
+			this.$element.find('.selectlist').plugin("domx.selectlist").destroy();
 			this.$element.find('.search').plugin("lark.searchbox").destroy();
 			if (this.infiniteScrollingEnabled) {
 				$(this.infiniteScrollingCont).infinitescroll('destroy');
@@ -224,9 +224,9 @@ define([
 			//var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 
 			this.$search.plugin("lark.searchbox").disable();
-			this.$filters.plugin("lark.selectlist").disable();
+			this.$filters.plugin("domx.selectlist").disable();
 			this.$views.find('label, input').addClass('disabled').attr('disabled', 'disabled');
-			this.$pageSize.plugin("lark.selectlist").disable();
+			this.$pageSize.plugin("domx.selectlist").disable();
 			this.$primaryPaging.find('.combobox').plugin("lark.combobox").disable();
 			this.$secondaryPaging.attr('disabled', 'disabled');
 			this.$prevBtn.attr('disabled', 'disabled');
@@ -254,9 +254,9 @@ define([
 			//var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 
 			this.$search.plugin("lark.searchbox").enable();
-			this.$filters.plugin("lark.selectlist").enable()
+			this.$filters.plugin("domx.selectlist").enable()
 			this.$views.find('label, input').removeClass('disabled').removeAttr('disabled');
-			this.$pageSize.plugin("lark.selectlist").enable()
+			this.$pageSize.plugin("domx.selectlist").enable()
 			this.$primaryPaging.find('.combobox').plugin("lark.combobox").enable();
 			this.$secondaryPaging.removeAttr('disabled');
 
@@ -275,9 +275,9 @@ define([
 
 			// if there are no items
 			if (parseInt(this.$count.html(), 10) !== 0) {
-				this.$pageSize.plugin("lark.selectlist").enable();
+				this.$pageSize.plugin("domx.selectlist").enable();
 			} else {
-				this.$pageSize.plugin("lark.selectlist").disable();
+				this.$pageSize.plugin("domx.selectlist").disable();
 			}
 
 			/* lwf
@@ -334,14 +334,14 @@ define([
 				}
 			};
 			if (this.$filters.length > 0) {
-				returnOptions.filter = this.$filters.plugin("lark.selectlist").selectedItem();
+				returnOptions.filter = this.$filters.plugin("domx.selectlist").selectedItem();
 			}
 
 			if (!this.infiniteScrollingEnabled) {
 				returnOptions.pageSize = 25;
 
 				if (this.$pageSize.length > 0) {
-					returnOptions.pageSize = parseInt(this.$pageSize.plugin("lark.selectlist").selectedItem().value, 10);
+					returnOptions.pageSize = parseInt(this.$pageSize.plugin("domx.selectlist").selectedItem().value, 10);
 				}
 			}
 
