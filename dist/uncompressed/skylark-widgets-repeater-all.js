@@ -14523,7 +14523,7 @@ define('skylark-widgets-repeater/Repeater',[
 			this.$views = this.$element.find('.repeater-views');
 
 			this.$element.on('mousedown.bs.dropdown.data-api', '[data-toggle="dropdown"]',function(e) {
-				$(this).dropdown();
+				$(this).plugin("domx.dropdown");
 			}); 
 
 			this.currentPage = 0;
