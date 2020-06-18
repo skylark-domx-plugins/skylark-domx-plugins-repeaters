@@ -66,10 +66,44 @@ define([
 	        });
 		},
 
-	    initOptions: function (options) {
-	      // Create a copy of the prototype options:
-	      this.options = langx.mixin({}, this.options,options);
-	    },
+	    //initOptions: function (options) {
+	    //  // Create a copy of the prototype options:
+	    //  this.options = langx.mixin({}, this.options,options);
+	    //},
+
+       initOptions : function(options) {
+          var ctor = this.constructor,
+              cache = ctor.cache = ctor.cache || {},
+              defaults = cache.defaults;
+          if (!defaults) {
+            var  ctors = [];
+            do {
+              ctors.unshift(ctor);
+              if (ctor === Plugin) {
+                break;
+              }
+              ctor = ctor.superclass;
+            } while (ctor);
+
+            defaults = cache.defaults = {};
+            for (var i=0;i<ctors.length;i++) {
+              ctor = ctors[i];
+              if (ctor.prototype.hasOwnProperty("options")) {
+                langx.mixin(defaults,ctor.prototype.options,true);
+              }
+              if (ctor.hasOwnProperty("options")) {
+                langx.mixin(defaults,ctor.options,true);
+              }
+            }
+          }
+          Object.defineProperty(this,"options",{
+            value :langx.mixin({},defaults,options,true)
+          });
+
+          //return this.options = langx.mixin({},defaults,options);
+          return this.options;
+        },
+
 
 	    close: function () {
       		if (noder.fullScreen() === this.container[0]) {

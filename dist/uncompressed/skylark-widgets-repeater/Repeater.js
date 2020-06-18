@@ -446,7 +446,7 @@ define([
 			var views = this._views = [];
 			var viewTypes = this.options.addons.views;
 			for (var i = 0; i< viewTypes.length; i++) {
-				var setting = Repeater.addons.views[viewTypes[i]];
+				var setting = this.constructor.addons.views[viewTypes[i]];
 				if (!setting) {
 					throw new Error("The view type " + viewTypes[i] + " is not defined!");
 				} 
@@ -616,7 +616,7 @@ define([
 			if (!this.infiniteScrollingEnabled || (this.infiniteScrollingEnabled && viewChanged)) {
 				//this.$loader.show().loader('play');
 				this._throbber = this.throb({
-					className : "loader"
+					className : "throbWrap"
 				});
 			}
 

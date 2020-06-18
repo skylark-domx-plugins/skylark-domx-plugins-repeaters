@@ -2,7 +2,7 @@ define([
     "./Repeater",
     "./views",
     "./views/ViewBase",
-    "./views/ListView",
+    "./views/LinearView",
     "./views/SliderView",
     "./views/TableView",
     "./views/TileView"

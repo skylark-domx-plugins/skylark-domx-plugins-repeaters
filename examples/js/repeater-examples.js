@@ -135,7 +135,7 @@ define([
 	$('#repeaterIllustration').plugin("lark.repeater",{
 		dataSource: dataSource,
 		addons : {
-			views : ["table","tile","slider","list"]
+			views : ["table","tile","slider","linear"]
 		}		
 	});
 

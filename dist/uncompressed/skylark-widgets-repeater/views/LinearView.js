@@ -10,8 +10,8 @@ define([
 ], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
 
 
-  var ListView = ViewBase.inherit({
-    klassName : "ListView",
+  var LinearView = ViewBase.inherit({
+    klassName : "LinearView",
 
     options: {
         alignment: 'left',
@@ -20,7 +20,7 @@ define([
         noItemsHTML: 'no items found',
         selectable: false,
 
-        template : '<ul class="clearfix repeater-list" data-container="true" data-infinite="true" data-preserve="shallow"></ul>',
+        template : '<ul class="clearfix repeater-linear" data-container="true" data-infinite="true" data-preserve="shallow"></ul>',
         item : {
             template: '<li class="repeater-item"><img  src="{{ThumbnailImage}}" class="thumb"/><h4 class="title">{{name}}</h4></div>'
         },
@@ -28,12 +28,12 @@ define([
 
     //ADDITIONAL METHODS
     clearSelectedItems : function() {
-        this.repeater.$canvas.find('.repeater-list .selectable.selected').removeClass('selected');
+        this.repeater.$canvas.find('.repeater-linear .selectable.selected').removeClass('selected');
     },
 
     getSelectedItems : function() {
         var selected = [];
-        this.repeater.$canvas.find('.repeater-list .selectable.selected').each(function() {
+        this.repeater.$canvas.find('.repeater-linear .selectable.selected').each(function() {
             selected.push($(this));
         });
         return selected;
@@ -91,13 +91,13 @@ define([
             if (items[i].index !== undefined) {
                 $item = $();
                 n = 0;
-                this.repeater.$canvas.find('.repeater-list .selectable').each(compareItemIndex);
+                this.repeater.$canvas.find('.repeater-linear .selectable').each(compareItemIndex);
                 if ($item.length > 0) {
                     selectItem($item, items[i].selected);
                 }
 
             } else if (items[i].selector) {
-                this.repeater.$canvas.find('.repeater-list .selectable').each(compareItemSelector);
+                this.repeater.$canvas.find('.repeater-linear .selectable').each(compareItemSelector);
             }
         }
     },
@@ -112,7 +112,7 @@ define([
     },
     before: function(helpers) {
         var alignment = this.options.alignment;
-        var $cont = this.repeater.$canvas.find('.repeater-list');
+        var $cont = this.repeater.$canvas.find('.repeater-linear');
         var data = helpers.data;
         var response = {};
         var $empty, validAlignments;
@@ -143,7 +143,7 @@ define([
 
                 if (!$item.hasClass(selected)) {
                     if (selectable !== 'multi') {
-                        self.repeater.$canvas.find('.repeater-list .selectable.selected').each(function() {
+                        self.repeater.$canvas.find('.repeater-linear .selectable.selected').each(function() {
                             var $itm = $(this);
                             $itm.removeClass(selected);
                             self.repeater.$element.trigger('deselected.lark.repeaterList', $itm);
@@ -176,11 +176,11 @@ define([
   });
 
 
-    views["list"] = {
-        name : "list",
-        ctor : ListView
+    views["linear"] = {
+        name : "linear",
+        ctor : LinearView
     };
 
-    return ListView;
+    return LinearView;
     
 });

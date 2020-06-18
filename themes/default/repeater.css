@@ -14,21 +14,21 @@
   padding: 5px 12px;
   width: 100%;
 }
-.repeater .infinitescroll .infinitescroll-load .loader {
+.repeater .infinitescroll .infinitescroll-load .throbWrap {
   font-size: 32px;
   height: 32px;
   margin: 0 auto;
   width: 32px;
 }
 
-.repeater .loader {
+.repeater .throbWrap {
   position: absolute;
   left : 0px;
   top : 0px;
   height : 100%;
   width : 100%;
 }
-.repeater .loader .throb {
+.repeater .throbWrap .throb {
   height: 64px;
   font-size: 64px;
   position: relative;
@@ -917,7 +917,7 @@
           user-select: none;
 }
 
-.repeater .repeater-list {
+.repeater .repeater-linear {
     bottom: 0;
     left: 0;
     position: absolute;
@@ -927,41 +927,41 @@
     overflow: auto;
 }
 
-.repeater .repeater-list .repeater-item  {
+.repeater .repeater-linear .repeater-item  {
     padding:20px;
     position: relative;
     clear: both;
     overflow: hidden;   
 }
 
-.repeater .repeater-list .repeater-item:nth-child(2n+1) {
+.repeater .repeater-linear .repeater-item:nth-child(2n+1) {
     background-color:rgba(0,0,0,.1);
     border:solid 1px rgba(255,255,255,.1);
     border-radius:10px;
 }
 
-.repeater .repeater-list .repeater-item .thumb {
+.repeater .repeater-linear .repeater-item .thumb {
     float:left;
     margin-right:20px;
     border:solid 1px #333;
 }
 
-.repeater ul.repeater-list {
+.repeater ul.repeater-linear {
  list-style: none;
 }
 
 
-.repeater .repeater-list .repeater-item:nth-child(2n+1) .thumb {
+.repeater .repeater-linear .repeater-item:nth-child(2n+1) .thumb {
     border:solid 1px #666;
 }
 
-.repeater .repeater-list .repeater-item .title {
+.repeater .repeater-linear .repeater-item .title {
     color:#fafafa;
     font-weight:bold;
     margin-bottom:6px;
 }
 
-.repeater .repeater-list .repeater-item .desc {
+.repeater .repeater-linear .repeater-item .desc {
     font:normal 14px/1.3 'helvetica neue', helvetica, arial;
     color:#aaa;
     text-align: left;

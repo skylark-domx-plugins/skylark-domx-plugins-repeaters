@@ -2677,10 +2677,114 @@ define('skylark-langx-events/events',[
 ],function(skylark){
 	return skylark.attach("langx.events",{});
 });
+define('skylark-langx-hoster/hoster',[
+    "skylark-langx-ns"
+],function(skylark){
+	// The javascript host environment, brower and nodejs are supported.
+	var hoster = {
+		"isBrowser" : true, // default
+		"isNode" : null,
+		"global" : this,
+		"browser" : null,
+		"node" : null
+	};
+
+	if (typeof process == "object" && process.versions && process.versions.node && process.versions.v8) {
+		hoster.isNode = true;
+		hoster.isBrowser = false;
+	}
+
+	hoster.global = (function(){
+		if (typeof global !== 'undefined' && typeof global !== 'function') {
+			// global spec defines a reference to the global object called 'global'
+			// https://github.com/tc39/proposal-global
+			// `global` is also defined in NodeJS
+			return global;
+		} else if (typeof window !== 'undefined') {
+			// window is defined in browsers
+			return window;
+		}
+		else if (typeof self !== 'undefined') {
+			// self is defined in WebWorkers
+			return self;
+		}
+		return this;
+	})();
+
+	var _document = null;
+
+	Object.defineProperty(hoster,"document",function(){
+		if (!_document) {
+			var w = typeof window === 'undefined' ? require('html-element') : window;
+			_document = w.document;
+		}
+
+		return _document;
+	});
+
+	if (hoster.global.CustomEvent === undefined) {
+		hoster.global.CustomEvent = function(type,props) {
+			this.type = type;
+			this.props = props;
+		};
+	}
+	Object.defineProperty(hoster,"document",function(){
+		if (!_document) {
+			var w = typeof window === 'undefined' ? require('html-element') : window;
+			_document = w.document;
+		}
+
+		return _document;
+	});
+
+	if (hoster.isBrowser) {
+	    function uaMatch( ua ) {
+		    ua = ua.toLowerCase();
+
+		    var match = /(chrome)[ \/]([\w.]+)/.exec( ua ) ||
+		      /(webkit)[ \/]([\w.]+)/.exec( ua ) ||
+		      /(opera)(?:.*version|)[ \/]([\w.]+)/.exec( ua ) ||
+		      /(msie) ([\w.]+)/.exec( ua ) ||
+		      ua.indexOf('compatible') < 0 && /(mozilla)(?:.*? rv:([\w.]+)|)/.exec( ua ) ||
+		      [];
+
+		    return {
+		      browser: match[ 1 ] || '',
+		      version: match[ 2 ] || '0'
+		    };
+	  	};
+
+	    var matched = uaMatch( navigator.userAgent );
+
+	    var browser = hoster.browser = {};
+
+	    if ( matched.browser ) {
+	      browser[ matched.browser ] = true;
+	      browser.version = matched.version;
+	    }
+
+	    // Chrome is Webkit, but Webkit is also Safari.
+	    if ( browser.chrome ) {
+	      browser.webkit = true;
+	    } else if ( browser.webkit ) {
+	      browser.safari = true;
+	    }
+	}
+
+	return  skylark.attach("langx.hoster",hoster);
+});
+define('skylark-langx-hoster/main',[
+	"./hoster"
+],function(hoster){
+	return hoster;
+});
+define('skylark-langx-hoster', ['skylark-langx-hoster/main'], function (main) { return main; });
+
 define('skylark-langx-events/Event',[
   "skylark-langx-objects",
   "skylark-langx-funcs",
   "skylark-langx-klass",
+  "skylark-langx-hoster"
 ],function(objects,funcs,klass){
     var eventMethods = {
         preventDefault: "isDefaultPrevented",
@@ -3078,7 +3182,7 @@ define('skylark-langx-events/Emitter',[
     });
 
 
-    return　events.Emitter = Emitter;
+    return events.Emitter = Emitter;
 
 });
 define('skylark-langx/Emitter',[
@@ -3124,94 +3228,6 @@ define('skylark-langx/funcs',[
 ],function(funcs){
     return funcs;
 });
-define('skylark-langx-hoster/hoster',[
-    "skylark-langx-ns"
-],function(skylark){
-	// The javascript host environment, brower and nodejs are supported.
-	var hoster = {
-		"isBrowser" : true, // default
-		"isNode" : null,
-		"global" : this,
-		"browser" : null,
-		"node" : null
-	};
-
-	if (typeof process == "object" && process.versions && process.versions.node && process.versions.v8) {
-		hoster.isNode = true;
-		hoster.isBrowser = false;
-	}
-
-	hoster.global = (function(){
-		if (typeof global !== 'undefined' && typeof global !== 'function') {
-			// global spec defines a reference to the global object called 'global'
-			// https://github.com/tc39/proposal-global
-			// `global` is also defined in NodeJS
-			return global;
-		} else if (typeof window !== 'undefined') {
-			// window is defined in browsers
-			return window;
-		}
-		else if (typeof self !== 'undefined') {
-			// self is defined in WebWorkers
-			return self;
-		}
-		return this;
-	})();
-
-	var _document = null;
-
-	Object.defineProperty(hoster,"document",function(){
-		if (!_document) {
-			var w = typeof window === 'undefined' ? require('html-element') : window;
-			_document = w.document;
-		}
-
-		return _document;
-	});
-
-	if (hoster.isBrowser) {
-	    function uaMatch( ua ) {
-		    ua = ua.toLowerCase();
-
-		    var match = /(chrome)[ \/]([\w.]+)/.exec( ua ) ||
-		      /(webkit)[ \/]([\w.]+)/.exec( ua ) ||
-		      /(opera)(?:.*version|)[ \/]([\w.]+)/.exec( ua ) ||
-		      /(msie) ([\w.]+)/.exec( ua ) ||
-		      ua.indexOf('compatible') < 0 && /(mozilla)(?:.*? rv:([\w.]+)|)/.exec( ua ) ||
-		      [];
-
-		    return {
-		      browser: match[ 1 ] || '',
-		      version: match[ 2 ] || '0'
-		    };
-	  	};
-
-	    var matched = uaMatch( navigator.userAgent );
-
-	    var browser = hoster.browser = {};
-
-	    if ( matched.browser ) {
-	      browser[ matched.browser ] = true;
-	      browser.version = matched.version;
-	    }
-
-	    // Chrome is Webkit, but Webkit is also Safari.
-	    if ( browser.chrome ) {
-	      browser.webkit = true;
-	    } else if ( browser.webkit ) {
-	      browser.safari = true;
-	    }
-	}
-
-	return  skylark.attach("langx.hoster",hoster);
-});
-define('skylark-langx-hoster/main',[
-	"./hoster"
-],function(hoster){
-	return hoster;
-});
-define('skylark-langx-hoster', ['skylark-langx-hoster/main'], function (main) { return main; });
-
 define('skylark-langx/hoster',[
 	"skylark-langx-hoster"
 ],function(hoster){
@@ -14908,7 +14924,7 @@ define('skylark-widgets-repeater/Repeater',[
 			var views = this._views = [];
 			var viewTypes = this.options.addons.views;
 			for (var i = 0; i< viewTypes.length; i++) {
-				var setting = Repeater.addons.views[viewTypes[i]];
+				var setting = this.constructor.addons.views[viewTypes[i]];
 				if (!setting) {
 					throw new Error("The view type " + viewTypes[i] + " is not defined!");
 				} 
@@ -15078,7 +15094,7 @@ define('skylark-widgets-repeater/Repeater',[
 			if (!this.infiniteScrollingEnabled || (this.infiniteScrollingEnabled && viewChanged)) {
 				//this.$loader.show().loader('play');
 				this._throbber = this.throb({
-					className : "loader"
+					className : "throbWrap"
 				});
 			}
 
@@ -15540,10 +15556,44 @@ define('skylark-widgets-repeater/views/ViewBase',[
 	        });
 		},
 
-	    initOptions: function (options) {
-	      // Create a copy of the prototype options:
-	      this.options = langx.mixin({}, this.options,options);
-	    },
+	    //initOptions: function (options) {
+	    //  // Create a copy of the prototype options:
+	    //  this.options = langx.mixin({}, this.options,options);
+	    //},
+
+       initOptions : function(options) {
+          var ctor = this.constructor,
+              cache = ctor.cache = ctor.cache || {},
+              defaults = cache.defaults;
+          if (!defaults) {
+            var  ctors = [];
+            do {
+              ctors.unshift(ctor);
+              if (ctor === Plugin) {
+                break;
+              }
+              ctor = ctor.superclass;
+            } while (ctor);
+
+            defaults = cache.defaults = {};
+            for (var i=0;i<ctors.length;i++) {
+              ctor = ctors[i];
+              if (ctor.prototype.hasOwnProperty("options")) {
+                langx.mixin(defaults,ctor.prototype.options,true);
+              }
+              if (ctor.hasOwnProperty("options")) {
+                langx.mixin(defaults,ctor.options,true);
+              }
+            }
+          }
+          Object.defineProperty(this,"options",{
+            value :langx.mixin({},defaults,options,true)
+          });
+
+          //return this.options = langx.mixin({},defaults,options);
+          return this.options;
+        },
+
 
 	    close: function () {
       		if (noder.fullScreen() === this.container[0]) {
@@ -15576,7 +15626,7 @@ define('skylark-widgets-repeater/views/ViewBase',[
 	return views.ViewBase = ViewBase;
 });
 
-define('skylark-widgets-repeater/views/ListView',[
+define('skylark-widgets-repeater/views/LinearView',[
     "skylark-langx/langx",
     "skylark-domx-browser",
     "skylark-domx-eventer",
@@ -15588,8 +15638,8 @@ define('skylark-widgets-repeater/views/ListView',[
 ], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
 
 
-  var ListView = ViewBase.inherit({
-    klassName : "ListView",
+  var LinearView = ViewBase.inherit({
+    klassName : "LinearView",
 
     options: {
         alignment: 'left',
@@ -15598,7 +15648,7 @@ define('skylark-widgets-repeater/views/ListView',[
         noItemsHTML: 'no items found',
         selectable: false,
 
-        template : '<ul class="clearfix repeater-list" data-container="true" data-infinite="true" data-preserve="shallow"></ul>',
+        template : '<ul class="clearfix repeater-linear" data-container="true" data-infinite="true" data-preserve="shallow"></ul>',
         item : {
             template: '<li class="repeater-item"><img  src="{{ThumbnailImage}}" class="thumb"/><h4 class="title">{{name}}</h4></div>'
         },
@@ -15606,12 +15656,12 @@ define('skylark-widgets-repeater/views/ListView',[
 
     //ADDITIONAL METHODS
     clearSelectedItems : function() {
-        this.repeater.$canvas.find('.repeater-list .selectable.selected').removeClass('selected');
+        this.repeater.$canvas.find('.repeater-linear .selectable.selected').removeClass('selected');
     },
 
     getSelectedItems : function() {
         var selected = [];
-        this.repeater.$canvas.find('.repeater-list .selectable.selected').each(function() {
+        this.repeater.$canvas.find('.repeater-linear .selectable.selected').each(function() {
             selected.push($(this));
         });
         return selected;
@@ -15669,13 +15719,13 @@ define('skylark-widgets-repeater/views/ListView',[
             if (items[i].index !== undefined) {
                 $item = $();
                 n = 0;
-                this.repeater.$canvas.find('.repeater-list .selectable').each(compareItemIndex);
+                this.repeater.$canvas.find('.repeater-linear .selectable').each(compareItemIndex);
                 if ($item.length > 0) {
                     selectItem($item, items[i].selected);
                 }
 
             } else if (items[i].selector) {
-                this.repeater.$canvas.find('.repeater-list .selectable').each(compareItemSelector);
+                this.repeater.$canvas.find('.repeater-linear .selectable').each(compareItemSelector);
             }
         }
     },
@@ -15690,7 +15740,7 @@ define('skylark-widgets-repeater/views/ListView',[
     },
     before: function(helpers) {
         var alignment = this.options.alignment;
-        var $cont = this.repeater.$canvas.find('.repeater-list');
+        var $cont = this.repeater.$canvas.find('.repeater-linear');
         var data = helpers.data;
         var response = {};
         var $empty, validAlignments;
@@ -15721,7 +15771,7 @@ define('skylark-widgets-repeater/views/ListView',[
 
                 if (!$item.hasClass(selected)) {
                     if (selectable !== 'multi') {
-                        self.repeater.$canvas.find('.repeater-list .selectable.selected').each(function() {
+                        self.repeater.$canvas.find('.repeater-linear .selectable.selected').each(function() {
                             var $itm = $(this);
                             $itm.removeClass(selected);
                             self.repeater.$element.trigger('deselected.lark.repeaterList', $itm);
@@ -15754,12 +15804,12 @@ define('skylark-widgets-repeater/views/ListView',[
   });
 
 
-    views["list"] = {
-        name : "list",
-        ctor : ListView
+    views["linear"] = {
+        name : "linear",
+        ctor : LinearView
     };
 
-    return ListView;
+    return LinearView;
     
 });
 /* global define, window, document, DocumentTouch */
@@ -17040,16 +17090,22 @@ define('skylark-widgets-repeater/views/TableView',[
         sortClearing: false,
         rowRendered: null,
         frozenColumns: 0,
-        actions: false
+        actions: false,
+
+        viewClass : "repeater-table",
+        tableWrapperClass : "repeater-table-wrapper",
+        checkClass : "repeater-table-check",
+        headingClass : "repeater-table-heading",
+        actionsPlaceHolderClass : "repeater-table-actions-placeholder"
     },
 
     clearSelectedItems : function listClearSelectedItems () {
-        this.repeater.$canvas.find('.repeater-table-check').remove();
-        this.repeater.$canvas.find('.repeater-table table tbody tr.selected').removeClass('selected');
+        this.repeater.$canvas.find(`.${this.options.checkClass}`).remove();
+        this.repeater.$canvas.find(`.${this.options.viewClass} table tbody tr.selected`).removeClass('selected');
     },
 
     highlightColumn : function listHighlightColumn (index, force) {
-        var tbody = this.repeater.$canvas.find('.repeater-table-wrapper > table tbody');
+        var tbody = this.repeater.$canvas.find(`.${this.options.tableWrapperClass} > table tbody`);
         if (this.options.highlightSortedColumn || force) {
             tbody.find('td.sorted').removeClass('sorted');
             tbody.find('tr').each(function eachTR () {
@@ -17061,7 +17117,7 @@ define('skylark-widgets-repeater/views/TableView',[
 
     getSelectedItems : function listGetSelectedItems () {
         var selected = [];
-        this.repeater.$canvas.find('.repeater-table .repeater-table-wrapper > table tbody tr.selected').each(function eachSelectedTR () {
+        this.repeater.$canvas.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table tbody tr.selected`).each(function eachSelectedTR () {
             var $item = $(this);
             selected.push({
                 data: $item.data('item_data'),
@@ -17072,17 +17128,17 @@ define('skylark-widgets-repeater/views/TableView',[
     },
 
     positionHeadings : function listPositionHeadings () {
-        var $wrapper = this.repeater.$element.find('.repeater-table-wrapper');
+        var $wrapper = this.repeater.$element.find(`.${this.options.tableWrapperClass}`);
         var offsetLeft = $wrapper.offset().left;
         var scrollLeft = $wrapper.scrollLeft();
         if (scrollLeft > 0) {
-            $wrapper.find('.repeater-table-heading').each(function eachListHeading () {
+            $wrapper.find(`.${this.options.headingClass}`).each(function eachListHeading () {
                 var $heading = $(this);
                 var left = ($heading.parents('th:first').offset().left - offsetLeft) + 'px';
                 $heading.addClass('shifted').css('left', left);
             });
         } else {
-            $wrapper.find('.repeater-table-heading').each(function eachListHeading () {
+            $wrapper.find(`.${this.options.headingClass}`).each(function eachListHeading () {
                 $(this).removeClass('shifted').css('left', '');
             });
         }
@@ -17134,7 +17190,7 @@ define('skylark-widgets-repeater/views/TableView',[
                         self.repeater.$element.find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').addClass('selected');
                     }
 
-                    $itm.find('td:first').prepend('<div class="repeater-table-check"><span class="glyphicon glyphicon-ok"></span></div>');
+                    $itm.find('td:first').prepend(`<div class="${this.options.checkClass}"><span class="glyphicon glyphicon-ok"></span></div>`);
                 }
             } else {
                 if (self.options.frozenColumns) {
@@ -17148,7 +17204,7 @@ define('skylark-widgets-repeater/views/TableView',[
                     self.repeater.$element.find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').removeClass('selected');
                 }
 
-                $itm.find('.repeater-table-check').remove();
+                $itm.find(`.${this.options.checkClass}`).remove();
                 $itm.removeClass('selected');
             }
         };
@@ -17163,21 +17219,22 @@ define('skylark-widgets-repeater/views/TableView',[
 
         for (i = 0; i < length; i++) {
             if (items[i].index !== undefined) {
-                $item = this.repeater.$canvas.find('.repeater-table .repeater-table-wrapper > table tbody tr:nth-child(' + (items[i].index + 1) + ')');
+                $item = this.repeater.$canvas.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table tbody tr:nth-child(` + (items[i].index + 1) + ')');
                 if ($item.length > 0) {
                     selectItem($item, items[i].selected, items[i].index);
                 }
             } else if (items[i].property !== undefined && items[i].value !== undefined) {
-                this.repeater.$canvas.find('.repeater-table .repeater-table-wrapper > table tbody tr').each(checkIfItemMatchesValue);
+                this.repeater.$canvas.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table tbody tr`).each(checkIfItemMatchesValue);
             }
         }
     },
 
     sizeHeadings : function listSizeHeadings () {
-        var $table = this.repeater.$element.find('.repeater-table table');
+        var $table = this.repeater.$element.find(`.${this.options.viewClass} table`);
+        var self = this;
         $table.find('thead th').each(function eachTH () {
             var $th = $(this);
-            var $heading = $th.find('.repeater-table-heading');
+            var $heading = $th.find(`.${self.options.headingClass}`);
             $heading.css({ height: $th.outerHeight() });
             $heading.outerWidth($heading.data('forced-width') || $th.outerWidth());
         });
@@ -17186,8 +17243,8 @@ define('skylark-widgets-repeater/views/TableView',[
     setFrozenColumns : function listSetFrozenColumns () {
         var frozenTable = this.repeater.$canvas.find('.table-frozen');
         var $wrapper = this.repeater.$element.find('.repeater-canvas');
-        var $table = this.repeater.$element.find('.repeater-table .repeater-table-wrapper > table');
-        var repeaterWrapper = this.repeater.$element.find('.repeater-table');
+        var $table = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
+        var repeaterWrapper = this.repeater.$element.find(`.${this.options.viewClass}`);
         var numFrozenColumns = this.options.frozenColumns;
         var self = this;
 
@@ -17221,10 +17278,10 @@ define('skylark-widgets-repeater/views/TableView',[
 
         this.sizeFrozenColumns();
 
-        $('.frozen-thead-wrapper .repeater-table-heading').on('click', function onClickHeading () {
+        $(`.frozen-thead-wrapper .${this.options.headingClass}`).on('click', function onClickHeading () {
             var index = $(this).parent('th').index();
             index = index + 1;
-            self.repeater.$element.find('.repeater-table-wrapper > table thead th:nth-child(' + index + ') .repeater-table-heading')[0].click();
+            self.repeater.$element.find(`.${this.options.tableWrapperClass} > table thead th:nth-child(` + index + `) .${this.options.headingClass}`)[0].click();
         });
     },
 
@@ -17236,7 +17293,7 @@ define('skylark-widgets-repeater/views/TableView',[
         var actionsEnabled = this.options.actions;
 
         var canvasWidth = this.repeater.$element.find('.repeater-canvas').outerWidth();
-        var tableWidth = this.repeater.$element.find('.repeater-table .repeater-table-wrapper > table').outerWidth();
+        var tableWidth = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`).outerWidth();
 
         var actionsWidth = this.repeater.$element.find('.table-actions') ? this.repeater.$element.find('.table-actions').outerWidth() : 0;
 
@@ -17244,9 +17301,9 @@ define('skylark-widgets-repeater/views/TableView',[
 
 
         if (scrollTop > 0) {
-            $wrapper.find('.repeater-table-heading').css('top', scrollTop);
+            $wrapper.find(`.${this.options.headingClass}`).css('top', scrollTop);
         } else {
-            $wrapper.find('.repeater-table-heading').css('top', '0');
+            $wrapper.find(`.${this.options.headingClass}`).css('top', '0');
         }
 
         if (scrollLeft > 0) {
@@ -17275,7 +17332,7 @@ define('skylark-widgets-repeater/views/TableView',[
         var self = this;
         var i;
         var length;
-        var $table = this.repeater.$element.find('.repeater-table .repeater-table-wrapper > table');
+        var $table = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
         var $actionsTable = this.repeater.$canvas.find('.table-actions');
 
         for (i = 0, length = this.options.actions.items.length; i < length; i++) {
@@ -17301,7 +17358,7 @@ define('skylark-widgets-repeater/views/TableView',[
 
             // Dont show actions dropdown in header if not multi select
             if (this.options.selectable === 'multi' || this.options.selectable === 'action') {
-                $actionsColumn.find('thead tr').html('<th><div class="repeater-table-heading">' + actionsDropdown + '</div></th>');
+                $actionsColumn.find('thead tr').html(`<th><div class="${this.options.headingClass}">` + actionsDropdown + '</div></th>');
 
                 if (this.options.selectable !== 'action') {
                     // disable the header dropdown until an item is selected
@@ -17309,7 +17366,7 @@ define('skylark-widgets-repeater/views/TableView',[
                 }
             } else {
                 var label = this.options.actions.label || '<span class="actions-hidden">a</span>';
-                $actionsColumn.find('thead tr').addClass('empty-heading').html('<th>' + label + '<div class="repeater-table-heading">' + label + '</div></th>');
+                $actionsColumn.find('thead tr').addClass('empty-heading').html('<th>' + label + `<div class="${this.options.headingClass}">` + label + '</div></th>');
             }
 
             // Create Actions dropdown for each cell in actions table
@@ -17347,10 +17404,10 @@ define('skylark-widgets-repeater/views/TableView',[
                     actionName: actionName,
                     rows: []
                 };
-                var selector = '.repeater-table-wrapper > table .selected';
+                var selector = `.${this.options.tableWrapperClass} > table .selected`;
 
                 if ( self.options.selectable === 'action' ) {
-                    selector = '.repeater-table-wrapper > table tr';
+                    selector = `.${this.options.tableWrapperClass} > table tr`;
                 }
                 self.repeater.$element.find(selector).each(function eachSelector (selectorIndex) {
                     selected.rows.push(selectorIndex + 1);
@@ -17367,7 +17424,7 @@ define('skylark-widgets-repeater/views/TableView',[
             return actions.name === selected.actionName;
         })[0];
         for (var i = 0, selectedRowsL = selected.rows.length; i < selectedRowsL; i++) {
-            var clickedRow = this.repeater.$canvas.find('.repeater-table-wrapper > table tbody tr:nth-child(' + selected.rows[i] + ')');
+            var clickedRow = this.repeater.$canvas.find(`.${this.options.tableWrapperClass} > table tbody tr:nth-child(` + selected.rows[i] + ')');
             selectedObj.push({
                 item: clickedRow,
                 rowData: clickedRow.data('item_data')
@@ -17384,21 +17441,21 @@ define('skylark-widgets-repeater/views/TableView',[
     },
 
     sizeActionsTable : function listSizeActionsTable () {
-        var $actionsTable = this.repeater.$element.find('.repeater-table table.table-actions');
+        var $actionsTable = this.repeater.$element.find(`.${this.options.viewClass} table.table-actions`);
         var $actionsTableHeader = $actionsTable.find('thead tr th');
-        var $table = this.repeater.$element.find('.repeater-table-wrapper > table');
+        var $table = this.repeater.$element.find(`.${this.options.tableWrapperClass} > table`);
 
         $actionsTableHeader.outerHeight($table.find('thead tr th').outerHeight());
-        $actionsTableHeader.find('.repeater-table-heading').outerHeight($actionsTableHeader.outerHeight());
+        $actionsTableHeader.find(`.${this.options.headingClass}`).outerHeight($actionsTableHeader.outerHeight());
         $actionsTable.find('tbody tr td:first-child').each(function eachFirstChild (i) {
             $(this).outerHeight($table.find('tbody tr:eq(' + i + ') td').outerHeight());
         });
     },
 
     sizeFrozenColumns : function listSizeFrozenColumns () {
-        var $table = this.repeater.$element.find('.repeater-table .repeater-table-wrapper > table');
+        var $table = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
 
-        this.repeater.$element.find('.repeater-table table.table-frozen tr').each(function eachTR (i) {
+        this.repeater.$element.find(`.${this.options.viewClass} table.table-frozen tr`).each(function eachTR (i) {
             $(this).height($table.find('tr:eq(' + i + ')').height());
         });
 
@@ -17409,7 +17466,7 @@ define('skylark-widgets-repeater/views/TableView',[
     frozenOptionsInitialize : function listFrozenOptionsInitialize () {
         var $checkboxes = this.repeater.$element.find('.frozen-column-wrapper .checkbox-inline');
         var $headerCheckbox = this.repeater.$element.find('.header-checkbox .checkbox-custom');
-        var $everyTable = this.repeater.$element.find('.repeater-table table');
+        var $everyTable = this.repeater.$element.find(`.${this.options.viewClass} table`);
         var self = this;
 
         // Make sure if row is hovered that it is shown in frozen column as well
@@ -17438,7 +17495,7 @@ define('skylark-widgets-repeater/views/TableView',[
                 } else {
                     var row = $(this).attr('data-row');
                     row = parseInt(row, 10) + 1;
-                    self.repeater.$element.find('.repeater-table-wrapper > table tbody tr:nth-child(' + row + ')').click();
+                    self.repeater.$element.find(`.${this.options.tableWrapperClass} > table tbody tr:nth-child(` + row + ')').click();
 
                     var numSelected = self.repeater.$element.find('.table-frozen tbody .checkbox-inline.checked').length;
                     if (numSelected === 0) {
@@ -17461,10 +17518,10 @@ define('skylark-widgets-repeater/views/TableView',[
                 if (self.isDisabled) {
                     revertCheckbox($(e.currentTarget));
                 } else if ($(this).is(':checked')) {
-                    self.repeater.$element.find('.repeater-table-wrapper > table tbody tr:not(.selected)').click();
+                    self.repeater.$element.find(`.${this.options.tableWrapperClass} > table tbody tr:not(.selected)`).click();
                     self.repeater.$element.trigger('selected.lark.repeaterList', $checkboxes);
                 } else {
-                    self.repeater.$element.find('.repeater-table-wrapper > table tbody tr.selected').click();
+                    self.repeater.$element.find(`.${this.options.tableWrapperClass} > table tbody tr.selected`).click();
                     self.repeater.$element.trigger('deselected.lark.repeaterList', $checkboxes);
                 }
             }
@@ -17510,7 +17567,7 @@ define('skylark-widgets-repeater/views/TableView',[
         callback();
     },
     resize: function resize () {
-        sizeColumns.call(this, this.repeater.$element.find('.repeater-table-wrapper > table thead tr'));
+        sizeColumns.call(this, this.repeater.$element.find(`.${this.options.tableWrapperClass} > table thead tr`));
         if (this.options.actions) {
             this.sizeActionsTable();
         }
@@ -17534,7 +17591,7 @@ define('skylark-widgets-repeater/views/TableView',[
         }
     },
     before: function before (helpers) {
-        var $listContainer = helpers.container.find('.repeater-table');
+        var $listContainer = helpers.container.find(`.${this.options.viewClass}`);
         var self = this;
         var $table;
 
@@ -17546,8 +17603,8 @@ define('skylark-widgets-repeater/views/TableView',[
         }
 
         if ($listContainer.length < 1) {
-            $listContainer = $('<div class="repeater-table ' + this.specialBrowserClass + '" data-preserve="shallow"><div class="repeater-table-wrapper" data-infinite="true" data-preserve="shallow"><table aria-readonly="true" class="table" data-preserve="shallow" role="grid"></table></div></div>');
-            $listContainer.find('.repeater-table-wrapper').on('scroll.lark.repeaterList', function onScrollRepeaterList () {
+            $listContainer = $(`<div class="${this.options.viewClass} ` + this.specialBrowserClass + `" data-preserve="shallow"><div class="${this.options.tableWrapperClass}" data-infinite="true" data-preserve="shallow"><table aria-readonly="true" class="table" data-preserve="shallow" role="grid"></table></div></div>`);
+            $listContainer.find(`.${this.options.tableWrapperClass}`).on('scroll.lark.repeaterList', function onScrollRepeaterList () {
                 if (self.options.columnSyncing) {
                     self.positionHeadings();
                 }
@@ -17594,7 +17651,7 @@ define('skylark-widgets-repeater/views/TableView',[
             this.positionHeadings();
         }
 
-        $sorted = this.repeater.$canvas.find('.repeater-table-wrapper > table .repeater-table-heading.sorted');
+        $sorted = this.repeater.$canvas.find(`.${this.options.tableWrapperClass} > table .${this.options.headingClass}.sorted`);
         if ($sorted.length > 0) {
             this.highlightColumn($sorted.data('fu_item_index'));
         }
@@ -17637,7 +17694,7 @@ define('skylark-widgets-repeater/views/TableView',[
 
         var property = columns[columnIndex].property;
         if (this.options.actions !== false && property === '@_ACTIONS_@') {
-            content = '<div class="repeater-table-actions-placeholder" style="width: ' + this.actions_width  + 'px"></div>';
+            content = `<div class="${this.options.actionsPlaceHolderClass}" style="width: ` + this.actions_width  + 'px"></div>';
         }
 
         content = (content !== undefined) ? content : '';
@@ -17663,10 +17720,10 @@ define('skylark-widgets-repeater/views/TableView',[
         var chevDown = 'glyphicon-chevron-down';
         var chevron = '.glyphicon.rlc:first';
         var chevUp = 'glyphicon-chevron-up';
-        var $div = $('<div class="repeater-table-heading"><span class="glyphicon rlc"></span></div>');
+        var $div = $(`<div class="${this.options.headingClass}"><span class="glyphicon rlc"></span></div>`);
         var checkAllID = (this.repeater.$element.attr('id') + '_' || '') + 'checkall';
 
-        var checkBoxMarkup = '<div class="repeater-table-heading header-checkbox">' +
+        var checkBoxMarkup = `<div class="${this.options.headingClass} header-checkbox">` +
                 '<label id="' + checkAllID + '" class="checkbox-custom checkbox-inline">' +
                     '<input class="sr-only" type="checkbox" value="">' +
                     '<span class="checkbox-label">&nbsp;</span>' +
@@ -17726,7 +17783,7 @@ define('skylark-widgets-repeater/views/TableView',[
                             self.sortProperty = null;
                         }
                     } else {
-                        $tr.find('th, .repeater-table-heading').removeClass('sorted');
+                        $tr.find(`th, .${this.options.headingClass}`).removeClass('sorted');
                         $spans.removeClass(chevDown).addClass(chevUp);
                         self.sortDirection = 'asc';
                         $both.addClass('sorted');
@@ -17741,7 +17798,7 @@ define('skylark-widgets-repeater/views/TableView',[
         }
 
         if (columns[index].sortDirection === 'asc' || columns[index].sortDirection === 'desc') {
-            $tr.find('th, .repeater-table-heading').removeClass('sorted');
+            $tr.find(`th, .${this.options.headingClass}`).removeClass('sorted');
             $both.addClass('sortable sorted');
             if (columns[index].sortDirection === 'asc') {
                 $spans.addClass(chevUp);
@@ -17778,18 +17835,18 @@ define('skylark-widgets-repeater/views/TableView',[
                         $actionsRow.removeClass('selected');
                     }
                 } else {
-                    $item.find('.repeater-table-check').remove();
+                    $item.find(`.${this.options.checkClass}`).remove();
                 }
 
                 $repeater.trigger('deselected.lark.repeaterList', $item);
             } else {
                 if (!isMulti) {
-                    repeater.$canvas.find('.repeater-table-check').remove();
-                    repeater.$canvas.find('.repeater-table tbody tr.selected').each(function deslectRow () {
+                    repeater.$canvas.find(`.${this.options.checkClass}`).remove();
+                    repeater.$canvas.find(`.${this.options.viewClass} tbody tr.selected`).each(function deslectRow () {
                         $(this).removeClass('selected');
                         $repeater.trigger('deselected.lark.repeaterList', $(this));
                     });
-                    $item.find('td:first').prepend('<div class="repeater-table-check"><span class="glyphicon glyphicon-ok"></span></div>');
+                    $item.find('td:first').prepend(`<div class="${this.options.checkClass}"><span class="glyphicon glyphicon-ok"></span></div>`);
                     $item.addClass('selected');
                     $frozenRow.addClass('selected');
                 } else {
@@ -17932,7 +17989,7 @@ define('skylark-widgets-repeater/views/TableView',[
             if (this.options.selectable === 'multi' && !this.noItems) {
                 // after checkbox column is created need to get width of checkbox column from
                 // its css class
-                var checkboxWidth = this.repeater.$element.find('.repeater-table-wrapper .header-checkbox').outerWidth();
+                var checkboxWidth = this.repeater.$element.find(`.${this.options.tableWrapperClass} .header-checkbox`).outerWidth();
                 var selectColumn = $.grep(columns, function grepColumn (column) {
                     return column.property === '@_CHECKBOX_@';
                 })[0];
@@ -17962,7 +18019,7 @@ define('skylark-widgets-repeater/views/TableView',[
                     widthTaken += $th.outerWidth();
                     self.columns[i]._auto_width = width;
                 } else {
-                    var outerWidth = $th.find('.repeater-table-heading').outerWidth();
+                    var outerWidth = $th.find(`.${self.options.headingClass}`).outerWidth();
                     automaticallyGeneratedWidths.push({
                         col: $th,
                         index: i,
@@ -17975,7 +18032,7 @@ define('skylark-widgets-repeater/views/TableView',[
 
             length = automaticallyGeneratedWidths.length;
             if (length > 0) {
-                var canvasWidth = this.repeater.$canvas.find('.repeater-table-wrapper').outerWidth();
+                var canvasWidth = this.repeater.$canvas.find(`.${this.options.tableWrapperClass}`).outerWidth();
                 newWidth = Math.floor((canvasWidth - widthTaken) / length);
                 for (i = 0; i < length; i++) {
                     if (automaticallyGeneratedWidths[i].minWidth > newWidth) {
@@ -18003,12 +18060,12 @@ define('skylark-widgets-repeater/views/TableView',[
     };
 
     var toggleActionsHeaderButton = function toggleActionsHeaderButton () {
-        var selectedSelector = '.repeater-table-wrapper > table .selected';
+        var selectedSelector = `.${this.options.tableWrapperClass} > table .selected`;
         var $actionsColumn = this.repeater.$element.find('.table-actions');
         var $selected;
 
         if (this.options.selectable === 'action') {
-            selectedSelector = '.repeater-table-wrapper > table tr';
+            selectedSelector = `.${this.options.tableWrapperClass} > table tr`;
         }
 
         $selected = this.repeater.$canvas.find( selectedSelector );
@@ -18239,7 +18296,7 @@ define('skylark-widgets-repeater/main',[
     "./Repeater",
     "./views",
     "./views/ViewBase",
-    "./views/ListView",
+    "./views/LinearView",
     "./views/SliderView",
     "./views/TableView",
     "./views/TileView"
