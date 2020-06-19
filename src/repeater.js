@@ -8,10 +8,10 @@ define([
   "skylark-domx-velm",
   "skylark-domx-query",
   "skylark-domx-popups/SelectList",
+  "skylark-domx-popups/ComboBox",
   "skylark-widgets-base/Widget",
-  "./ComboBox",
   "./SearchBox"  
-],function(skylark,langx,browser,eventer,noder,geom,elmx,$,SelectList,Widget){
+],function(skylark,langx,browser,eventer,noder,geom,elmx,$,SelectList,ComboBox,Widget){
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
@@ -84,7 +84,7 @@ define([
 
 			this.$filters.plugin("domx.selectlist");
 			this.$pageSize.plugin("domx.selectlist");
-			this.$primaryPaging.find('.combobox').plugin("lark.combobox");
+			this.$primaryPaging.find('.combobox').plugin("domx.combobox");
 			this.$search.plugin("lark.searchbox",{
 				searchOnKeyPress: this.options.searchOnKeyPress,
 				allowCancel: this.options.allowCancel
@@ -227,7 +227,7 @@ define([
 			this.$filters.plugin("domx.selectlist").disable();
 			this.$views.find('label, input').addClass('disabled').attr('disabled', 'disabled');
 			this.$pageSize.plugin("domx.selectlist").disable();
-			this.$primaryPaging.find('.combobox').plugin("lark.combobox").disable();
+			this.$primaryPaging.find('.combobox').plugin("domx.combobox").disable();
 			this.$secondaryPaging.attr('disabled', 'disabled');
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.$nextBtn.attr('disabled', 'disabled');
@@ -257,7 +257,7 @@ define([
 			this.$filters.plugin("domx.selectlist").enable()
 			this.$views.find('label, input').removeClass('disabled').removeAttr('disabled');
 			this.$pageSize.plugin("domx.selectlist").enable()
-			this.$primaryPaging.find('.combobox').plugin("lark.combobox").enable();
+			this.$primaryPaging.find('.combobox').plugin("domx.combobox").enable();
 			this.$secondaryPaging.removeAttr('disabled');
 
 			if (!this.$prevBtn.hasClass('page-end')) {
@@ -270,7 +270,7 @@ define([
 			// is 0 or 1 pages, if using $primaryPaging (combobox)
 			// if using selectlist allow user to use selectlist to select 0 or 1
 			if (this.$prevBtn.hasClass('page-end') && this.$nextBtn.hasClass('page-end')) {
-				this.$primaryPaging.plugin("lark.combobox").disable();
+				this.$primaryPaging.plugin("domx.combobox").disable();
 			}
 
 			// if there are no items
