@@ -1038,6 +1038,11 @@
             main: 'main'
          },
          {
+           name : "skylark-langx-binary",
+           location : "../node_modules/skylark-langx-binary/dist/uncompressed/skylark-langx-binary",
+            main: 'main'
+         },
+         {
            name : "skylark-langx-datetimes",
            location : "../node_modules/skylark-langx-datetimes/dist/uncompressed/skylark-langx-datetimes",
             main: 'main'
@@ -1078,8 +1083,8 @@
             main: 'main'
          },
          {
-           name : "skylark-langx-numbers",
-           location : "../node_modules/skylark-langx-numbers/dist/uncompressed/skylark-langx-numbers",
+           name : "skylark-langx-numerics",
+           location : "../node_modules/skylark-langx-numerics/dist/uncompressed/skylark-langx-numerics",
             main: 'main'
          },
          {
@@ -1219,13 +1224,6 @@
             main: 'main'
          },
          {
-           name : "skylark-widgets-base",
-           location : "../node_modules/skylark-widgets-base/dist/uncompressed/skylark-widgets-base",
-//           location : "../../skylark-widgets-base/src",
-            main: 'main'
-         },          
-
-         {
             name: 'skylark-langx',
             location: '../node_modules/skylark-langx/dist/uncompressed/skylark-langx',
 //            location: '../../../langx/skylark-langx/src',
@@ -1233,7 +1231,7 @@
           },
      
          {
-            name: 'skylark-widgets-repeater',
+            name: 'skylark-domx-repeater',
 //            location: '../dist/uncompressed/skylark-ui-repeater',
             location: '../src',
             main: 'main'
@@ -1243,7 +1241,7 @@
   })();
 </script>
 <script>
-  require(['skylark-widgets-repeater'],function(){
+  require(['skylark-domx-repeater'],function(){
       require(['js/application'], function($){
 
       });

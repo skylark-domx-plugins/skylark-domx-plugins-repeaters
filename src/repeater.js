@@ -7,18 +7,19 @@ define([
   "skylark-domx-geom",
   "skylark-domx-velm",
   "skylark-domx-query",
+  "skylark-domx-fx",
+  "skylark-domx-plugins",
   "skylark-domx-popups/SelectList",
   "skylark-domx-popups/ComboBox",
-  "skylark-widgets-base/Widget",
   "./SearchBox"  
-],function(skylark,langx,browser,eventer,noder,geom,elmx,$,SelectList,ComboBox,Widget){
+],function(skylark,langx,browser,eventer,noder,geom,elmx,$,fx,plugins,SelectList,ComboBox){
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
-	var Repeater = Widget.inherit({
+	var Repeater = plugins.Plugin.inherit({
 		klassName: "Repeater",
 
-		pluginName: "lark.repeater",
+		pluginName: "domx.repeater",
 
 		options : {
 			dataSource: function dataSource (options, callback) {
@@ -36,8 +37,13 @@ define([
 			}
 		},
 
+	    throb: function(params) {
+	      return fx.throb(this._elm,params);
+	    },
+
 //		_init : function(element,options) {
-		_init : function() {
+	    _construct : function(elm,options) {
+		    this.overrided(elm,options);
 			var self = this;
 			var $btn;
 			var currentView;
@@ -1000,7 +1006,9 @@ define([
 
 	Repeater.addons = {};
 
+   plugins.register(Repeater);
 
-	return skylark.attach("widgets.Repeater",Repeater);
+
+	return skylark.attach("domx.Repeater",Repeater);
 
 });

@@ -1,5 +1,5 @@
-# skylark-ui-repeater
-The skylark repeater widget library.
+# skylark-domx-repeater
+The skylark repeater plugin library.
 
 ## Dependences
 
@@ -17,10 +17,10 @@ builds are in the directory dist.
 
 |                      | build                                   | Description              |
 | -------------------- | --------------------------------------- | ------------------------ |
-| full                 | skylark-ui-repeater-all.js              | included dependences     |
-| only                 | skylark-ui-repeater.js                  | not included dependences |
-| full （development） | uncompressed/skylark-ui-repeater-all.js | included dependences     |
-| only （development） | uncompressed/skylark-ui-repeater.js     | not included dependences |
+| full                 | skylark-domx-repeater-all.js              | included dependences     |
+| only                 | skylark-domx-repeater.js                  | not included dependences |
+| full （development） | uncompressed/skylark-domx-repeater-all.js | included dependences     |
+| only （development） | uncompressed/skylark-domx-repeater.js     | not included dependences |
 
 Please use the "full" version when using this library alone, and use the "only" version when using other skylark libraries.
 
@@ -28,9 +28,9 @@ Please use the "full" version when using this library alone, and use the "only" 
 
 You can get the latest version in many different ways:
 
-- Downloading [a ZIP file from master](https://github.com/skylarkui/skylark-ui-repeater/archive/master.zip)
-- Cloning using Git: `git clone https://github.com/skylarkui/skylark-ui-repeater.git`
-- Installing via NPM: `npm install https://github.com/skylarkui/skylark-ui-repeater.git#master --save`
+- Downloading [a ZIP file from master](https://github.com/skylarkui/skylark-domx-repeater/archive/master.zip)
+- Cloning using Git: `git clone https://github.com/skylarkui/skylark-domx-repeater.git`
+- Installing via NPM: `npm install https://github.com/skylarkui/skylark-domx-repeater.git#master --save`
 
 ## Building 
 

@@ -8,7 +8,7 @@
 define([
 	"skylark-langx/langx",
 	"skylark-domx-query",
-	"skylark-widgets-repeater",
+	"skylark-domx-repeater",
 	"./data/pokemon",
 	"./data/colors"
 ],function (langx,$,Repeater,pokemon,colors) {
@@ -132,22 +132,22 @@ define([
 	};
 
 	// REPEATER
-	$('#repeaterIllustration').plugin("lark.repeater",{
+	$('#repeaterIllustration').plugin("domx.repeater",{
 		dataSource: dataSource,
 		addons : {
 			views : ["table","tile","slider","linear"]
 		}		
 	});
 
-	$('#myRepeater').plugin("lark.repeater",{
+	$('#myRepeater').plugin("domx.repeater",{
 		dataSource: dataSource
 	});
 
-	$('#myRepeaterList').plugin("lark.repeater",{
+	$('#myRepeaterList').plugin("domx.repeater",{
 		dataSource: dataSource
 	});
 
-	$('#myRepeaterThumbnail').plugin("lark.repeater",{
+	$('#myRepeaterThumbnail').plugin("domx.repeater",{
 		dataSource: dataSource,
 		thumbnail_template: '<div class="thumbnail repeater-thumbnail" style="background: {{color}};"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
 	});

@@ -1,8 +1,8 @@
 /**
- * skylark-widgets-repeater - The skylark repeater widget
+ * skylark-domx-repeater - The skylark repeater plugin library
  * @author Hudaokeji, Inc.
  * @version v0.9.0
- * @link https://github.com/skylark-widgets/skylark-widgets-repeater/
+ * @link https://github.com/skylark-domx/skylark-domx-repeater/
  * @license MIT
  */
 (function(factory,globals) {
@@ -86,7 +86,7 @@
 
 })(function(define,require) {
 
-define('skylark-widgets-repeater/SearchBox',[
+define('skylark-domx-repeater/SearchBox',[
   "skylark-langx/langx",
   "skylark-domx-browser",
   "skylark-domx-eventer",
@@ -244,7 +244,7 @@ define('skylark-widgets-repeater/SearchBox',[
 	return 	SearchBox;
 });
 
-define('skylark-widgets-repeater/Repeater',[
+define('skylark-domx-repeater/Repeater',[
   "skylark-langx/skylark",
   "skylark-langx/langx",
   "skylark-domx-browser",
@@ -253,18 +253,19 @@ define('skylark-widgets-repeater/Repeater',[
   "skylark-domx-geom",
   "skylark-domx-velm",
   "skylark-domx-query",
+  "skylark-domx-fx",
+  "skylark-domx-plugins",
   "skylark-domx-popups/SelectList",
   "skylark-domx-popups/ComboBox",
-  "skylark-widgets-base/Widget",
   "./SearchBox"  
-],function(skylark,langx,browser,eventer,noder,geom,elmx,$,SelectList,ComboBox,Widget){
+],function(skylark,langx,browser,eventer,noder,geom,elmx,$,fx,plugins,SelectList,ComboBox){
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
-	var Repeater = Widget.inherit({
+	var Repeater = plugins.Plugin.inherit({
 		klassName: "Repeater",
 
-		pluginName: "lark.repeater",
+		pluginName: "domx.repeater",
 
 		options : {
 			dataSource: function dataSource (options, callback) {
@@ -282,8 +283,13 @@ define('skylark-widgets-repeater/Repeater',[
 			}
 		},
 
+	    throb: function(params) {
+	      return fx.throb(this._elm,params);
+	    },
+
 //		_init : function(element,options) {
-		_init : function() {
+	    _construct : function(elm,options) {
+		    this.overrided(elm,options);
 			var self = this;
 			var $btn;
 			var currentView;
@@ -1246,17 +1252,19 @@ define('skylark-widgets-repeater/Repeater',[
 
 	Repeater.addons = {};
 
+   plugins.register(Repeater);
 
-	return skylark.attach("widgets.Repeater",Repeater);
+
+	return skylark.attach("domx.Repeater",Repeater);
 
 });
 
-define('skylark-widgets-repeater/views',[
+define('skylark-domx-repeater/views',[
 	"./Repeater"
 ],function(Repeater){
 	return Repeater.addons.views = {};
 });
-define('skylark-widgets-repeater/views/ViewBase',[
+define('skylark-domx-repeater/views/ViewBase',[
 	"skylark-langx/langx",
 	"skylark-domx-noder",
 	"skylark-domx-query",
@@ -1394,7 +1402,7 @@ define('skylark-widgets-repeater/views/ViewBase',[
 	return views.ViewBase = ViewBase;
 });
 
-define('skylark-widgets-repeater/views/LinearView',[
+define('skylark-domx-repeater/views/LinearView',[
     "skylark-langx/langx",
     "skylark-domx-browser",
     "skylark-domx-eventer",
@@ -1582,7 +1590,7 @@ define('skylark-widgets-repeater/views/LinearView',[
 });
 /* global define, window, document, DocumentTouch */
 
-define('skylark-widgets-repeater/views/SliderView',[
+define('skylark-domx-repeater/views/SliderView',[
   "skylark-langx/langx",
   "skylark-domx-noder",
   "skylark-domx-query",
@@ -2833,7 +2841,7 @@ define('skylark-widgets-repeater/views/SliderView',[
 
 });
 
-define('skylark-widgets-repeater/views/TableView',[
+define('skylark-domx-repeater/views/TableView',[
     "skylark-langx/langx",
     "skylark-domx-browser",
     "skylark-domx-eventer",
@@ -3854,7 +3862,7 @@ define('skylark-widgets-repeater/views/TableView',[
     return TableView;
 
 });
-define('skylark-widgets-repeater/views/TileView',[
+define('skylark-domx-repeater/views/TileView',[
     "skylark-langx/langx",
     "skylark-domx-browser",
     "skylark-domx-eventer",
@@ -4060,7 +4068,7 @@ define('skylark-widgets-repeater/views/TileView',[
     return TileView;
     
 });
-define('skylark-widgets-repeater/main',[
+define('skylark-domx-repeater/main',[
     "./Repeater",
     "./views",
     "./views/ViewBase",
@@ -4071,8 +4079,8 @@ define('skylark-widgets-repeater/main',[
 ], function(Repeater) {
     return Repeater;
 });
-define('skylark-widgets-repeater', ['skylark-widgets-repeater/main'], function (main) { return main; });
+define('skylark-domx-repeater', ['skylark-domx-repeater/main'], function (main) { return main; });
 
 
 },this);
-//# sourceMappingURL=sourcemaps/skylark-widgets-repeater.js.map
+//# sourceMappingURL=sourcemaps/skylark-domx-repeater.js.map
