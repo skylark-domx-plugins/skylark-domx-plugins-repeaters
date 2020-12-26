@@ -211,9 +211,9 @@ define([
 			markup = this.$element[0].outerHTML;
 
 			// destroy components and remove leftover
-			this.$element.find('.combobox').plugin("lark.combobox").destroy();
-			this.$element.find('.selectlist').plugin("domx.selectlist").destroy();
-			this.$element.find('.search').plugin("lark.searchbox").destroy();
+			langx.scall(this.$element.find('.combobox').plugin("lark.combobox"),"destroy");
+			langx.scall(this.$element.find('.selectlist').plugin("domx.selectlist"),"destroy");
+			langx.scall(this.$element.find('.search').plugin("lark.searchbox"),"destroy");
 			if (this.infiniteScrollingEnabled) {
 				$(this.infiniteScrollingCont).infinitescroll('destroy');
 			}
@@ -229,11 +229,11 @@ define([
 		disable: function disable () {
 			//var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 
-			this.$search.plugin("lark.searchbox").disable();
-			this.$filters.plugin("domx.selectlist").disable();
+			langx.scall(this.$search.plugin("lark.searchbox"),"disable");
+			langx.scall(this.$filters.plugin("domx.selectlist"),"disable");
 			this.$views.find('label, input').addClass('disabled').attr('disabled', 'disabled');
-			this.$pageSize.plugin("domx.selectlist").disable();
-			this.$primaryPaging.find('.combobox').plugin("domx.combobox").disable();
+			langx.scall(this.$pageSize.plugin("domx.selectlist"),"disable");
+			langx.scall(this.$primaryPaging.find('.combobox').plugin("domx.combobox"),"disable");
 			this.$secondaryPaging.attr('disabled', 'disabled');
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.$nextBtn.attr('disabled', 'disabled');
@@ -259,11 +259,11 @@ define([
 		enable: function enable () {
 			//var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
 
-			this.$search.plugin("lark.searchbox").enable();
-			this.$filters.plugin("domx.selectlist").enable()
+			langx.scall(this.$search.plugin("lark.searchbox"),"enable");
+			langx.scall(this.$filters.plugin("domx.selectlist"),"enable")
 			this.$views.find('label, input').removeClass('disabled').removeAttr('disabled');
-			this.$pageSize.plugin("domx.selectlist").enable()
-			this.$primaryPaging.find('.combobox').plugin("domx.combobox").enable();
+			langx.scall(this.$pageSize.plugin("domx.selectlist"),"enable")
+			langx.scall(this.$primaryPaging.find('.combobox').plugin("domx.combobox"),"enable");
 			this.$secondaryPaging.removeAttr('disabled');
 
 			if (!this.$prevBtn.hasClass('page-end')) {
@@ -276,14 +276,14 @@ define([
 			// is 0 or 1 pages, if using $primaryPaging (combobox)
 			// if using selectlist allow user to use selectlist to select 0 or 1
 			if (this.$prevBtn.hasClass('page-end') && this.$nextBtn.hasClass('page-end')) {
-				this.$primaryPaging.plugin("domx.combobox").disable();
+				langx.scall(this.$primaryPaging.plugin("domx.combobox"),"disable");
 			}
 
 			// if there are no items
 			if (parseInt(this.$count.html(), 10) !== 0) {
-				this.$pageSize.plugin("domx.selectlist").enable();
+				langx.scall(this.$pageSize.plugin("domx.selectlist"),"enable");
 			} else {
-				this.$pageSize.plugin("domx.selectlist").disable();
+				langx.scall(this.$pageSize.plugin("domx.selectlist"),"disable");
 			}
 
 			/* lwf
