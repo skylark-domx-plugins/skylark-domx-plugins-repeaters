@@ -451,21 +451,37 @@ define([
 
 			var views = this._views = [];
 			var viewTypes = this.options.addons.views;
-			for (var i = 0; i< viewTypes.length; i++) {
-				var setting = this.constructor.addons.views[viewTypes[i]];
-				if (!setting) {
-					throw new Error("The view type " + viewTypes[i] + " is not defined!");
-				} 
-				var ctor = setting.ctor;
-				this._views.push(this._views[viewTypes[i]] = new ctor(this));
+			if (langx.isArray(viewTypes)) {
+				for (var i = 0; i< viewTypes.length; i++) {
+					var setting = this.constructor.addons.views[viewTypes[i]];
+					if (!setting) {
+						throw new Error("The view type " + viewTypes[i] + " is not defined!");
+					} 
+					var ctor = setting.ctor;
+					this._views.push(this._views[viewTypes[i]] = new ctor(this));
 
+				}				
+			} else if (langx.isPlainObject(viewTypes)) {
+				for (var name in viewTypes) {
+					var setting = this.constructor.addons.views[name];
+					if (!setting) {
+						throw new Error("The view type " + viewTypes[i] + " is not defined!");
+					} 
+					var ctor = setting.ctor;
+					this._views.push(this._views[name] = new ctor(this,viewTypes[name]));
+
+				}
 			}
 
+
+			/*
 			if (views.length > 0) {
 				initViewType.call(this, 0, viewTypes, callback);
 			} else {
 				callback();
 			}
+			*/
+			callback();			
 		},
 
 		itemization: function itemization (data) {

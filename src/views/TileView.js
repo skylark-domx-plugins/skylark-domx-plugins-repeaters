@@ -23,7 +23,8 @@ define([
         template : '<div class="clearfix repeater-tile" data-container="true" data-infinite="true" data-preserve="shallow"></div>',
         item : {
             template: '<div class="thumbnail repeater-thumbnail"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
-        }
+        },
+        renderItem : null
     },
 
     //ADDITIONAL METHODS
@@ -149,7 +150,12 @@ define([
         return response;
     },
     renderItem: function(helpers) {
+        if (this.options.renderItem) {
+            return this.options.renderItem.call(this,helpers);
+        }
+
         var selectable = this.options.selectable;
+
         var selected = 'selected';
         var self = this;
         var $thumbnail = this._create$Item(this.options.item.template,helpers.subset[helpers.index]);

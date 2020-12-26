@@ -697,21 +697,37 @@ define('skylark-domx-repeater/Repeater',[
 
 			var views = this._views = [];
 			var viewTypes = this.options.addons.views;
-			for (var i = 0; i< viewTypes.length; i++) {
-				var setting = this.constructor.addons.views[viewTypes[i]];
-				if (!setting) {
-					throw new Error("The view type " + viewTypes[i] + " is not defined!");
-				} 
-				var ctor = setting.ctor;
-				this._views.push(this._views[viewTypes[i]] = new ctor(this));
+			if (langx.isArray(viewTypes)) {
+				for (var i = 0; i< viewTypes.length; i++) {
+					var setting = this.constructor.addons.views[viewTypes[i]];
+					if (!setting) {
+						throw new Error("The view type " + viewTypes[i] + " is not defined!");
+					} 
+					var ctor = setting.ctor;
+					this._views.push(this._views[viewTypes[i]] = new ctor(this));
 
+				}				
+			} else if (langx.isPlainObject(viewTypes)) {
+				for (var name in viewTypes) {
+					var setting = this.constructor.addons.views[name];
+					if (!setting) {
+						throw new Error("The view type " + viewTypes[i] + " is not defined!");
+					} 
+					var ctor = setting.ctor;
+					this._views.push(this._views[name] = new ctor(this,viewTypes[name]));
+
+				}
 			}
 
+
+			/*
 			if (views.length > 0) {
 				initViewType.call(this, 0, viewTypes, callback);
 			} else {
 				callback();
 			}
+			*/
+			callback();			
 		},
 
 		itemization: function itemization (data) {
@@ -1277,8 +1293,8 @@ define('skylark-domx-repeater/views/ViewBase',[
 	    options : {
 	      // The class to add when the gallery controls are visible:
 	      controlsClass: "skylarkui-repeater-controls",
-		  // Defines if the gallery should open in fullscreen mode:
-		  fullScreen: false
+		    // Defines if the gallery should open in fullscreen mode:
+		    fullScreen: false
 
 	    },
 
@@ -1308,86 +1324,86 @@ define('skylark-domx-repeater/views/ViewBase',[
         	return $(template);
     	},	    
 	    
-		init : function (repeater,options) {
-			var that = this,
-				hasControls;
-			this.repeater = repeater;
-			this.initOptions(options);
-	        if (this.options.fullScreen) {
-	          noder.fullScreen(this.container[0]);
-	        }
-	        this.repeater.on("item.running",function(e){
-	            if (that.container.hasClass(that.options.controlsClass)) {
-	              hasControls = true
-	              that.container.removeClass(that.options.controlsClass);
-	            } else {
-	              hasControls = false
-	            }
-	        });
+  		init : function (repeater,options) {
+  			var that = this,
+  				hasControls;
+  			this.repeater = repeater;
+  			this.initOptions(options);
+  	        if (this.options.fullScreen) {
+  	          noder.fullScreen(this.container[0]);
+  	        }
+  	        this.repeater.on("item.running",function(e){
+  	            if (that.container.hasClass(that.options.controlsClass)) {
+  	              hasControls = true
+  	              that.container.removeClass(that.options.controlsClass);
+  	            } else {
+  	              hasControls = false
+  	            }
+  	        });
 
-	        this.repeater.on("item.running",function(e){
-	            if (hasControls) {
-	              that.container.addClass(that.options.controlsClass);
-	            }
-	        });
-		},
+  	        this.repeater.on("item.running",function(e){
+  	            if (hasControls) {
+  	              that.container.addClass(that.options.controlsClass);
+  	            }
+  	        });
+  		},
 
 	    //initOptions: function (options) {
 	    //  // Create a copy of the prototype options:
 	    //  this.options = langx.mixin({}, this.options,options);
 	    //},
 
-       initOptions : function(options) {
-          var ctor = this.constructor,
-              cache = ctor.cache = ctor.cache || {},
-              defaults = cache.defaults;
-          if (!defaults) {
-            var  ctors = [];
-            do {
-              ctors.unshift(ctor);
-              if (ctor === Plugin) {
-                break;
-              }
-              ctor = ctor.superclass;
-            } while (ctor);
+      initOptions : function(options) {
+        var ctor = this.constructor,
+            cache = ctor.cache = ctor.cache || {},
+            defaults = cache.defaults;
+        if (!defaults) {
+          var  ctors = [];
+          do {
+            ctors.unshift(ctor);
+            if (ctor === Plugin) {
+              break;
+            }
+            ctor = ctor.superclass;
+          } while (ctor);
 
-            defaults = cache.defaults = {};
-            for (var i=0;i<ctors.length;i++) {
-              ctor = ctors[i];
-              if (ctor.prototype.hasOwnProperty("options")) {
-                langx.mixin(defaults,ctor.prototype.options,true);
-              }
-              if (ctor.hasOwnProperty("options")) {
-                langx.mixin(defaults,ctor.options,true);
-              }
+          defaults = cache.defaults = {};
+          for (var i=0;i<ctors.length;i++) {
+            ctor = ctors[i];
+            if (ctor.prototype.hasOwnProperty("options")) {
+              langx.mixin(defaults,ctor.prototype.options,true);
+            }
+            if (ctor.hasOwnProperty("options")) {
+              langx.mixin(defaults,ctor.options,true);
             }
           }
-          Object.defineProperty(this,"options",{
-            value :langx.mixin({},defaults,options,true)
-          });
+        }
+        Object.defineProperty(this,"options",{
+          value :langx.mixin({},defaults,options,true)
+        });
 
-          //return this.options = langx.mixin({},defaults,options);
-          return this.options;
-        },
+        //return this.options = langx.mixin({},defaults,options);
+        return this.options;
+      },
 
 
 	    close: function () {
       		if (noder.fullScreen() === this.container[0]) {
         		noder.fullScreen(false);
       		}
-      	},
+    	},
 
-      	getValue : function() {
-      		return this.getSelectedItems();
-      	},
+    	getValue : function() {
+    		return this.getSelectedItems();
+    	},
 
-      	cleared : function() {
+    	cleared : function() {
 
-      	},
+    	},
 
-      	selected : function() {
+    	selected : function() {
 
-      	},
+    	},
 
 	    dataOptions: function (options) {
 	    	return options;
@@ -3887,7 +3903,8 @@ define('skylark-domx-repeater/views/TileView',[
         template : '<div class="clearfix repeater-tile" data-container="true" data-infinite="true" data-preserve="shallow"></div>',
         item : {
             template: '<div class="thumbnail repeater-thumbnail"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
-        }
+        },
+        renderItem : null
     },
 
     //ADDITIONAL METHODS
@@ -4013,7 +4030,12 @@ define('skylark-domx-repeater/views/TileView',[
         return response;
     },
     renderItem: function(helpers) {
+        if (this.options.renderItem) {
+            return this.options.renderItem.call(this,helpers);
+        }
+
         var selectable = this.options.selectable;
+
         var selected = 'selected';
         var self = this;
         var $thumbnail = this._create$Item(this.options.item.template,helpers.subset[helpers.index]);

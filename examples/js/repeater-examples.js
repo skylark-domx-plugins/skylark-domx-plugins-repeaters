@@ -135,7 +135,18 @@ define([
 	$('#repeaterIllustration').plugin("domx.repeater",{
 		dataSource: dataSource,
 		addons : {
-			views : ["table","tile","slider","linear"]
+			views : {
+				"table" : {},
+				"tile" : {
+					item : {
+						template: '<div class="thumbnail repeater-thumbnail" style="background: {{color}};"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
+					}
+				},
+				"slider" : {},
+				"linear" : {
+
+				}
+			}
 		}		
 	});
 

@@ -11,8 +11,8 @@ define([
 	    options : {
 	      // The class to add when the gallery controls are visible:
 	      controlsClass: "skylarkui-repeater-controls",
-		  // Defines if the gallery should open in fullscreen mode:
-		  fullScreen: false
+		    // Defines if the gallery should open in fullscreen mode:
+		    fullScreen: false
 
 	    },
 
@@ -42,86 +42,86 @@ define([
         	return $(template);
     	},	    
 	    
-		init : function (repeater,options) {
-			var that = this,
-				hasControls;
-			this.repeater = repeater;
-			this.initOptions(options);
-	        if (this.options.fullScreen) {
-	          noder.fullScreen(this.container[0]);
-	        }
-	        this.repeater.on("item.running",function(e){
-	            if (that.container.hasClass(that.options.controlsClass)) {
-	              hasControls = true
-	              that.container.removeClass(that.options.controlsClass);
-	            } else {
-	              hasControls = false
-	            }
-	        });
+  		init : function (repeater,options) {
+  			var that = this,
+  				hasControls;
+  			this.repeater = repeater;
+  			this.initOptions(options);
+  	        if (this.options.fullScreen) {
+  	          noder.fullScreen(this.container[0]);
+  	        }
+  	        this.repeater.on("item.running",function(e){
+  	            if (that.container.hasClass(that.options.controlsClass)) {
+  	              hasControls = true
+  	              that.container.removeClass(that.options.controlsClass);
+  	            } else {
+  	              hasControls = false
+  	            }
+  	        });
 
-	        this.repeater.on("item.running",function(e){
-	            if (hasControls) {
-	              that.container.addClass(that.options.controlsClass);
-	            }
-	        });
-		},
+  	        this.repeater.on("item.running",function(e){
+  	            if (hasControls) {
+  	              that.container.addClass(that.options.controlsClass);
+  	            }
+  	        });
+  		},
 
 	    //initOptions: function (options) {
 	    //  // Create a copy of the prototype options:
 	    //  this.options = langx.mixin({}, this.options,options);
 	    //},
 
-       initOptions : function(options) {
-          var ctor = this.constructor,
-              cache = ctor.cache = ctor.cache || {},
-              defaults = cache.defaults;
-          if (!defaults) {
-            var  ctors = [];
-            do {
-              ctors.unshift(ctor);
-              if (ctor === Plugin) {
-                break;
-              }
-              ctor = ctor.superclass;
-            } while (ctor);
+      initOptions : function(options) {
+        var ctor = this.constructor,
+            cache = ctor.cache = ctor.cache || {},
+            defaults = cache.defaults;
+        if (!defaults) {
+          var  ctors = [];
+          do {
+            ctors.unshift(ctor);
+            if (ctor === Plugin) {
+              break;
+            }
+            ctor = ctor.superclass;
+          } while (ctor);
 
-            defaults = cache.defaults = {};
-            for (var i=0;i<ctors.length;i++) {
-              ctor = ctors[i];
-              if (ctor.prototype.hasOwnProperty("options")) {
-                langx.mixin(defaults,ctor.prototype.options,true);
-              }
-              if (ctor.hasOwnProperty("options")) {
-                langx.mixin(defaults,ctor.options,true);
-              }
+          defaults = cache.defaults = {};
+          for (var i=0;i<ctors.length;i++) {
+            ctor = ctors[i];
+            if (ctor.prototype.hasOwnProperty("options")) {
+              langx.mixin(defaults,ctor.prototype.options,true);
+            }
+            if (ctor.hasOwnProperty("options")) {
+              langx.mixin(defaults,ctor.options,true);
             }
           }
-          Object.defineProperty(this,"options",{
-            value :langx.mixin({},defaults,options,true)
-          });
+        }
+        Object.defineProperty(this,"options",{
+          value :langx.mixin({},defaults,options,true)
+        });
 
-          //return this.options = langx.mixin({},defaults,options);
-          return this.options;
-        },
+        //return this.options = langx.mixin({},defaults,options);
+        return this.options;
+      },
 
 
 	    close: function () {
       		if (noder.fullScreen() === this.container[0]) {
         		noder.fullScreen(false);
       		}
-      	},
+    	},
 
-      	getValue : function() {
-      		return this.getSelectedItems();
-      	},
+    	getValue : function() {
+    		return this.getSelectedItems();
+    	},
 
-      	cleared : function() {
+    	cleared : function() {
 
-      	},
+    	},
 
-      	selected : function() {
+    	selected : function() {
 
-      	},
+    	},
 
 	    dataOptions: function (options) {
 	    	return options;
