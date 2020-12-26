@@ -169,7 +169,7 @@ define([
                   "</div>",
 
       "item" : {
-        template : '<img height="75" src="{{ThumbnailImage}}" width="65"/>' 
+        "template" : '<img height="75" src="{{ThumbnailImage}}" width="65"/>' 
       }
     },
 

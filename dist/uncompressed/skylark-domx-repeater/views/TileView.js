@@ -19,6 +19,7 @@ define([
         itemRendered: null,
         noItemsHTML: 'no items found',
         selectable: false,
+        viewClass: "repeater-tile",
         template : '<div class="clearfix repeater-tile" data-container="true" data-infinite="true" data-preserve="shallow"></div>',
         item : {
             template: '<div class="thumbnail repeater-thumbnail"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
@@ -27,12 +28,12 @@ define([
 
     //ADDITIONAL METHODS
     clearSelectedItems : function() {
-        this.repeater.$canvas.find('.repeater-tile .selectable.selected').removeClass('selected');
+        this.repeater.$canvas.find(`.${this.options.viewClass} .selectable.selected`).removeClass('selected');
     },
 
     getSelectedItems : function() {
         var selected = [];
-        this.repeater.$canvas.find('.repeater-tile .selectable.selected').each(function() {
+        this.repeater.$canvas.find(`.${this.options.viewClass} .selectable.selected`).each(function() {
             selected.push($(this));
         });
         return selected;
@@ -90,13 +91,13 @@ define([
             if (items[i].index !== undefined) {
                 $item = $();
                 n = 0;
-                this.repeater.$canvas.find('.repeater-tile .selectable').each(compareItemIndex);
+                this.repeater.$canvas.find(`.${this.options.viewClass} .selectable`).each(compareItemIndex);
                 if ($item.length > 0) {
                     selectItem($item, items[i].selected);
                 }
 
             } else if (items[i].selector) {
-                this.repeater.$canvas.find('.repeater-tile .selectable').each(compareItemSelector);
+                this.repeater.$canvas.find(`.${this.options.viewClass} .selectable`).each(compareItemSelector);
             }
         }
     },
@@ -111,13 +112,14 @@ define([
     },
     before: function(helpers) {
         var alignment = this.options.alignment;
-        var $cont = this.repeater.$canvas.find('.repeater-tile');
+        var $cont = this.repeater.$canvas.find(`.${this.options.viewClass}`);
         var data = helpers.data;
         var response = {};
         var $empty, validAlignments;
 
         if ($cont.length < 1) {
             $cont = $(this.options.template);
+            $cont.addClass(this.options.viewClass);
             if (alignment && alignment !== 'none') {
                 validAlignments = {
                     'center': 1,
@@ -161,7 +163,7 @@ define([
 
                 if (!$thumbnail.hasClass(selected)) {
                     if (selectable !== 'multi') {
-                        self.repeater.$canvas.find('.repeater-tile .selectable.selected').each(function() {
+                        self.repeater.$canvas.find(`.${this.options.viewClass} .selectable.selected`).each(function() {
                             var $itm = $(this);
                             $itm.removeClass(selected);
                             self.repeater.$element.trigger('deselected.lark.repeaterThumbnail', $itm);

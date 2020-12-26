@@ -36,11 +36,11 @@ define([
 			this.$input = this.$element.find('input');
 			this.$icon = this.$element.find('.glyphicon, .fuelux-icon');
 
-			this.$button.on('click.fu.search', langx.proxy(this.buttonclicked, this));
-			this.$input.on('keyup.fu.search', langx.proxy(this.keypress, this));
+			this.$button.on('click.lark.search', langx.proxy(this.buttonclicked, this));
+			this.$input.on('keyup.lark.search', langx.proxy(this.keypress, this));
 
 			if (this.$repeater.length > 0) {
-				this.$repeater.on('rendered.fu.repeater', langx.proxy(this.clearPending, this));
+				this.$repeater.on('rendered.lark.repeater', langx.proxy(this.clearPending, this));
 			}
 
 			this.activeSearch = '';
@@ -70,7 +70,7 @@ define([
 
 			this.activeSearch = searchText;
 			this.$element.addClass('searched pending');
-			this.$element.trigger('searched.fu.search', searchText);
+			this.$element.trigger('searched.lark.search', searchText);
 		},
 
 		clear: function () {
@@ -82,12 +82,12 @@ define([
 			}
 
 			if (this.$element.hasClass('pending')) {
-				this.$element.trigger('canceled.fu.search');
+				this.$element.trigger('canceled.lark.search');
 			}
 
 			this.activeSearch = '';
 			this.$input.val('');
-			this.$element.trigger('cleared.fu.search');
+			this.$element.trigger('cleared.lark.search');
 			this.$element.removeClass('searched pending');
 		},
 

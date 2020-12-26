@@ -96,7 +96,7 @@ define([
 				allowCancel: this.options.allowCancel
 			});
 
-			this.$filters.on('changed.fu.selectlist', function onFiltersChanged (e, value) {
+			this.$filters.on('changed.lark.selectlist', function onFiltersChanged (e, value) {
 				self.$element.trigger('filtered.lark.repeater', value);
 				self.render({
 					clearInfinite: true,
@@ -104,24 +104,24 @@ define([
 				});
 			});
 			this.$nextBtn.on('click.lark.repeater', langx.proxy(this.next, this));
-			this.$pageSize.on('changed.fu.selectlist', function onPageSizeChanged (e, value) {
+			this.$pageSize.on('changed.lark.selectlist', function onPageSizeChanged (e, value) {
 				self.$element.trigger('pageSizeChanged.lark.repeater', value);
 				self.render({
 					pageIncrement: null
 				});
 			});
 			this.$prevBtn.on('click.lark.repeater', langx.proxy(this.previous, this));
-			this.$primaryPaging.find('.combobox').on('changed.fu.combobox', function onPrimaryPagingChanged (evt, data) {
+			this.$primaryPaging.find('.combobox').on('changed.lark.combobox', function onPrimaryPagingChanged (evt, data) {
 				self.pageInputChange(data.text, data);
 			});
-			this.$search.on('searched.fu.search cleared.fu.search', function onSearched (e, value) {
+			this.$search.on('searched.lark.search cleared.lark.search', function onSearched (e, value) {
 				self.$element.trigger('searchChanged.lark.repeater', value);
 				self.render({
 					clearInfinite: true,
 					pageIncrement: null
 				});
 			});
-			this.$search.on('canceled.fu.search', function onSearchCanceled (e, value) {
+			this.$search.on('canceled.lark.search', function onSearchCanceled (e, value) {
 				self.$element.trigger('canceled.lark.repeater', value);
 				self.render({
 					clearInfinite: true,
@@ -422,7 +422,7 @@ define([
 			var cont = this.$canvas.find('[data-infinite="true"]:first');
 
 			cont = (cont.length < 1) ? this.$canvas : cont;
-			if (cont.data('fu.infinitescroll')) {
+			if (cont.data('lark.infinitescroll')) {
 				cont.infinitescroll('enable');
 			} else {
 				var self = this;
