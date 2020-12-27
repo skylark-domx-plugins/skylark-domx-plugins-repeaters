@@ -3119,7 +3119,115 @@ define('skylark-domx-repeater/views/TableView',[
         }
     },
 
-    createItemActions : function listCreateItemActions () {
+    createItemActions : function () {
+        var actionsHtml = '';
+        var self = this;
+        var i;
+        var $table = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
+        var $actionsTable = this.repeater.$canvas.find('.table-actions');
+        var len = this.options.actions.items.length;
+        if (len == 1) {
+            var action = this.options.actions.items[0];
+            actionsHtml = '<a href="javascript:void(0)" data-action="' + action.name + '" class="action-item"> ' + action.html + '</a>'
+            if ($actionsTable.length < 1) {
+                var $actionsColumnWrapper = $('<div class="actions-column-wrapper" style="width: ' + this.options.actions.width + 'px"></div>').insertBefore($table);
+                var $actionsColumn = $table.clone().addClass('table-actions');
+                $actionsColumn.find('th:not(:last-child)').remove();
+                $actionsColumn.find('tr td:not(:last-child)').remove();
+
+                var $actionsCells = $actionsColumn.find('td');
+
+                $actionsCells.each(function (rowNumber) {
+                    var id = $(this).parent().attr("id");
+                    var data = $("#" + id).data("item_data")
+                    if (self.options.exceptActionRows && data && langx.inArray(self.options.exceptActionRows, data.name)) {
+                        $(this).html("-");
+                    } else {
+                        $(this).html(actionsHtml);
+                    }
+                    $(this).find('a').attr('data-row', rowNumber + 1);
+                });
+            }
+        } else {
+            for (i = 0; i < len; i++) {
+                var action = this.options.actions.items[i];
+                var html = action.html;
+
+                actionsHtml += '<li class="' + action.name + '"><a href="javascript:void(0)" data-action="' + action.name + '" class="action-item"> ' + html + '</a></li>';
+            }
+            var actionsDropdown = '<ul class="ul-inline list-unstyled ul-horizontally" role="menu">' +
+                actionsHtml + '</ul>';
+            if ($actionsTable.length < 1) {
+                var $actionsColumnWrapper = $('<div class="actions-column-wrapper" style="width: ' + this.options.actions.width + 'px"></div>').insertBefore($table);
+                var $actionsColumn = $table.clone().addClass('table-actions');
+                $actionsColumn.find('th:not(:last-child)').remove();
+                $actionsColumn.find('tr td:not(:last-child)').remove();
+
+                // Dont show actions dropdown in header if not multi select
+                if (this.options.selectable === 'multi' || this.options.selectable === 'action') {
+                    $actionsColumn.find('thead tr').html('<th><div class="repeater-list-heading">' + actionsDropdown + '</div></th>');
+
+                    if (this.options.selectable !== 'action') {
+                        // disable the header dropdown until an item is selected
+                        $actionsColumn.find('thead .btn').attr('disabled', 'disabled');
+                    }
+                } else {
+                    var label = this.options.actions.label || '<span class="actions-hidden">a</span>';
+                    $actionsColumn.find('thead tr').addClass('empty-heading').html('<th>' + label + '<div class="repeater-list-heading">' + label + '</div></th>');
+                }
+
+                // Create Actions dropdown for each cell in actions table
+                var $actionsCells = $actionsColumn.find('td');
+
+                $actionsCells.each(function addActionsDropdown(rowNumber) {
+                    $(this).html(actionsDropdown).addClass("r-list-action");
+                    $(this).find('a').attr('data-row', rowNumber + 1);
+                });
+            }
+        }
+
+        $actionsColumnWrapper.append($actionsColumn);
+
+        this.repeater.$canvas.addClass('actions-enabled');
+        this.sizeActionsTable();
+
+        // row level actions click
+        this.repeater.$element.find('.table-actions tbody .action-item').on('click', function onBodyActionItemClick(e) {
+            if (!self.isDisabled) {
+                var actionName = $(this).data('action');
+                var row = $(this).data('row');
+                var selected = {
+                    actionName: actionName,
+                    rows: [row]
+                };
+                self.getActionItems(selected, e);
+            }
+        });
+        // bulk actions click
+        this.repeater.$element.find('.table-actions thead .action-item').on('click', function onHeadActionItemClick(e) {
+            if (!self.isDisabled) {
+                var actionName = $(this).data('action');
+                var selected = {
+                    actionName: actionName,
+                    rows: []
+                };
+
+                var selector = `.${this.options.tableWrapperClass} > table .selected`;
+
+                if ( self.options.selectable === 'action' ) {
+                    selector = `.${this.options.tableWrapperClass} > table tr`;
+                }
+
+                self.repeater.$element.find(selector).each(function eachSelector(selectorIndex) {
+                    selected.rows.push(selectorIndex + 1);
+                });
+
+                self.getActionItems(selected, e);
+            }
+        });
+    },
+    createItemActions_1: function  () {
+
         var actionsHtml = '';
         var self = this;
         var i;
