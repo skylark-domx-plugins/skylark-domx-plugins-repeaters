@@ -9,8 +9,8 @@ define([
   "skylark-domx-query",
   "skylark-domx-fx",
   "skylark-domx-plugins",
-  "skylark-domx-popups/SelectList",
-  "skylark-domx-popups/ComboBox",
+  "skylark-domx-plugins-popups/SelectList",
+  "skylark-domx-plugins-popups/ComboBox",
   "./SearchBox"  
 ],function(skylark,langx,browser,eventer,noder,geom,elmx,$,fx,plugins,SelectList,ComboBox){
 
