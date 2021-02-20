@@ -1,8 +1,8 @@
 /**
- * skylark-domx-repeater - The skylark repeater plugin library
+ * skylark-domx-plugins-repeater - The skylark repeater plugin library
  * @author Hudaokeji, Inc.
  * @version v0.9.0
- * @link https://github.com/skylark-domx/skylark-domx-repeater/
+ * @link https://github.com/skylark-domx-plugins/skylark-domx-plugins-repeater/
  * @license MIT
  */
 define(["./Repeater"],function(e){return e.addons.views={}});
