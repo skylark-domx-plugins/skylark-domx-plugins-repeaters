@@ -8,7 +8,7 @@ define([
   "skylark-domx-velm",
   "skylark-domx-query",
   "skylark-domx-fx",
-  "skylark-domx-plugins",
+  "skylark-domx-plugins-base",
   "skylark-domx-plugins-popups/SelectList",
   "skylark-domx-plugins-popups/ComboBox",
   "./SearchBox"  
