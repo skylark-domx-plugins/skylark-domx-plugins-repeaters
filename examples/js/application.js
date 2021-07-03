@@ -7,21 +7,21 @@
 
 define([
 	"skylark-domx-query",
-	"skylark-domx-scrolls/ScrollSpy",
-	"skylark-domx-scrolls/Affix",
+	"skylark-domx-plugins-scrolls/scroll-spy",
+	"skylark-domx-plugins-scrolls/affix",
 	"./repeater-examples"
 ],function ($) {
 	var $body = $(document.body);
 	var $window = $(window);
 
-	$body.plugin("domx.scrollspy",{
+	$body.plugin("lark.scrolls.scrollspy",{
 		target: '.fu-sidebar'
 	});
 
 	setTimeout(function () {
 		var $sideBar = $('.fu-sidebar');
 
-		$sideBar.plugin("domx.affix",{
+		$sideBar.plugin("lark.scrolls.affix",{
 			offset: {
 				top: function () {
 					var offsetTop = $sideBar.offset().top;
