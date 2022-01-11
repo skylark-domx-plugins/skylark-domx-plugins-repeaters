@@ -1,8 +1,8 @@
 /**
- * skylark-fuelux-repeater - The skylark repeater plugin library
+ * skylark-domx-plugins-repeaters - The skylark repeater plugin library
  * @author Hudaokeji, Inc.
  * @version v0.9.0
- * @link https://github.com/skylark-integration/skylark-fuelux-repeater/
+ * @link https://github.com/skylark-domx-plugins/skylark-domx-plugins-repeaters/
  * @license MIT
  */
 (function(factory,globals) {
@@ -414,7 +414,7 @@ define('skylark-domx-plugins-popups/combobox',[
 	return popups.ComboBox = ComboBox;
 });
 
-define('skylark-fuelux-repeater/searchbox',[
+define('skylark-domx-plugins-repeaters/searchbox',[
   "skylark-langx/langx",
   "skylark-domx-browser",
   "skylark-domx-eventer",
@@ -572,7 +572,7 @@ define('skylark-fuelux-repeater/searchbox',[
 	return 	SearchBox;
 });
 
-define('skylark-fuelux-repeater/repeater',[
+define('skylark-domx-plugins-repeaters/repeater',[
   "skylark-langx/skylark",
   "skylark-langx/langx",
   "skylark-domx-browser",
@@ -1531,12 +1531,12 @@ define('skylark-fuelux-repeater/repeater',[
 
 });
 
-define('skylark-fuelux-repeater/views',[
+define('skylark-domx-plugins-repeaters/views',[
 	"./repeater"
 ],function(Repeater){
 	return Repeater.addons.views = {};
 });
-define('skylark-fuelux-repeater/views/view-base',[
+define('skylark-domx-plugins-repeaters/views/view-base',[
 	"skylark-langx/langx",
 	"skylark-domx-noder",
 	"skylark-domx-query",
@@ -1738,7 +1738,7 @@ define('skylark-fuelux-repeater/views/view-base',[
 	return views.ViewBase = ViewBase;
 });
 
-define('skylark-fuelux-repeater/views/linear-view',[
+define('skylark-domx-plugins-repeaters/views/linear-view',[
     "skylark-langx/langx",
     "skylark-domx-browser",
     "skylark-domx-eventer",
@@ -1926,7 +1926,7 @@ define('skylark-fuelux-repeater/views/linear-view',[
 });
 /* global define, window, document, DocumentTouch */
 
-define('skylark-fuelux-repeater/views/slider-view',[
+define('skylark-domx-plugins-repeaters/views/slider-view',[
   "skylark-langx/langx",
   "skylark-domx-noder",
   "skylark-domx-query",
@@ -3177,7 +3177,7 @@ define('skylark-fuelux-repeater/views/slider-view',[
 
 });
 
-define('skylark-fuelux-repeater/views/table-view',[
+define('skylark-domx-plugins-repeaters/views/table-view',[
     "skylark-langx/langx",
     "skylark-domx-browser",
     "skylark-domx-eventer",
@@ -4306,7 +4306,7 @@ define('skylark-fuelux-repeater/views/table-view',[
     return TableView;
 
 });
-define('skylark-fuelux-repeater/views/tile-view',[
+define('skylark-domx-plugins-repeaters/views/tile-view',[
     "skylark-langx/langx",
     "skylark-domx-browser",
     "skylark-domx-eventer",
@@ -4519,7 +4519,7 @@ define('skylark-fuelux-repeater/views/tile-view',[
     return TileView;
     
 });
-define('skylark-fuelux-repeater/main',[
+define('skylark-domx-plugins-repeaters/main',[
     "./repeater",
     "./views",
     "./views/view-base",
@@ -4530,8 +4530,8 @@ define('skylark-fuelux-repeater/main',[
 ], function(Repeater) {
     return Repeater;
 });
-define('skylark-fuelux-repeater', ['skylark-fuelux-repeater/main'], function (main) { return main; });
+define('skylark-domx-plugins-repeaters', ['skylark-domx-plugins-repeaters/main'], function (main) { return main; });
 
 
 },this);
-//# sourceMappingURL=sourcemaps/skylark-fuelux-repeater.js.map
+//# sourceMappingURL=sourcemaps/skylark-domx-plugins-repeaters.js.map

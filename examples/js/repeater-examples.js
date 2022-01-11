@@ -8,7 +8,7 @@
 define([
 	"skylark-langx/langx",
 	"skylark-domx-query",
-	"skylark-fuelux-repeater",
+	"skylark-domx-plugins-repeaters/repeater",
 	"./data/pokemon",
 	"./data/colors"
 ],function (langx,$,Repeater,pokemon,colors) {

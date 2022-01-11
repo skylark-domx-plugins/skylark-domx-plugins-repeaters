@@ -1,5 +1,5 @@
 {
-  "name": "skylark-fuelux-repeater",
+  "name": "skylark-domx-plugins-repeaters",
   "description": "The skylark repeater plugin library",
   "version": "0.9.0",
   "keywords": [
@@ -7,17 +7,17 @@
     "ui",
     "repeater"
   ],
-  "homepage": "https://github.com/skylark-integration/skylark-fuelux-repeater/",
+  "homepage": "https://github.com/skylark-domx-plugins/skylark-domx-plugins-repeaters/",
   "author": "Hudaokeji, Inc.",
   "scripts": {
     "build": "slib build ."
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/skylark-integration/skylark-fuelux-repeater.git"
+    "url": "https://github.com/skylark-domx-plugins/skylark-domx-plugins-repeaters.git"
   },
   "bugs": {
-    "url": "https://github.com/skylark-integration/skylark-fuelux-repeater/issues"
+    "url": "https://github.com/skylark-domx-plugins/skylark-domx-plugins-repeaters/issues"
   },
   "license": "MIT",
   "dependencies": {
