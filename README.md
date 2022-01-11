@@ -1,15 +1,13 @@
-# skylark-domx-repeater
+# skylark-domx-plugins-repeaters
 The skylark repeater plugin library.
 
 ## Dependences
 
 | Project                                                      | Status | Description                                             |
 | ------------------------------------------------------------ | ------ | ------------------------------------------------------- |
-| [skylark-langx](https://github.com/skylarklangx/skylark-langx) |        | Javascript language extension library                   |
-| [skylark-utils](https://github.com/skylarkutils/skylark-utils) |        | An Universal HTML5 Javascript Library                   |
-| [skylark-bootstrap3](https://github.com/skylarkui/skylark-bootstrap3) |        | The skylark bootstrap3 widgets                          |
-| [skylark-fuelux](https://github.com/skylarkui/skylark-fuelux) |        | A version of fuelux that ported to running on skylarkjs |
-| [skylark-utils-dom](https://github.com/skylarkutils/skylark-utils-dom) |        | An Universal DOM Utility Library                        |
+| [skylark-langx](https://github.com/skylark-langx/skylark-langx) |        | Javascript language extension library                   |
+| [skylark-domx](https://github.com/skylark-domx/skylark-domx) |        | An Universal DOM Utility Library                        |
+| [skylark-domx-plugins-base](https://github.com/skylark-domx-plugins/skylark-domx-plugins-base) |        | Plugin base Library                   |
 
 ## Different builds
 
@@ -17,10 +15,10 @@ builds are in the directory dist.
 
 |                      | build                                   | Description              |
 | -------------------- | --------------------------------------- | ------------------------ |
-| full                 | skylark-domx-repeater-all.js              | included dependences     |
-| only                 | skylark-domx-repeater.js                  | not included dependences |
-| full （development） | uncompressed/skylark-domx-repeater-all.js | included dependences     |
-| only （development） | uncompressed/skylark-domx-repeater.js     | not included dependences |
+| full                 | skylark-domx-plugins-repeaters-all.js              | included dependences     |
+| only                 | skylark-domx-plugins-repeaters.js                  | not included dependences |
+| full （development） | uncompressed/skylark-domx-plugins-repeaters-all.js | included dependences     |
+| only （development） | uncompressed/skylark-domx-plugins-repeaters.js     | not included dependences |
 
 Please use the "full" version when using this library alone, and use the "only" version when using other skylark libraries.
 
@@ -28,14 +26,14 @@ Please use the "full" version when using this library alone, and use the "only" 
 
 You can get the latest version in many different ways:
 
-- Downloading [a ZIP file from master](https://github.com/skylarkui/skylark-domx-repeater/archive/master.zip)
-- Cloning using Git: `git clone https://github.com/skylarkui/skylark-domx-repeater.git`
-- Installing via NPM: `npm install https://github.com/skylarkui/skylark-domx-repeater.git#master --save`
+- Downloading [a ZIP file from master](https://github.com/skylark-domx-plugins/skylark-domx-plugins-repeaters/archive/master.zip)
+- Cloning using Git: `git clone https://github.com/skylark-domx-plugins/skylark-domx-plugins-repeaters.git`
+- Installing via NPM: `npm install https://github.com/skylark-domx-plugins/skylark-domx-plugins-repeaters.git --save`
 
 ## Building 
 
 - Ensure that Node.js is installed.
-- Run npm install https://github.com/skylarkjs/skylark-bundle-cli.git -g to ensure sbundle is installed.
+- Run npm install https://github.com/skylarkjs/skylark.git -g to ensure slib is installed.
 - Run npm install to ensure the required dependencies are installed.
 - Run npm run build. The builds will be placed in the dist/ directory.
 
