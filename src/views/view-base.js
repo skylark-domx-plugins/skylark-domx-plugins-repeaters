@@ -129,7 +129,71 @@ define([
 
 	    enabled : function(helpers){
 	    	
-	    }
+	    },
+
+      addItem : function addItem ($parent, response) {
+        var action;
+        if (response) {
+          action = (response.action) ? response.action : 'append';
+          if (action !== 'none' && response.item !== undefined) {
+            var $container = (response.container !== undefined) ? $(response.container) : $parent;
+            $container[action](response.item);
+          }
+        }
+      },
+
+      render : function(helpers) {
+        if (this.before) {
+          var addBefore = this.before(helpers);
+          this.addItem(helpers.container, addBefore);
+        }
+
+        var $dataContainer = helpers.container.find('[data-container="true"]:last');
+        var $container = ($dataContainer.length > 0) ? $dataContainer : helpers.container;
+
+        // It appears that the following code would theoretically allow you to pass a deeply
+        // nested value to "repeat on" to be added to the repeater.
+        // eg. `data.foo.bar.items`
+        if (this.renderItem) {
+          var subset;
+          var objectAndPropsToRepeatOnString = this.repeat || 'data.items';
+          var objectAndPropsToRepeatOn = objectAndPropsToRepeatOnString.split('.');
+          var objectToRepeatOn = objectAndPropsToRepeatOn[0];
+
+          if (objectToRepeatOn === 'data' || objectToRepeatOn === 'this') {
+            subset = (objectToRepeatOn === 'this') ? this : helpers.data;
+
+            // Extracts subset from object chain (get `items` out of `foo.bar.items`). I think....
+            var propsToRepeatOn = objectAndPropsToRepeatOn.slice(1);
+            for (var prop = 0; prop < propsToRepeatOn.length; prop++) {
+              if (subset[propsToRepeatOn[prop]] !== undefined) {
+                subset = subset[propsToRepeatOn[prop]];
+              } else {
+                subset = [];
+                console.warn('WARNING: Repeater unable to find property to iterate renderItem on.');
+                break;
+              }
+            }
+
+            for (var subItemIndex = 0; subItemIndex < subset.length; subItemIndex++) {
+              var addSubItem = this.renderItem({
+                container: $container,
+                data: helpers.data,
+                index: subItemIndex,
+                subset: subset
+              });
+              this.addItem($container, addSubItem);
+            }
+          } else {
+            console.warn('WARNING: Repeater plugin "repeat" value must start with either "data" or "this"');
+          }
+        }
+
+        if (this.after) {
+          var addAfter = this.after(helpers);
+          this.addItem(helpers.container, addAfter);
+        }    
+      }
 
 	});
 

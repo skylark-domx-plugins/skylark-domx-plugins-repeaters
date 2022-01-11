@@ -1219,23 +1219,20 @@ define('skylark-fuelux-repeater/repeater',[
 			var dataOptions = this.getDataOptions(options);
 
 			var beforeRender = this.options.dataSource;
-			var repeaterPrototypeContext = this;
+			var self = this;
 			var viewTypeObj = this._view;
 			beforeRender(
 				dataOptions,
 				// this serves as a bridge function to pass all required data through to the actual function
 				// that does the rendering for us.
 				function callDoRender (dataSourceReturnedData) {
-					doRender.call(
-						repeaterPrototypeContext,
-						{
-							data: dataSourceReturnedData,
-							dataOptions: dataOptions,
-							options: options,
-							viewChanged: viewChanged,
-							viewTypeObj: viewTypeObj
-						}
-					);
+					self.doRender({
+						data: dataSourceReturnedData,
+						dataOptions: dataOptions,
+						options: options,
+						viewChanged: viewChanged,
+						viewTypeObj: viewTypeObj
+					});
 				}
 			);
 		},
@@ -1311,72 +1308,11 @@ define('skylark-fuelux-repeater/repeater',[
 
 		// e.g. "Rows" or "Thumbnails"
 		renderItems: function renderItems (viewTypeObj, data, callback) {
-			if (!viewTypeObj.render) {
-				if (viewTypeObj.before) {
-					var addBefore = viewTypeObj.before({
-						container: this.$canvas,
-						data: data
-					});
-					addItem(this.$canvas, addBefore);
-				}
-
-				var $dataContainer = this.$canvas.find('[data-container="true"]:last');
-				var $container = ($dataContainer.length > 0) ? $dataContainer : this.$canvas;
-
-				// It appears that the following code would theoretically allow you to pass a deeply
-				// nested value to "repeat on" to be added to the repeater.
-				// eg. `data.foo.bar.items`
-				if (viewTypeObj.renderItem) {
-					var subset;
-					var objectAndPropsToRepeatOnString = viewTypeObj.repeat || 'data.items';
-					var objectAndPropsToRepeatOn = objectAndPropsToRepeatOnString.split('.');
-					var objectToRepeatOn = objectAndPropsToRepeatOn[0];
-
-					if (objectToRepeatOn === 'data' || objectToRepeatOn === 'this') {
-						subset = (objectToRepeatOn === 'this') ? this : data;
-
-						// Extracts subset from object chain (get `items` out of `foo.bar.items`). I think....
-						var propsToRepeatOn = objectAndPropsToRepeatOn.slice(1);
-						for (var prop = 0; prop < propsToRepeatOn.length; prop++) {
-							if (subset[propsToRepeatOn[prop]] !== undefined) {
-								subset = subset[propsToRepeatOn[prop]];
-							} else {
-								subset = [];
-								logWarn('WARNING: Repeater unable to find property to iterate renderItem on.');
-								break;
-							}
-						}
-
-						for (var subItemIndex = 0; subItemIndex < subset.length; subItemIndex++) {
-							var addSubItem = viewTypeObj.renderItem({
-								container: $container,
-								data: data,
-								index: subItemIndex,
-								subset: subset
-							});
-							addItem($container, addSubItem);
-						}
-					} else {
-						logWarn('WARNING: Repeater plugin "repeat" value must start with either "data" or "this"');
-					}
-				}
-
-				if (viewTypeObj.after) {
-					var addAfter = viewTypeObj.after({
-						container: this.$canvas,
-						data: data
-					});
-					addItem(this.$canvas, addAfter);
-				}
-
-				callback(data);
-			} else {
-				viewTypeObj.render({
-					container: this.$canvas,
-					data: data
-				}, callback);
-				callback(data);
-			}
+			viewTypeObj.render({
+				container: this.$canvas,
+				data: data
+			}, callback);
+			callback(data);
 		},
 
 		/* // by lwf
@@ -1478,9 +1414,84 @@ define('skylark-fuelux-repeater/repeater',[
 				prop = this.getNestedProperty(obj, property)
 			}
 			return prop
-		}
+		},
 
-		
+		// This does the actual rendering of the repeater
+		doRender : function doRender (state) {
+			var data = state.data || {};
+
+			if (this.infiniteScrollingEnabled) {
+				// pass empty object because data handled in infiniteScrollPaging method
+				this.infiniteScrollingCallback({});
+			} else {
+				this.itemization(data);
+				this.pagination(data);
+			}
+
+			var self = this;
+			this.renderItems(
+				state.viewTypeObj,
+				data,
+				function callAfterRender (d) {
+					state.data = d;
+					self.afterRender(state);
+				}
+			);
+		},
+
+		callNextInit : function callNextInit (currentViewType, viewTypes, callback) {
+			var nextViewType = currentViewType + 1;
+			if (nextViewType < viewTypes.length) {
+				this.initViewType(nextViewType, viewTypes, callback);
+			} else {
+				callback();
+			}
+		},
+
+		initViewType : function initViewType (currentViewtype, viewTypes, callback) {
+			var self = this;
+			if (viewTypes[currentViewtype].initialize) {
+				viewTypes[currentViewtype].initialize.call(this, {}, function afterInitialize () {
+					self.callNextInit(currentViewtype, viewTypes, callback);
+				});
+			} else {
+				self.callNextInit(currentViewtype, viewTypes, callback);
+			}
+		},
+
+		// Does all of our cleanup post-render
+		afterRender : function afterRender (state) {
+			var data = state.data || {};
+
+			if (this.infiniteScrollingEnabled) {
+				if (state.viewChanged || state.options.clearInfinite) {
+					this.initInfiniteScrolling();
+				}
+
+				this.infiniteScrollPaging(data, state.options);
+			}
+
+			//this.$loader.hide().loader('pause');
+			if (this._throbber) {
+				this._throbber.remove();
+				this._throbber = null;
+			}
+			this.enable();
+
+			this.$search.trigger('rendered.lark.repeater', {
+				data: data,
+				options: state.dataOptions,
+				renderOptions: state.options
+			});
+			this.$element.trigger('rendered.lark.repeater', {
+				data: data,
+				options: state.dataOptions,
+				renderOptions: state.options
+			});
+
+			// for maintaining support of 'loaded' event
+			this.$element.trigger('loaded.lark.repeater', state.dataOptions);
+		}
 	});
 
 	var logWarn = function logWarn (msg) {
@@ -1507,92 +1518,9 @@ define('skylark-fuelux-repeater/repeater',[
 		cont.append(keep);
 	};
 
-	var addItem = function addItem ($parent, response) {
-		var action;
-		if (response) {
-			action = (response.action) ? response.action : 'append';
-			if (action !== 'none' && response.item !== undefined) {
-				var $container = (response.container !== undefined) ? $(response.container) : $parent;
-				$container[action](response.item);
-			}
-		}
-	};
 
-	var callNextInit = function callNextInit (currentViewType, viewTypes, callback) {
-		var nextViewType = currentViewType + 1;
-		if (nextViewType < viewTypes.length) {
-			initViewType.call(this, nextViewType, viewTypes, callback);
-		} else {
-			callback();
-		}
-	};
 
-	var initViewType = function initViewType (currentViewtype, viewTypes, callback) {
-		if (viewTypes[currentViewtype].initialize) {
-			viewTypes[currentViewtype].initialize.call(this, {}, function afterInitialize () {
-				callNextInit.call(this, currentViewtype, viewTypes, callback);
-			});
-		} else {
-			callNextInit.call(this, currentViewtype, viewTypes, callback);
-		}
-	};
 
-	// Does all of our cleanup post-render
-	var afterRender = function afterRender (state) {
-		var data = state.data || {};
-
-		if (this.infiniteScrollingEnabled) {
-			if (state.viewChanged || state.options.clearInfinite) {
-				this.initInfiniteScrolling();
-			}
-
-			this.infiniteScrollPaging(data, state.options);
-		}
-
-		//this.$loader.hide().loader('pause');
-		if (this._throbber) {
-			this._throbber.remove();
-			this._throbber = null;
-		}
-		this.enable();
-
-		this.$search.trigger('rendered.lark.repeater', {
-			data: data,
-			options: state.dataOptions,
-			renderOptions: state.options
-		});
-		this.$element.trigger('rendered.lark.repeater', {
-			data: data,
-			options: state.dataOptions,
-			renderOptions: state.options
-		});
-
-		// for maintaining support of 'loaded' event
-		this.$element.trigger('loaded.lark.repeater', state.dataOptions);
-	};
-
-	// This does the actual rendering of the repeater
-	var doRender = function doRender (state) {
-		var data = state.data || {};
-
-		if (this.infiniteScrollingEnabled) {
-			// pass empty object because data handled in infiniteScrollPaging method
-			this.infiniteScrollingCallback({});
-		} else {
-			this.itemization(data);
-			this.pagination(data);
-		}
-
-		var self = this;
-		this.renderItems(
-			state.viewTypeObj,
-			data,
-			function callAfterRender (d) {
-				state.data = d;
-				afterRender.call(self, state);
-			}
-		);
-	};
 
 	Repeater.addons = {};
 
@@ -1739,7 +1667,71 @@ define('skylark-fuelux-repeater/views/view-base',[
 
 	    enabled : function(helpers){
 	    	
-	    }
+	    },
+
+      addItem : function addItem ($parent, response) {
+        var action;
+        if (response) {
+          action = (response.action) ? response.action : 'append';
+          if (action !== 'none' && response.item !== undefined) {
+            var $container = (response.container !== undefined) ? $(response.container) : $parent;
+            $container[action](response.item);
+          }
+        }
+      },
+
+      render : function(helpers) {
+        if (this.before) {
+          var addBefore = this.before(helpers);
+          this.addItem(helpers.container, addBefore);
+        }
+
+        var $dataContainer = helpers.container.find('[data-container="true"]:last');
+        var $container = ($dataContainer.length > 0) ? $dataContainer : helpers.container;
+
+        // It appears that the following code would theoretically allow you to pass a deeply
+        // nested value to "repeat on" to be added to the repeater.
+        // eg. `data.foo.bar.items`
+        if (this.renderItem) {
+          var subset;
+          var objectAndPropsToRepeatOnString = this.repeat || 'data.items';
+          var objectAndPropsToRepeatOn = objectAndPropsToRepeatOnString.split('.');
+          var objectToRepeatOn = objectAndPropsToRepeatOn[0];
+
+          if (objectToRepeatOn === 'data' || objectToRepeatOn === 'this') {
+            subset = (objectToRepeatOn === 'this') ? this : helpers.data;
+
+            // Extracts subset from object chain (get `items` out of `foo.bar.items`). I think....
+            var propsToRepeatOn = objectAndPropsToRepeatOn.slice(1);
+            for (var prop = 0; prop < propsToRepeatOn.length; prop++) {
+              if (subset[propsToRepeatOn[prop]] !== undefined) {
+                subset = subset[propsToRepeatOn[prop]];
+              } else {
+                subset = [];
+                console.warn('WARNING: Repeater unable to find property to iterate renderItem on.');
+                break;
+              }
+            }
+
+            for (var subItemIndex = 0; subItemIndex < subset.length; subItemIndex++) {
+              var addSubItem = this.renderItem({
+                container: $container,
+                data: helpers.data,
+                index: subItemIndex,
+                subset: subset
+              });
+              this.addItem($container, addSubItem);
+            }
+          } else {
+            console.warn('WARNING: Repeater plugin "repeat" value must start with either "data" or "this"');
+          }
+        }
+
+        if (this.after) {
+          var addAfter = this.after(helpers);
+          this.addItem(helpers.container, addAfter);
+        }    
+      }
 
 	});
 

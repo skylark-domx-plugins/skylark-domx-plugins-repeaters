@@ -21,12 +21,12 @@
   },
   "license": "MIT",
   "dependencies": {
-    "skylark-domx": "git+https://github.com/skylark-domx/skylark-domx.git#master",
-    "skylark-domx-plugins-base": "git+https://github.com/skylark-domx-plugins/skylark-domx-plugins-base.git#master",
-    "skylark-domx-plugins-panels": "git+https://github.com/skylark-domx-plugins/skylark-domx-plugins-panels.git#master",
-    "skylark-domx-plugins-popups": "git+https://github.com/skylark-domx-plugins/skylark-domx-plugins-popups.git#master",
-    "skylark-domx-plugins-scrolls": "git+https://github.com/skylark-domx-plugins/skylark-domx-plugins-scrolls.git#master",
-    "skylark-langx": "git+https://github.com/skylark-langx/skylark-langx.git#master"
+    "skylark-domx": "git+https://github.com/skylark-domx/skylark-domx.git",
+    "skylark-domx-plugins-base": "git+https://github.com/skylark-domx-plugins/skylark-domx-plugins-base.git",
+    "skylark-domx-plugins-panels": "git+https://github.com/skylark-domx-plugins/skylark-domx-plugins-panels.git",
+    "skylark-domx-plugins-popups": "git+https://github.com/skylark-domx-plugins/skylark-domx-plugins-popups.git",
+    "skylark-domx-plugins-scrolls": "git+https://github.com/skylark-domx-plugins/skylark-domx-plugins-scrolls.git",
+    "skylark-langx": "git+https://github.com/skylark-langx/skylark-langx.git"
   },
   "engines": {
     "node": ">=0.10.1"
