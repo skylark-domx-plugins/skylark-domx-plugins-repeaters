@@ -1,9 +1,8 @@
 define([
 	"skylark-langx/langx",
 	"skylark-domx-noder",
-	"skylark-domx-query",
-	"../views",	
-],function(langx,noder,$,views) {
+	"skylark-domx-query"
+],function(langx,noder,$) {
 
 	var ViewBase = langx.Evented.inherit({
 	    klassName: "ViewBase",
@@ -197,5 +196,5 @@ define([
 
 	});
 
-	return views.ViewBase = ViewBase;
+	return ViewBase;
 });

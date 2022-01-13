@@ -4,9 +4,9 @@ define([
   "skylark-langx/langx",
   "skylark-domx-noder",
   "skylark-domx-query",
-  "../views", 
+   "../view-type-registry",   
    "./view-base"
-],function (langx,noder,$,views,ViewBase) {
+],function (langx,noder,$,viewTypeRegistry,ViewBase) {
   'use strict'
 
   var SliderView = ViewBase.inherit({
@@ -1242,7 +1242,7 @@ define([
     }
   });
 
-  views["slider"] = {
+  viewTypeRegistry["slider"] = {
     "name" :  "slider",
     "ctor" :  SliderView
   };

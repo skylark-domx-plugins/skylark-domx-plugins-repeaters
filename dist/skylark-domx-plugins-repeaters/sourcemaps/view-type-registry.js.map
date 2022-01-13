@@ -1,0 +1,1 @@
+{"version":3,"sources":["view-type-registry.js"],"names":["define","repeaters","viewTypeRegistry"],"mappings":";;;;;;;AAAAA,QACC,eACC,SAASC,GACV,OAAOA,EAAUC","file":"../view-type-registry.js","sourcesContent":["define([\r\n\t\"./repeaters\"\r\n],function(repeaters){\r\n\treturn repeaters.viewTypeRegistry = {};\r\n});"]}

@@ -132,7 +132,7 @@ define([
 	};
 
 	// REPEATER
-	$('#repeaterIllustration').plugin("lark.fuelux.repeater",{
+	$('#repeaterIllustration').plugin("lark.repeaters.repeater",{
 		dataSource: dataSource,
 		addons : {
 			views : {
@@ -150,15 +150,15 @@ define([
 		}		
 	});
 
-	$('#myRepeater').plugin("lark.fuelux.repeater",{
+	$('#myRepeater').plugin("lark.repeaters.repeater",{
 		dataSource: dataSource
 	});
 
-	$('#myRepeaterList').plugin("lark.fuelux.repeater",{
+	$('#myRepeaterList').plugin("lark.repeaters.repeater",{
 		dataSource: dataSource
 	});
 
-	$('#myRepeaterThumbnail').plugin("lark.fuelux.repeater",{
+	$('#myRepeaterThumbnail').plugin("lark.repeaters.repeater",{
 		dataSource: dataSource,
 		thumbnail_template: '<div class="thumbnail repeater-thumbnail" style="background: {{color}};"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
 	});

@@ -5,9 +5,9 @@ define([
     "skylark-domx-noder",
     "skylark-domx-geom",
     "skylark-domx-query",
-    "../views",   
+    "../view-type-registry",   
     "./view-base"
-], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
+], function(langx, browser, eventer, noder, geom, $, viewTypeRegistry, ViewBase) {
 
   var TableView = ViewBase.inherit({
     klassName : "TableView",
@@ -61,7 +61,7 @@ define([
     },
 
     positionHeadings : function listPositionHeadings () {
-        var $wrapper = this.repeater.$element.find(`.${this.options.tableWrapperClass}`);
+        var $wrapper = this.repeater.$().find(`.${this.options.tableWrapperClass}`);
         var offsetLeft = $wrapper.offset().left;
         var scrollLeft = $wrapper.scrollLeft();
         if (scrollLeft > 0) {
@@ -113,28 +113,28 @@ define([
                     $itm.addClass('selected');
 
                     if (self.options.frozenColumns || self.options.selectable === 'multi') {
-                        $frozenCols = self.repeater.$element.find('.frozen-column-wrapper tr:nth-child(' + (index + 1) + ')');
+                        $frozenCols = self.repeater.$().find('.frozen-column-wrapper tr:nth-child(' + (index + 1) + ')');
 
                         $frozenCols.addClass('selected');
                         $frozenCols.find('.repeater-select-checkbox').addClass('checked');
                     }
 
                     if (self.options.actions) {
-                        self.repeater.$element.find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').addClass('selected');
+                        self.repeater.$().find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').addClass('selected');
                     }
 
                     $itm.find('td:first').prepend(`<div class="${this.options.checkClass}"><span class="glyphicon glyphicon-ok"></span></div>`);
                 }
             } else {
                 if (self.options.frozenColumns) {
-                    $frozenCols = self.repeater.$element.find('.frozen-column-wrapper tr:nth-child(' + (index + 1) + ')');
+                    $frozenCols = self.repeater.$().find('.frozen-column-wrapper tr:nth-child(' + (index + 1) + ')');
 
                     $frozenCols.addClass('selected');
                     $frozenCols.find('.repeater-select-checkbox').removeClass('checked');
                 }
 
                 if (self.options.actions) {
-                    self.repeater.$element.find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').removeClass('selected');
+                    self.repeater.$().find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').removeClass('selected');
                 }
 
                 $itm.find(`.${this.options.checkClass}`).remove();
@@ -163,7 +163,7 @@ define([
     },
 
     sizeHeadings : function listSizeHeadings () {
-        var $table = this.repeater.$element.find(`.${this.options.viewClass} table`);
+        var $table = this.repeater.$().find(`.${this.options.viewClass} table`);
         var self = this;
         $table.find('thead th').each(function eachTH () {
             var $th = $(this);
@@ -175,9 +175,9 @@ define([
 
     setFrozenColumns : function listSetFrozenColumns () {
         var frozenTable = this.repeater.$canvas.find('.table-frozen');
-        var $wrapper = this.repeater.$element.find('.repeater-canvas');
-        var $table = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
-        var repeaterWrapper = this.repeater.$element.find(`.${this.options.viewClass}`);
+        var $wrapper = this.repeater.$().find('.repeater-canvas');
+        var $table = this.repeater.$().find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
+        var repeaterWrapper = this.repeater.$().find(`.${this.options.viewClass}`);
         var numFrozenColumns = this.options.frozenColumns;
         var self = this;
 
@@ -214,21 +214,21 @@ define([
         $(`.frozen-thead-wrapper .${this.options.headingClass}`).on('click', function onClickHeading () {
             var index = $(this).parent('th').index();
             index = index + 1;
-            self.repeater.$element.find(`.${this.options.tableWrapperClass} > table thead th:nth-child(` + index + `) .${this.options.headingClass}`)[0].click();
+            self.repeater.$().find(`.${this.options.tableWrapperClass} > table thead th:nth-child(` + index + `) .${this.options.headingClass}`)[0].click();
         });
     },
 
     positionColumns : function listPositionColumns () {
-        var $wrapper = this.repeater.$element.find('.repeater-canvas');
+        var $wrapper = this.repeater.$().find('.repeater-canvas');
         var scrollTop = $wrapper.scrollTop();
         var scrollLeft = $wrapper.scrollLeft();
         var frozenEnabled = this.options.frozenColumns || this.options.selectable === 'multi';
         var actionsEnabled = this.options.actions;
 
-        var canvasWidth = this.repeater.$element.find('.repeater-canvas').outerWidth();
-        var tableWidth = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`).outerWidth();
+        var canvasWidth = this.repeater.$().find('.repeater-canvas').outerWidth();
+        var tableWidth = this.repeater.$().find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`).outerWidth();
 
-        var actionsWidth = this.repeater.$element.find('.table-actions') ? this.repeater.$element.find('.table-actions').outerWidth() : 0;
+        var actionsWidth = this.repeater.$().find('.table-actions') ? this.repeater.$().find('.table-actions').outerWidth() : 0;
 
         var shouldScroll = (tableWidth - (canvasWidth - actionsWidth)) >= scrollLeft;
 
@@ -264,7 +264,7 @@ define([
         var actionsHtml = '';
         var self = this;
         var i;
-        var $table = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
+        var $table = this.repeater.$().find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
         var $actionsTable = this.repeater.$canvas.find('.table-actions');
         var len = this.options.actions.items.length;
         if (len == 1) {
@@ -333,7 +333,7 @@ define([
         this.sizeActionsTable();
 
         // row level actions click
-        this.repeater.$element.find('.table-actions tbody .action-item').on('click', function onBodyActionItemClick(e) {
+        this.repeater.$().find('.table-actions tbody .action-item').on('click', function onBodyActionItemClick(e) {
             if (!self.isDisabled) {
                 var actionName = $(this).data('action');
                 var row = $(this).data('row');
@@ -345,7 +345,7 @@ define([
             }
         });
         // bulk actions click
-        this.repeater.$element.find('.table-actions thead .action-item').on('click', function onHeadActionItemClick(e) {
+        this.repeater.$().find('.table-actions thead .action-item').on('click', function onHeadActionItemClick(e) {
             if (!self.isDisabled) {
                 var actionName = $(this).data('action');
                 var selected = {
@@ -359,7 +359,7 @@ define([
                     selector = `.${this.options.tableWrapperClass} > table tr`;
                 }
 
-                self.repeater.$element.find(selector).each(function eachSelector(selectorIndex) {
+                self.repeater.$().find(selector).each(function eachSelector(selectorIndex) {
                     selected.rows.push(selectorIndex + 1);
                 });
 
@@ -373,7 +373,7 @@ define([
         var self = this;
         var i;
         var length;
-        var $table = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
+        var $table = this.repeater.$().find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
         var $actionsTable = this.repeater.$canvas.find('.table-actions');
 
         for (i = 0, length = this.options.actions.items.length; i < length; i++) {
@@ -426,7 +426,7 @@ define([
         this.sizeActionsTable();
 
         // row level actions click
-        this.repeater.$element.find('.table-actions tbody .action-item').on('click', function onBodyActionItemClick (e) {
+        this.repeater.$().find('.table-actions tbody .action-item').on('click', function onBodyActionItemClick (e) {
             if (!self.isDisabled) {
                 var actionName = $(this).data('action');
                 var row = $(this).data('row');
@@ -438,7 +438,7 @@ define([
             }
         });
         // bulk actions click
-        this.repeater.$element.find('.table-actions thead .action-item').on('click', function onHeadActionItemClick (e) {
+        this.repeater.$().find('.table-actions thead .action-item').on('click', function onHeadActionItemClick (e) {
             if (!self.isDisabled) {
                 var actionName = $(this).data('action');
                 var selected = {
@@ -450,7 +450,7 @@ define([
                 if ( self.options.selectable === 'action' ) {
                     selector = `.${this.options.tableWrapperClass} > table tr`;
                 }
-                self.repeater.$element.find(selector).each(function eachSelector (selectorIndex) {
+                self.repeater.$().find(selector).each(function eachSelector (selectorIndex) {
                     selected.rows.push(selectorIndex + 1);
                 });
 
@@ -482,9 +482,9 @@ define([
     },
 
     sizeActionsTable : function listSizeActionsTable () {
-        var $actionsTable = this.repeater.$element.find(`.${this.options.viewClass} table.table-actions`);
+        var $actionsTable = this.repeater.$().find(`.${this.options.viewClass} table.table-actions`);
         var $actionsTableHeader = $actionsTable.find('thead tr th');
-        var $table = this.repeater.$element.find(`.${this.options.tableWrapperClass} > table`);
+        var $table = this.repeater.$().find(`.${this.options.tableWrapperClass} > table`);
 
         $actionsTableHeader.outerHeight($table.find('thead tr th').outerHeight());
         $actionsTableHeader.find(`.${this.options.headingClass}`).outerHeight($actionsTableHeader.outerHeight());
@@ -494,24 +494,24 @@ define([
     },
 
     sizeFrozenColumns : function listSizeFrozenColumns () {
-        var $table = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
+        var $table = this.repeater.$().find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
 
-        this.repeater.$element.find(`.${this.options.viewClass} table.table-frozen tr`).each(function eachTR (i) {
+        this.repeater.$().find(`.${this.options.viewClass} table.table-frozen tr`).each(function eachTR (i) {
             $(this).height($table.find('tr:eq(' + i + ')').height());
         });
 
         var columnWidth = $table.find('td:eq(0)').outerWidth();
-        this.repeater.$element.find('.frozen-column-wrapper, .frozen-thead-wrapper').width(columnWidth);
+        this.repeater.$().find('.frozen-column-wrapper, .frozen-thead-wrapper').width(columnWidth);
     },
 
     frozenOptionsInitialize : function listFrozenOptionsInitialize () {
-        var $checkboxes = this.repeater.$element.find('.frozen-column-wrapper .checkbox-inline');
-        var $headerCheckbox = this.repeater.$element.find('.header-checkbox .checkbox-custom');
-        var $everyTable = this.repeater.$element.find(`.${this.options.viewClass} table`);
+        var $checkboxes = this.repeater.$().find('.frozen-column-wrapper .checkbox-inline');
+        var $headerCheckbox = this.repeater.$().find('.header-checkbox .checkbox-custom');
+        var $everyTable = this.repeater.$().find(`.${this.options.viewClass} table`);
         var self = this;
 
         // Make sure if row is hovered that it is shown in frozen column as well
-        this.repeater.$element.find('tr.selectable').on('mouseover mouseleave', function onMouseEvents (e) {
+        this.repeater.$().find('tr.selectable').on('mouseover mouseleave', function onMouseEvents (e) {
             var index = $(this).index();
             index = index + 1;
             if (e.type === 'mouseover') {
@@ -525,8 +525,8 @@ define([
         $checkboxes.checkbox();
 
         // Row checkboxes
-        var $rowCheckboxes = this.repeater.$element.find('.table-frozen tbody .checkbox-inline');
-        var $checkAll = this.repeater.$element.find('.frozen-thead-wrapper thead .checkbox-inline input');
+        var $rowCheckboxes = this.repeater.$().find('.table-frozen tbody .checkbox-inline');
+        var $checkAll = this.repeater.$().find('.frozen-thead-wrapper thead .checkbox-inline input');
         $rowCheckboxes.on('change', function onChangeRowCheckboxes (e) {
             e.preventDefault();
 
@@ -536,9 +536,9 @@ define([
                 } else {
                     var row = $(this).attr('data-row');
                     row = parseInt(row, 10) + 1;
-                    self.repeater.$element.find(`.${this.options.tableWrapperClass} > table tbody tr:nth-child(` + row + ')').click();
+                    self.repeater.$().find(`.${this.options.tableWrapperClass} > table tbody tr:nth-child(` + row + ')').click();
 
-                    var numSelected = self.repeater.$element.find('.table-frozen tbody .checkbox-inline.checked').length;
+                    var numSelected = self.repeater.$().find('.table-frozen tbody .checkbox-inline.checked').length;
                     if (numSelected === 0) {
                         $checkAll.prop('checked', false);
                         $checkAll.prop('indeterminate', false);
@@ -559,11 +559,11 @@ define([
                 if (self.isDisabled) {
                     revertCheckbox($(e.currentTarget));
                 } else if ($(this).is(':checked')) {
-                    self.repeater.$element.find(`.${this.options.tableWrapperClass} > table tbody tr:not(.selected)`).click();
-                    self.repeater.$element.trigger('selected.lark.repeaterList', $checkboxes);
+                    self.repeater.$().find(`.${this.options.tableWrapperClass} > table tbody tr:not(.selected)`).click();
+                    self.repeater.$().trigger('selected', $checkboxes);
                 } else {
-                    self.repeater.$element.find(`.${this.options.tableWrapperClass} > table tbody tr.selected`).click();
-                    self.repeater.$element.trigger('deselected.lark.repeaterList', $checkboxes);
+                    self.repeater.$().find(`.${this.options.tableWrapperClass} > table tbody tr.selected`).click();
+                    self.repeater.$().trigger('deselected', $checkboxes);
                 }
             }
         });
@@ -608,7 +608,7 @@ define([
         callback();
     },
     resize: function resize () {
-        sizeColumns.call(this, this.repeater.$element.find(`.${this.options.tableWrapperClass} > table thead tr`));
+        sizeColumns.call(this, this.repeater.$().find(`.${this.options.tableWrapperClass} > table thead tr`));
         if (this.options.actions) {
             this.sizeActionsTable();
         }
@@ -762,7 +762,7 @@ define([
         var chevron = '.glyphicon.rlc:first';
         var chevUp = 'glyphicon-chevron-up';
         var $div = $(`<div class="${this.options.headingClass}"><span class="glyphicon rlc"></span></div>`);
-        var checkAllID = (this.repeater.$element.attr('id') + '_' || '') + 'checkall';
+        var checkAllID = (this.repeater.$().attr('id') + '_' || '') + 'checkall';
 
         var checkBoxMarkup = `<div class="${this.options.headingClass} header-checkbox">` +
                 '<label id="' + checkAllID + '" class="checkbox-custom checkbox-inline">' +
@@ -858,7 +858,7 @@ define([
     var onClickRowRepeaterList = function onClickRowRepeaterList (repeater) {
         var isMulti = repeater.options.selectable === 'multi';
         var isActions = repeater.options.actions;
-        var $repeater = repeater.$element;
+        var $repeater = repeater.$();
 
         if (!repeater.isDisabled) {
             var $item = $(this);
@@ -1030,7 +1030,7 @@ define([
             if (this.options.selectable === 'multi' && !this.noItems) {
                 // after checkbox column is created need to get width of checkbox column from
                 // its css class
-                var checkboxWidth = this.repeater.$element.find(`.${this.options.tableWrapperClass} .header-checkbox`).outerWidth();
+                var checkboxWidth = this.repeater.$().find(`.${this.options.tableWrapperClass} .header-checkbox`).outerWidth();
                 var selectColumn = $.grep(columns, function grepColumn (column) {
                     return column.property === '@_CHECKBOX_@';
                 })[0];
@@ -1102,7 +1102,7 @@ define([
 
     var toggleActionsHeaderButton = function toggleActionsHeaderButton () {
         var selectedSelector = `.${this.options.tableWrapperClass} > table .selected`;
-        var $actionsColumn = this.repeater.$element.find('.table-actions');
+        var $actionsColumn = this.repeater.$().find('.table-actions');
         var $selected;
 
         if (this.options.selectable === 'action') {
@@ -1119,7 +1119,7 @@ define([
     };
 
 
-     views["table"] = {
+     viewTypeRegistry["table"] = {
         name : "table",
         ctor : TableView
     }; 

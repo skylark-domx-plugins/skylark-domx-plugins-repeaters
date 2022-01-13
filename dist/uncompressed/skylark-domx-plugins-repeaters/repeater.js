@@ -11,15 +11,17 @@ define([
   "skylark-domx-plugins-base",
   "skylark-domx-plugins-popups/select-list",
   "skylark-domx-plugins-popups/combobox",
-  "./searchbox"  
-],function(skylark,langx,browser,eventer,noder,geom,elmx,$,fx,plugins,SelectList,ComboBox){
+  "./repeaters",
+  "./searchbox",
+  "./view-type-registry"
+],function(skylark,langx,browser,eventer,noder,geom,elmx,$,fx,plugins,SelectList,ComboBox,repeaters,Searchbox,viewTypeRegistry){
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
 	var Repeater = plugins.Plugin.inherit({
 		klassName: "Repeater",
 
-		pluginName: "lark.fuelux.repeater",
+		pluginName: "lark.repeaters.repeater",
 
 		options : {
 			dataSource: function dataSource (options, callback) {
@@ -48,25 +50,25 @@ define([
 			var $btn;
 			var currentView;
 
-			this.$element = $(this._elm); //$(element);
+			var $el = this.$();
 
-			this.$canvas = this.$element.find('.repeater-canvas');
-			this.$count = this.$element.find('.repeater-count');
-			this.$end = this.$element.find('.repeater-end');
-			this.$filters = this.$element.find('.repeater-filters');
-			this.$loader = this.$element.find('.repeater-loader');
-			this.$pageSize = this.$element.find('.repeater-itemization .selectlist');
-			this.$nextBtn = this.$element.find('.repeater-next');
-			this.$pages = this.$element.find('.repeater-pages');
-			this.$prevBtn = this.$element.find('.repeater-prev');
-			this.$primaryPaging = this.$element.find('.repeater-primaryPaging');
-			this.$search = this.$element.find('.repeater-search').find('.search');
-			this.$secondaryPaging = this.$element.find('.repeater-secondaryPaging');
-			this.$start = this.$element.find('.repeater-start');
-			this.$viewport = this.$element.find('.repeater-viewport');
-			this.$views = this.$element.find('.repeater-views');
+			this.$canvas = $el.find('.repeater-canvas');
+			this.$count = $el.find('.repeater-count');
+			this.$end = $el.find('.repeater-end');
+			this.$filters = $el.find('.repeater-filters');
+			this.$loader = $el.find('.repeater-loader');
+			this.$pageSize = $el.find('.repeater-itemization .selectlist');
+			this.$nextBtn = $el.find('.repeater-next');
+			this.$pages = $el.find('.repeater-pages');
+			this.$prevBtn = $el.find('.repeater-prev');
+			this.$primaryPaging = $el.find('.repeater-primaryPaging');
+			this.$search = $el.find('.repeater-search').find('.search');
+			this.$secondaryPaging = $el.find('.repeater-secondaryPaging');
+			this.$start = $el.find('.repeater-start');
+			this.$viewport = $el.find('.repeater-viewport');
+			this.$views = $el.find('.repeater-views');
 
-			this.$element.on('mousedown.bs.dropdown.data-api', '[data-toggle="dropdown"]',function(e) {
+			$el.on('mousedown.bs.dropdown.data-api', '[data-toggle="dropdown"]',function(e) {
 				$(this).plugin("lark.popups.dropdown");
 			}); 
 
@@ -85,19 +87,18 @@ define([
 			this.stamp = new Date().getTime() + (Math.floor(Math.random() * 100) + 1);
 			this.storedDataSourceOpts = null;
 			this.syncingViewButtonState = false;
-//			this.viewOptions = {};
 			this.viewType = null;
 
 			this.$filters.plugin("lark.popups.selectlist");
 			this.$pageSize.plugin("lark.popups.selectlist");
 			this.$primaryPaging.find('.combobox').plugin("lark.popups.combobox");
-			this.$search.plugin("lark.fuelux.searchbox",{
+			this.$search.plugin("lark.repeaters.searchbox",{
 				searchOnKeyPress: this.options.searchOnKeyPress,
 				allowCancel: this.options.allowCancel
 			});
 
 			this.$filters.on('changed.lark.selectlist', function onFiltersChanged (e, value) {
-				self.$element.trigger('filtered.lark.repeater', value);
+				self.$().trigger('filtered', value);
 				self.render({
 					clearInfinite: true,
 					pageIncrement: null
@@ -105,7 +106,7 @@ define([
 			});
 			this.$nextBtn.on('click.lark.repeater', langx.proxy(this.next, this));
 			this.$pageSize.on('changed.lark.selectlist', function onPageSizeChanged (e, value) {
-				self.$element.trigger('pageSizeChanged.lark.repeater', value);
+				self.$().trigger('pageSizeChanged', value);
 				self.render({
 					pageIncrement: null
 				});
@@ -115,14 +116,14 @@ define([
 				self.pageInputChange(data.text, data);
 			});
 			this.$search.on('searched.lark.search cleared.lark.search', function onSearched (e, value) {
-				self.$element.trigger('searchChanged.lark.repeater', value);
+				self.$().trigger('searchChanged', value);
 				self.render({
 					clearInfinite: true,
 					pageIncrement: null
 				});
 			});
 			this.$search.on('canceled.lark.search', function onSearchCanceled (e, value) {
-				self.$element.trigger('canceled.lark.repeater', value);
+				self.$().trigger('canceled', value);
 				self.render({
 					clearInfinite: true,
 					pageIncrement: null
@@ -143,7 +144,7 @@ define([
 				clearTimeout(self.resizeTimeout);
 				self.resizeTimeout = setTimeout(function resizeTimeout () {
 					self.resize();
-					self.$element.trigger('resized.lark.repeater');
+					self.$().trigger('resized');
 				}, 75);
 			});
 
@@ -160,7 +161,7 @@ define([
 
 			this.initViewTypes(function initViewTypes () {
 				self.resize();
-				self.$element.trigger('resized.lark.repeater');
+				self.$().trigger('resized');
 				self.render({
 					changeView: currentView
 				});
@@ -200,25 +201,26 @@ define([
 		},
 
 		destroy: function destroy () {
-			var markup;
+			var markup,
+				$el = this.$();
 			// set input value attrbute in markup
-			this.$element.find('input').each(function eachInput () {
+			$el.find('input').each(function eachInput () {
 				$(this).attr('value', $(this).val());
 			});
 
 			// empty elements to return to original markup
 			this.$canvas.empty();
-			markup = this.$element[0].outerHTML;
+			markup = this._elm.outerHTML;
 
 			// destroy components and remove leftover
-			langx.scall(this.$element.find('.combobox').plugin("lark.popups.combobox"),"destroy");
-			langx.scall(this.$element.find('.selectlist').plugin("lark.popups.selectlist"),"destroy");
-			langx.scall(this.$element.find('.search').plugin("lark.fuelux.searchbox"),"destroy");
+			langx.scall($el.find('.combobox').plugin("lark.popups.combobox"),"destroy");
+			langx.scall($el.find('.selectlist').plugin("lark.popups.selectlist"),"destroy");
+			langx.scall($el.find('.search').plugin("lark.repeaters.searchbox"),"destroy");
 			if (this.infiniteScrollingEnabled) {
 				$(this.infiniteScrollingCont).infinitescroll('destroy');
 			}
 
-			this.$element.remove();
+			$el.remove();
 
 			// any external events
 			$(window).off('resize.lark.repeater.' + this.stamp);
@@ -227,9 +229,7 @@ define([
 		},
 
 		disable: function disable () {
-			//var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
-
-			langx.scall(this.$search.plugin("lark.fuelux.searchbox"),"disable");
+			langx.scall(this.$search.plugin("lark.repeaters.searchbox"),"disable");
 			langx.scall(this.$filters.plugin("lark.popups.selectlist"),"disable");
 			this.$views.find('label, input').addClass('disabled').attr('disabled', 'disabled');
 			langx.scall(this.$pageSize.plugin("lark.popups.selectlist"),"disable");
@@ -238,13 +238,6 @@ define([
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.$nextBtn.attr('disabled', 'disabled');
 
-			/* lwf
-			if (viewTypeObj.enabled) {
-				viewTypeObj.enabled.call(this, {
-					status: false
-				});
-			}
-			*/
 			if (this._view) {
 				this._view.enabled({
 					status: false
@@ -252,14 +245,12 @@ define([
 			}
 
 			this.isDisabled = true;
-			this.$element.addClass('disabled');
-			this.$element.trigger('disabled.lark.repeater');
+			this.$().addClass('disabled');
+			this.$().trigger('disabled');
 		},
 
 		enable: function enable () {
-			//var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
-
-			langx.scall(this.$search.plugin("lark.fuelux.searchbox"),"enable");
+			langx.scall(this.$search.plugin("lark.repeaters.searchbox"),"enable");
 			langx.scall(this.$filters.plugin("lark.popups.selectlist"),"enable")
 			this.$views.find('label, input').removeClass('disabled').removeAttr('disabled');
 			langx.scall(this.$pageSize.plugin("lark.popups.selectlist"),"enable")
@@ -286,13 +277,6 @@ define([
 				langx.scall(this.$pageSize.plugin("lark.popups.selectlist"),"disable");
 			}
 
-			/* lwf
-			if (viewTypeObj.enabled) {
-				viewTypeObj.enabled.call(this, {
-					status: true
-				});
-			}
-			*/
 			if (this._view) {
 				this._view.enabled({
 					status: true
@@ -300,8 +284,8 @@ define([
 			}
 
 			this.isDisabled = false;
-			this.$element.removeClass('disabled');
-			this.$element.trigger('enabled.lark.repeater');
+			this.$().removeClass('disabled');
+			this.$().trigger('enabled');
 		},
 
 		getDataOptions: function getDataOptions (opts) {
@@ -356,13 +340,7 @@ define([
 				returnOptions.search = searchValue;
 			}
 
-			/* lwf
-			var viewType = $.fn.repeater.viewTypes[this.viewType] || {};
-			var addViewTypeData = viewType.dataOptions;
-			if (addViewTypeData) {
-				returnOptions = addViewTypeData.call(this, returnOptions);
-			}
-			*/
+
 			if (this._view) {
 				returnOptions = this._view.dataOptions(returnOptions);
 			}
@@ -374,8 +352,8 @@ define([
 		},
 
 		infiniteScrolling: function infiniteScrolling (enable, opts) {
-			var footer = this.$element.find('.repeater-footer');
-			var viewport = this.$element.find('.repeater-viewport');
+			var footer = this.$().find('.repeater-footer');
+			var viewport = this.$().find('.repeater-viewport');
 			var options = opts || {};
 
 			if (enable) {
@@ -439,21 +417,12 @@ define([
 		},
 
 		initViewTypes: function initViewTypes (callback) {
-			/*
-			var viewTypes = [];
-
-			for (var key in $.fn.repeater.viewTypes) {
-				if ({}.hasOwnProperty.call($.fn.repeater.viewTypes, key)) {
-					viewTypes.push($.fn.repeater.viewTypes[key]);
-				}
-			}
-			*/
 
 			var views = this._views = [];
 			var viewTypes = this.options.addons.views;
 			if (langx.isArray(viewTypes)) {
 				for (var i = 0; i< viewTypes.length; i++) {
-					var setting = this.constructor.addons.views[viewTypes[i]];
+					var setting = viewTypeRegistry[viewTypes[i]];
 					if (!setting) {
 						throw new Error("The view type " + viewTypes[i] + " is not defined!");
 					} 
@@ -463,7 +432,7 @@ define([
 				}				
 			} else if (langx.isPlainObject(viewTypes)) {
 				for (var name in viewTypes) {
-					var setting = this.constructor.addons.views[name];
+					var setting = viewTypeRegistry[name];
 					if (!setting) {
 						throw new Error("The view type " + viewTypes[i] + " is not defined!");
 					} 
@@ -473,14 +442,6 @@ define([
 				}
 			}
 
-
-			/*
-			if (views.length > 0) {
-				initViewType.call(this, 0, viewTypes, callback);
-			} else {
-				callback();
-			}
-			*/
 			callback();			
 		},
 
@@ -494,7 +455,7 @@ define([
 			this.$nextBtn.attr('disabled', 'disabled');
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.pageIncrement = 1;
-			this.$element.trigger('nextClicked.lark.repeater');
+			this.$().trigger('nextClicked');
 			this.render({
 				pageIncrement: this.pageIncrement
 			});
@@ -508,7 +469,7 @@ define([
 				this.lastPageInput = val;
 				var value = parseInt(val, 10) - 1;
 				pageInc = value - this.currentPage;
-				this.$element.trigger('pageChanged.lark.repeater', [value, dataFromCombobox]);
+				this.$().trigger('pageChanged', [value, dataFromCombobox]);
 				this.render({
 					pageIncrement: pageInc
 				});
@@ -583,7 +544,7 @@ define([
 			this.$nextBtn.attr('disabled', 'disabled');
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.pageIncrement = -1;
-			this.$element.trigger('previousClicked.lark.repeater');
+			this.$().trigger('previousClicked');
 			this.render({
 				pageIncrement: this.pageIncrement
 			});
@@ -606,25 +567,17 @@ define([
 
 				//this.setViewOptions(this.currentView);
 
-				this.$element.attr('data-currentview', this.currentView);
-				this.$element.attr('data-viewtype', this.viewType);
+				this.$().attr('data-currentview', this.currentView);
+				this.$().attr('data-viewtype', this.viewType);
 				viewChanged = true;
 				options.viewChanged = viewChanged;
 
-				this.$element.trigger('viewChanged.lark.repeater', this.currentView);
+				this.$().trigger('viewChanged', this.currentView);
 
 				if (this.infiniteScrollingEnabled) {
 					this.infiniteScrolling(false);
 				}
 
-				/* lwf
-				viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
-				if (viewTypeObj.selected) {
-					viewTypeObj.selected.call(this, {
-						prevView: prevView
-					});
-				}
-				*/
 				this._view.selected({
 					prevView: prevView
 				})
@@ -664,19 +617,19 @@ define([
 		},
 
 		resize: function resize () {
-			var staticHeight = (this.options.staticHeight === -1) ? this.$element.attr('data-staticheight') : this.options.staticHeight;
+			var staticHeight = (this.options.staticHeight === -1) ? this.$().attr('data-staticheight') : this.options.staticHeight;
 			var viewTypeObj = {};
 			var height;
 			var viewportMargins;
 			var scrubbedElements = [];
 			var previousProperties = [];
-			//var $hiddenElements = this.$element.parentsUntil(':visible').addBack(); // del addBack() not supported by skyalrk
-			var $hiddenElements = this.$element.parentsUntil(':visible');
+			//var $hiddenElements = this.$().parentsUntil(':visible').addBack(); // del addBack() not supported by skyalrk
+			var $hiddenElements = this.$().parentsUntil(':visible');
 			var currentHiddenElement;
 			var currentElementIndex = 0;
 
 			// Set parents to 'display:block' until repeater is visible again
-			while (currentElementIndex < $hiddenElements.length && this.$element.is(':hidden')) {
+			while (currentElementIndex < $hiddenElements.length && this.$().is(':hidden')) {
 				currentHiddenElement = $hiddenElements[currentElementIndex];
 				// Only set display property on elements that are explicitly hidden (i.e. do not inherit it from their parent)
 				if ($(currentHiddenElement).is(':hidden')) {
@@ -698,9 +651,9 @@ define([
 					top: this.$viewport.css('margin-top')
 				};
 
-				var staticHeightValue = (staticHeight === 'true' || staticHeight === true) ? this.$element.height() : parseInt(staticHeight, 10);
-				var headerHeight = this.$element.find('.repeater-header').outerHeight();
-				var footerHeight = this.$element.find('.repeater-footer').outerHeight();
+				var staticHeightValue = (staticHeight === 'true' || staticHeight === true) ? this.$().height() : parseInt(staticHeight, 10);
+				var headerHeight = this.$().find('.repeater-header').outerHeight();
+				var footerHeight = this.$().find('.repeater-footer').outerHeight();
 				var bottomMargin = (viewportMargins.bottom === 'auto') ? 0 : parseInt(viewportMargins.bottom, 10);
 				var topMargin = (viewportMargins.top === 'auto') ? 0 : parseInt(viewportMargins.top, 10);
 
@@ -711,19 +664,10 @@ define([
 			}
 
 
-
-			/* lwf
-			if (viewTypeObj.resize) {
-				viewTypeObj.resize.call(this, {
-					height: this.$element.outerHeight(),
-					width: this.$element.outerWidth()
-				});
-			}
-			*/
 			if (this._view) {
 				this._view.resize({
-					height: this.$element.outerHeight(),
-					width: this.$element.outerWidth()
+					height: this.$().outerHeight(),
+					width: this.$().outerWidth()
 				});
 			}
 
@@ -741,20 +685,6 @@ define([
 			callback(data);
 		},
 
-		/* // by lwf
-		setViewOptions: function setViewOptions (curView) {
-			var opts = {};
-			var viewName = curView.split('.')[1];
-
-			if (this.options.views) {
-				opts = this.options.views[viewName] || this.options.views[curView] || {};
-			} else {
-				opts = {};
-			}
-
-			this.viewOptions = langx.mixin({}, this.options, opts);
-		},
-		*/
 		viewChanged: function viewChanged (e) {
 			var $selected = $(e.target);
 			var val = $selected.val();
@@ -904,19 +834,19 @@ define([
 			}
 			this.enable();
 
-			this.$search.trigger('rendered.lark.repeater', {
+			this.$search.trigger('rendered', {
 				data: data,
 				options: state.dataOptions,
 				renderOptions: state.options
 			});
-			this.$element.trigger('rendered.lark.repeater', {
+			this.$().trigger('rendered', {
 				data: data,
 				options: state.dataOptions,
 				renderOptions: state.options
 			});
 
 			// for maintaining support of 'loaded' event
-			this.$element.trigger('loaded.lark.repeater', state.dataOptions);
+			this.$().trigger('loaded', state.dataOptions);
 		}
 	});
 
@@ -944,15 +874,11 @@ define([
 		cont.append(keep);
 	};
 
-
-
-
-
 	Repeater.addons = {};
 
-   plugins.register(Repeater);
+    plugins.register(Repeater);
 
 
-	return skylark.attach("intg.lark.Repeater",Repeater);
+	return repeaters.Repeater = Repeater;
 
 });

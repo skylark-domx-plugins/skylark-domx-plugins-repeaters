@@ -5,5 +5,5 @@
  * @link https://github.com/skylark-domx-plugins/skylark-domx-plugins-repeaters/
  * @license MIT
  */
-define(["./repeater","./views","./views/view-base","./views/linear-view","./views/slider-view","./views/table-view","./views/tile-view"],function(e){return e});
+define(["./repeaters","./repeater","./view-type-registry","./views/view-base","./views/linear-view","./views/slider-view","./views/table-view","./views/tile-view"],function(e){return e});
 //# sourceMappingURL=sourcemaps/main.js.map

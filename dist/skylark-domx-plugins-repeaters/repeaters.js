@@ -5,5 +5,5 @@
  * @link https://github.com/skylark-domx-plugins/skylark-domx-plugins-repeaters/
  * @license MIT
  */
-define(["./repeater"],function(e){return e.addons.views={}});
-//# sourceMappingURL=sourcemaps/views.js.map
+define(["skylark-domx-plugins-base"],function(e){return e.repeaters={}});
+//# sourceMappingURL=sourcemaps/repeaters.js.map

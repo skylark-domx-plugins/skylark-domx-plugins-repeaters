@@ -86,6 +86,11 @@
 
 })(function(define,require) {
 
+define('skylark-domx-plugins-repeaters/repeaters',[
+	"skylark-domx-plugins-base"
+],function(plugins){
+	return plugins.repeaters = {};
+});
 define('skylark-domx-plugins-popups/combobox',[
   "skylark-langx/langx",
   "skylark-domx-browser",
@@ -421,8 +426,9 @@ define('skylark-domx-plugins-repeaters/searchbox',[
   "skylark-domx-noder",
   "skylark-domx-geom",
   "skylark-domx-query",
-  "skylark-domx-plugins-base"
-],function(langx,browser,eventer,noder,geom,$,plugins){
+  "skylark-domx-plugins-base",
+  "./repeaters"
+],function(langx,browser,eventer,noder,geom,$,plugins,repeaters){
 
 
 	// SEARCH CONSTRUCTOR AND PROTOTYPE
@@ -430,7 +436,7 @@ define('skylark-domx-plugins-repeaters/searchbox',[
 	var SearchBox = plugins.Plugin.inherit({
 		klassName: "SearchBox",
 
-		pluginName: "lark.fuelux.searchbox",
+		pluginName: "lark.repeaters.searchbox",
 
 		options : {
 			clearOnEmpty: false,
@@ -569,9 +575,14 @@ define('skylark-domx-plugins-repeaters/searchbox',[
 
     plugins.register(SearchBox);
 
-	return 	SearchBox;
+	return 	repeaters.SearchBox = SearchBox;
 });
 
+define('skylark-domx-plugins-repeaters/view-type-registry',[
+	"./repeaters"
+],function(repeaters){
+	return repeaters.viewTypeRegistry = {};
+});
 define('skylark-domx-plugins-repeaters/repeater',[
   "skylark-langx/skylark",
   "skylark-langx/langx",
@@ -585,15 +596,17 @@ define('skylark-domx-plugins-repeaters/repeater',[
   "skylark-domx-plugins-base",
   "skylark-domx-plugins-popups/select-list",
   "skylark-domx-plugins-popups/combobox",
-  "./searchbox"  
-],function(skylark,langx,browser,eventer,noder,geom,elmx,$,fx,plugins,SelectList,ComboBox){
+  "./repeaters",
+  "./searchbox",
+  "./view-type-registry"
+],function(skylark,langx,browser,eventer,noder,geom,elmx,$,fx,plugins,SelectList,ComboBox,repeaters,Searchbox,viewTypeRegistry){
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
 	var Repeater = plugins.Plugin.inherit({
 		klassName: "Repeater",
 
-		pluginName: "lark.fuelux.repeater",
+		pluginName: "lark.repeaters.repeater",
 
 		options : {
 			dataSource: function dataSource (options, callback) {
@@ -622,25 +635,25 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			var $btn;
 			var currentView;
 
-			this.$element = $(this._elm); //$(element);
+			var $el = this.$();
 
-			this.$canvas = this.$element.find('.repeater-canvas');
-			this.$count = this.$element.find('.repeater-count');
-			this.$end = this.$element.find('.repeater-end');
-			this.$filters = this.$element.find('.repeater-filters');
-			this.$loader = this.$element.find('.repeater-loader');
-			this.$pageSize = this.$element.find('.repeater-itemization .selectlist');
-			this.$nextBtn = this.$element.find('.repeater-next');
-			this.$pages = this.$element.find('.repeater-pages');
-			this.$prevBtn = this.$element.find('.repeater-prev');
-			this.$primaryPaging = this.$element.find('.repeater-primaryPaging');
-			this.$search = this.$element.find('.repeater-search').find('.search');
-			this.$secondaryPaging = this.$element.find('.repeater-secondaryPaging');
-			this.$start = this.$element.find('.repeater-start');
-			this.$viewport = this.$element.find('.repeater-viewport');
-			this.$views = this.$element.find('.repeater-views');
+			this.$canvas = $el.find('.repeater-canvas');
+			this.$count = $el.find('.repeater-count');
+			this.$end = $el.find('.repeater-end');
+			this.$filters = $el.find('.repeater-filters');
+			this.$loader = $el.find('.repeater-loader');
+			this.$pageSize = $el.find('.repeater-itemization .selectlist');
+			this.$nextBtn = $el.find('.repeater-next');
+			this.$pages = $el.find('.repeater-pages');
+			this.$prevBtn = $el.find('.repeater-prev');
+			this.$primaryPaging = $el.find('.repeater-primaryPaging');
+			this.$search = $el.find('.repeater-search').find('.search');
+			this.$secondaryPaging = $el.find('.repeater-secondaryPaging');
+			this.$start = $el.find('.repeater-start');
+			this.$viewport = $el.find('.repeater-viewport');
+			this.$views = $el.find('.repeater-views');
 
-			this.$element.on('mousedown.bs.dropdown.data-api', '[data-toggle="dropdown"]',function(e) {
+			$el.on('mousedown.bs.dropdown.data-api', '[data-toggle="dropdown"]',function(e) {
 				$(this).plugin("lark.popups.dropdown");
 			}); 
 
@@ -659,19 +672,18 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			this.stamp = new Date().getTime() + (Math.floor(Math.random() * 100) + 1);
 			this.storedDataSourceOpts = null;
 			this.syncingViewButtonState = false;
-//			this.viewOptions = {};
 			this.viewType = null;
 
 			this.$filters.plugin("lark.popups.selectlist");
 			this.$pageSize.plugin("lark.popups.selectlist");
 			this.$primaryPaging.find('.combobox').plugin("lark.popups.combobox");
-			this.$search.plugin("lark.fuelux.searchbox",{
+			this.$search.plugin("lark.repeaters.searchbox",{
 				searchOnKeyPress: this.options.searchOnKeyPress,
 				allowCancel: this.options.allowCancel
 			});
 
 			this.$filters.on('changed.lark.selectlist', function onFiltersChanged (e, value) {
-				self.$element.trigger('filtered.lark.repeater', value);
+				self.$().trigger('filtered', value);
 				self.render({
 					clearInfinite: true,
 					pageIncrement: null
@@ -679,7 +691,7 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			});
 			this.$nextBtn.on('click.lark.repeater', langx.proxy(this.next, this));
 			this.$pageSize.on('changed.lark.selectlist', function onPageSizeChanged (e, value) {
-				self.$element.trigger('pageSizeChanged.lark.repeater', value);
+				self.$().trigger('pageSizeChanged', value);
 				self.render({
 					pageIncrement: null
 				});
@@ -689,14 +701,14 @@ define('skylark-domx-plugins-repeaters/repeater',[
 				self.pageInputChange(data.text, data);
 			});
 			this.$search.on('searched.lark.search cleared.lark.search', function onSearched (e, value) {
-				self.$element.trigger('searchChanged.lark.repeater', value);
+				self.$().trigger('searchChanged', value);
 				self.render({
 					clearInfinite: true,
 					pageIncrement: null
 				});
 			});
 			this.$search.on('canceled.lark.search', function onSearchCanceled (e, value) {
-				self.$element.trigger('canceled.lark.repeater', value);
+				self.$().trigger('canceled', value);
 				self.render({
 					clearInfinite: true,
 					pageIncrement: null
@@ -717,7 +729,7 @@ define('skylark-domx-plugins-repeaters/repeater',[
 				clearTimeout(self.resizeTimeout);
 				self.resizeTimeout = setTimeout(function resizeTimeout () {
 					self.resize();
-					self.$element.trigger('resized.lark.repeater');
+					self.$().trigger('resized');
 				}, 75);
 			});
 
@@ -734,7 +746,7 @@ define('skylark-domx-plugins-repeaters/repeater',[
 
 			this.initViewTypes(function initViewTypes () {
 				self.resize();
-				self.$element.trigger('resized.lark.repeater');
+				self.$().trigger('resized');
 				self.render({
 					changeView: currentView
 				});
@@ -774,25 +786,26 @@ define('skylark-domx-plugins-repeaters/repeater',[
 		},
 
 		destroy: function destroy () {
-			var markup;
+			var markup,
+				$el = this.$();
 			// set input value attrbute in markup
-			this.$element.find('input').each(function eachInput () {
+			$el.find('input').each(function eachInput () {
 				$(this).attr('value', $(this).val());
 			});
 
 			// empty elements to return to original markup
 			this.$canvas.empty();
-			markup = this.$element[0].outerHTML;
+			markup = this._elm.outerHTML;
 
 			// destroy components and remove leftover
-			langx.scall(this.$element.find('.combobox').plugin("lark.popups.combobox"),"destroy");
-			langx.scall(this.$element.find('.selectlist').plugin("lark.popups.selectlist"),"destroy");
-			langx.scall(this.$element.find('.search').plugin("lark.fuelux.searchbox"),"destroy");
+			langx.scall($el.find('.combobox').plugin("lark.popups.combobox"),"destroy");
+			langx.scall($el.find('.selectlist').plugin("lark.popups.selectlist"),"destroy");
+			langx.scall($el.find('.search').plugin("lark.repeaters.searchbox"),"destroy");
 			if (this.infiniteScrollingEnabled) {
 				$(this.infiniteScrollingCont).infinitescroll('destroy');
 			}
 
-			this.$element.remove();
+			$el.remove();
 
 			// any external events
 			$(window).off('resize.lark.repeater.' + this.stamp);
@@ -801,9 +814,7 @@ define('skylark-domx-plugins-repeaters/repeater',[
 		},
 
 		disable: function disable () {
-			//var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
-
-			langx.scall(this.$search.plugin("lark.fuelux.searchbox"),"disable");
+			langx.scall(this.$search.plugin("lark.repeaters.searchbox"),"disable");
 			langx.scall(this.$filters.plugin("lark.popups.selectlist"),"disable");
 			this.$views.find('label, input').addClass('disabled').attr('disabled', 'disabled');
 			langx.scall(this.$pageSize.plugin("lark.popups.selectlist"),"disable");
@@ -812,13 +823,6 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.$nextBtn.attr('disabled', 'disabled');
 
-			/* lwf
-			if (viewTypeObj.enabled) {
-				viewTypeObj.enabled.call(this, {
-					status: false
-				});
-			}
-			*/
 			if (this._view) {
 				this._view.enabled({
 					status: false
@@ -826,14 +830,12 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			}
 
 			this.isDisabled = true;
-			this.$element.addClass('disabled');
-			this.$element.trigger('disabled.lark.repeater');
+			this.$().addClass('disabled');
+			this.$().trigger('disabled');
 		},
 
 		enable: function enable () {
-			//var viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
-
-			langx.scall(this.$search.plugin("lark.fuelux.searchbox"),"enable");
+			langx.scall(this.$search.plugin("lark.repeaters.searchbox"),"enable");
 			langx.scall(this.$filters.plugin("lark.popups.selectlist"),"enable")
 			this.$views.find('label, input').removeClass('disabled').removeAttr('disabled');
 			langx.scall(this.$pageSize.plugin("lark.popups.selectlist"),"enable")
@@ -860,13 +862,6 @@ define('skylark-domx-plugins-repeaters/repeater',[
 				langx.scall(this.$pageSize.plugin("lark.popups.selectlist"),"disable");
 			}
 
-			/* lwf
-			if (viewTypeObj.enabled) {
-				viewTypeObj.enabled.call(this, {
-					status: true
-				});
-			}
-			*/
 			if (this._view) {
 				this._view.enabled({
 					status: true
@@ -874,8 +869,8 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			}
 
 			this.isDisabled = false;
-			this.$element.removeClass('disabled');
-			this.$element.trigger('enabled.lark.repeater');
+			this.$().removeClass('disabled');
+			this.$().trigger('enabled');
 		},
 
 		getDataOptions: function getDataOptions (opts) {
@@ -930,13 +925,7 @@ define('skylark-domx-plugins-repeaters/repeater',[
 				returnOptions.search = searchValue;
 			}
 
-			/* lwf
-			var viewType = $.fn.repeater.viewTypes[this.viewType] || {};
-			var addViewTypeData = viewType.dataOptions;
-			if (addViewTypeData) {
-				returnOptions = addViewTypeData.call(this, returnOptions);
-			}
-			*/
+
 			if (this._view) {
 				returnOptions = this._view.dataOptions(returnOptions);
 			}
@@ -948,8 +937,8 @@ define('skylark-domx-plugins-repeaters/repeater',[
 		},
 
 		infiniteScrolling: function infiniteScrolling (enable, opts) {
-			var footer = this.$element.find('.repeater-footer');
-			var viewport = this.$element.find('.repeater-viewport');
+			var footer = this.$().find('.repeater-footer');
+			var viewport = this.$().find('.repeater-viewport');
 			var options = opts || {};
 
 			if (enable) {
@@ -1013,21 +1002,12 @@ define('skylark-domx-plugins-repeaters/repeater',[
 		},
 
 		initViewTypes: function initViewTypes (callback) {
-			/*
-			var viewTypes = [];
-
-			for (var key in $.fn.repeater.viewTypes) {
-				if ({}.hasOwnProperty.call($.fn.repeater.viewTypes, key)) {
-					viewTypes.push($.fn.repeater.viewTypes[key]);
-				}
-			}
-			*/
 
 			var views = this._views = [];
 			var viewTypes = this.options.addons.views;
 			if (langx.isArray(viewTypes)) {
 				for (var i = 0; i< viewTypes.length; i++) {
-					var setting = this.constructor.addons.views[viewTypes[i]];
+					var setting = viewTypeRegistry[viewTypes[i]];
 					if (!setting) {
 						throw new Error("The view type " + viewTypes[i] + " is not defined!");
 					} 
@@ -1037,7 +1017,7 @@ define('skylark-domx-plugins-repeaters/repeater',[
 				}				
 			} else if (langx.isPlainObject(viewTypes)) {
 				for (var name in viewTypes) {
-					var setting = this.constructor.addons.views[name];
+					var setting = viewTypeRegistry[name];
 					if (!setting) {
 						throw new Error("The view type " + viewTypes[i] + " is not defined!");
 					} 
@@ -1047,14 +1027,6 @@ define('skylark-domx-plugins-repeaters/repeater',[
 				}
 			}
 
-
-			/*
-			if (views.length > 0) {
-				initViewType.call(this, 0, viewTypes, callback);
-			} else {
-				callback();
-			}
-			*/
 			callback();			
 		},
 
@@ -1068,7 +1040,7 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			this.$nextBtn.attr('disabled', 'disabled');
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.pageIncrement = 1;
-			this.$element.trigger('nextClicked.lark.repeater');
+			this.$().trigger('nextClicked');
 			this.render({
 				pageIncrement: this.pageIncrement
 			});
@@ -1082,7 +1054,7 @@ define('skylark-domx-plugins-repeaters/repeater',[
 				this.lastPageInput = val;
 				var value = parseInt(val, 10) - 1;
 				pageInc = value - this.currentPage;
-				this.$element.trigger('pageChanged.lark.repeater', [value, dataFromCombobox]);
+				this.$().trigger('pageChanged', [value, dataFromCombobox]);
 				this.render({
 					pageIncrement: pageInc
 				});
@@ -1157,7 +1129,7 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			this.$nextBtn.attr('disabled', 'disabled');
 			this.$prevBtn.attr('disabled', 'disabled');
 			this.pageIncrement = -1;
-			this.$element.trigger('previousClicked.lark.repeater');
+			this.$().trigger('previousClicked');
 			this.render({
 				pageIncrement: this.pageIncrement
 			});
@@ -1180,25 +1152,17 @@ define('skylark-domx-plugins-repeaters/repeater',[
 
 				//this.setViewOptions(this.currentView);
 
-				this.$element.attr('data-currentview', this.currentView);
-				this.$element.attr('data-viewtype', this.viewType);
+				this.$().attr('data-currentview', this.currentView);
+				this.$().attr('data-viewtype', this.viewType);
 				viewChanged = true;
 				options.viewChanged = viewChanged;
 
-				this.$element.trigger('viewChanged.lark.repeater', this.currentView);
+				this.$().trigger('viewChanged', this.currentView);
 
 				if (this.infiniteScrollingEnabled) {
 					this.infiniteScrolling(false);
 				}
 
-				/* lwf
-				viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
-				if (viewTypeObj.selected) {
-					viewTypeObj.selected.call(this, {
-						prevView: prevView
-					});
-				}
-				*/
 				this._view.selected({
 					prevView: prevView
 				})
@@ -1238,19 +1202,19 @@ define('skylark-domx-plugins-repeaters/repeater',[
 		},
 
 		resize: function resize () {
-			var staticHeight = (this.options.staticHeight === -1) ? this.$element.attr('data-staticheight') : this.options.staticHeight;
+			var staticHeight = (this.options.staticHeight === -1) ? this.$().attr('data-staticheight') : this.options.staticHeight;
 			var viewTypeObj = {};
 			var height;
 			var viewportMargins;
 			var scrubbedElements = [];
 			var previousProperties = [];
-			//var $hiddenElements = this.$element.parentsUntil(':visible').addBack(); // del addBack() not supported by skyalrk
-			var $hiddenElements = this.$element.parentsUntil(':visible');
+			//var $hiddenElements = this.$().parentsUntil(':visible').addBack(); // del addBack() not supported by skyalrk
+			var $hiddenElements = this.$().parentsUntil(':visible');
 			var currentHiddenElement;
 			var currentElementIndex = 0;
 
 			// Set parents to 'display:block' until repeater is visible again
-			while (currentElementIndex < $hiddenElements.length && this.$element.is(':hidden')) {
+			while (currentElementIndex < $hiddenElements.length && this.$().is(':hidden')) {
 				currentHiddenElement = $hiddenElements[currentElementIndex];
 				// Only set display property on elements that are explicitly hidden (i.e. do not inherit it from their parent)
 				if ($(currentHiddenElement).is(':hidden')) {
@@ -1272,9 +1236,9 @@ define('skylark-domx-plugins-repeaters/repeater',[
 					top: this.$viewport.css('margin-top')
 				};
 
-				var staticHeightValue = (staticHeight === 'true' || staticHeight === true) ? this.$element.height() : parseInt(staticHeight, 10);
-				var headerHeight = this.$element.find('.repeater-header').outerHeight();
-				var footerHeight = this.$element.find('.repeater-footer').outerHeight();
+				var staticHeightValue = (staticHeight === 'true' || staticHeight === true) ? this.$().height() : parseInt(staticHeight, 10);
+				var headerHeight = this.$().find('.repeater-header').outerHeight();
+				var footerHeight = this.$().find('.repeater-footer').outerHeight();
 				var bottomMargin = (viewportMargins.bottom === 'auto') ? 0 : parseInt(viewportMargins.bottom, 10);
 				var topMargin = (viewportMargins.top === 'auto') ? 0 : parseInt(viewportMargins.top, 10);
 
@@ -1285,19 +1249,10 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			}
 
 
-
-			/* lwf
-			if (viewTypeObj.resize) {
-				viewTypeObj.resize.call(this, {
-					height: this.$element.outerHeight(),
-					width: this.$element.outerWidth()
-				});
-			}
-			*/
 			if (this._view) {
 				this._view.resize({
-					height: this.$element.outerHeight(),
-					width: this.$element.outerWidth()
+					height: this.$().outerHeight(),
+					width: this.$().outerWidth()
 				});
 			}
 
@@ -1315,20 +1270,6 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			callback(data);
 		},
 
-		/* // by lwf
-		setViewOptions: function setViewOptions (curView) {
-			var opts = {};
-			var viewName = curView.split('.')[1];
-
-			if (this.options.views) {
-				opts = this.options.views[viewName] || this.options.views[curView] || {};
-			} else {
-				opts = {};
-			}
-
-			this.viewOptions = langx.mixin({}, this.options, opts);
-		},
-		*/
 		viewChanged: function viewChanged (e) {
 			var $selected = $(e.target);
 			var val = $selected.val();
@@ -1478,19 +1419,19 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			}
 			this.enable();
 
-			this.$search.trigger('rendered.lark.repeater', {
+			this.$search.trigger('rendered', {
 				data: data,
 				options: state.dataOptions,
 				renderOptions: state.options
 			});
-			this.$element.trigger('rendered.lark.repeater', {
+			this.$().trigger('rendered', {
 				data: data,
 				options: state.dataOptions,
 				renderOptions: state.options
 			});
 
 			// for maintaining support of 'loaded' event
-			this.$element.trigger('loaded.lark.repeater', state.dataOptions);
+			this.$().trigger('loaded', state.dataOptions);
 		}
 	});
 
@@ -1518,30 +1459,20 @@ define('skylark-domx-plugins-repeaters/repeater',[
 		cont.append(keep);
 	};
 
-
-
-
-
 	Repeater.addons = {};
 
-   plugins.register(Repeater);
+    plugins.register(Repeater);
 
 
-	return skylark.attach("intg.lark.Repeater",Repeater);
+	return repeaters.Repeater = Repeater;
 
 });
 
-define('skylark-domx-plugins-repeaters/views',[
-	"./repeater"
-],function(Repeater){
-	return Repeater.addons.views = {};
-});
 define('skylark-domx-plugins-repeaters/views/view-base',[
 	"skylark-langx/langx",
 	"skylark-domx-noder",
-	"skylark-domx-query",
-	"../views",	
-],function(langx,noder,$,views) {
+	"skylark-domx-query"
+],function(langx,noder,$) {
 
 	var ViewBase = langx.Evented.inherit({
 	    klassName: "ViewBase",
@@ -1735,7 +1666,7 @@ define('skylark-domx-plugins-repeaters/views/view-base',[
 
 	});
 
-	return views.ViewBase = ViewBase;
+	return ViewBase;
 });
 
 define('skylark-domx-plugins-repeaters/views/linear-view',[
@@ -1745,9 +1676,9 @@ define('skylark-domx-plugins-repeaters/views/linear-view',[
     "skylark-domx-noder",
     "skylark-domx-geom",
     "skylark-domx-query",
-    "../views",   
+    "../view-type-registry",   
     "./view-base"
-], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
+], function(langx, browser, eventer, noder, geom, $, viewTypeRegistry, ViewBase) {
 
 
   var LinearView = ViewBase.inherit({
@@ -1916,7 +1847,7 @@ define('skylark-domx-plugins-repeaters/views/linear-view',[
   });
 
 
-    views["linear"] = {
+    viewTypeRegistry["linear"] = {
         name : "linear",
         ctor : LinearView
     };
@@ -1930,9 +1861,9 @@ define('skylark-domx-plugins-repeaters/views/slider-view',[
   "skylark-langx/langx",
   "skylark-domx-noder",
   "skylark-domx-query",
-  "../views", 
+   "../view-type-registry",   
    "./view-base"
-],function (langx,noder,$,views,ViewBase) {
+],function (langx,noder,$,viewTypeRegistry,ViewBase) {
   'use strict'
 
   var SliderView = ViewBase.inherit({
@@ -3168,7 +3099,7 @@ define('skylark-domx-plugins-repeaters/views/slider-view',[
     }
   });
 
-  views["slider"] = {
+  viewTypeRegistry["slider"] = {
     "name" :  "slider",
     "ctor" :  SliderView
   };
@@ -3184,9 +3115,9 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
     "skylark-domx-noder",
     "skylark-domx-geom",
     "skylark-domx-query",
-    "../views",   
+    "../view-type-registry",   
     "./view-base"
-], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
+], function(langx, browser, eventer, noder, geom, $, viewTypeRegistry, ViewBase) {
 
   var TableView = ViewBase.inherit({
     klassName : "TableView",
@@ -3240,7 +3171,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
     },
 
     positionHeadings : function listPositionHeadings () {
-        var $wrapper = this.repeater.$element.find(`.${this.options.tableWrapperClass}`);
+        var $wrapper = this.repeater.$().find(`.${this.options.tableWrapperClass}`);
         var offsetLeft = $wrapper.offset().left;
         var scrollLeft = $wrapper.scrollLeft();
         if (scrollLeft > 0) {
@@ -3292,28 +3223,28 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
                     $itm.addClass('selected');
 
                     if (self.options.frozenColumns || self.options.selectable === 'multi') {
-                        $frozenCols = self.repeater.$element.find('.frozen-column-wrapper tr:nth-child(' + (index + 1) + ')');
+                        $frozenCols = self.repeater.$().find('.frozen-column-wrapper tr:nth-child(' + (index + 1) + ')');
 
                         $frozenCols.addClass('selected');
                         $frozenCols.find('.repeater-select-checkbox').addClass('checked');
                     }
 
                     if (self.options.actions) {
-                        self.repeater.$element.find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').addClass('selected');
+                        self.repeater.$().find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').addClass('selected');
                     }
 
                     $itm.find('td:first').prepend(`<div class="${this.options.checkClass}"><span class="glyphicon glyphicon-ok"></span></div>`);
                 }
             } else {
                 if (self.options.frozenColumns) {
-                    $frozenCols = self.repeater.$element.find('.frozen-column-wrapper tr:nth-child(' + (index + 1) + ')');
+                    $frozenCols = self.repeater.$().find('.frozen-column-wrapper tr:nth-child(' + (index + 1) + ')');
 
                     $frozenCols.addClass('selected');
                     $frozenCols.find('.repeater-select-checkbox').removeClass('checked');
                 }
 
                 if (self.options.actions) {
-                    self.repeater.$element.find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').removeClass('selected');
+                    self.repeater.$().find('.actions-column-wrapper tr:nth-child(' + (index + 1) + ')').removeClass('selected');
                 }
 
                 $itm.find(`.${this.options.checkClass}`).remove();
@@ -3342,7 +3273,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
     },
 
     sizeHeadings : function listSizeHeadings () {
-        var $table = this.repeater.$element.find(`.${this.options.viewClass} table`);
+        var $table = this.repeater.$().find(`.${this.options.viewClass} table`);
         var self = this;
         $table.find('thead th').each(function eachTH () {
             var $th = $(this);
@@ -3354,9 +3285,9 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
 
     setFrozenColumns : function listSetFrozenColumns () {
         var frozenTable = this.repeater.$canvas.find('.table-frozen');
-        var $wrapper = this.repeater.$element.find('.repeater-canvas');
-        var $table = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
-        var repeaterWrapper = this.repeater.$element.find(`.${this.options.viewClass}`);
+        var $wrapper = this.repeater.$().find('.repeater-canvas');
+        var $table = this.repeater.$().find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
+        var repeaterWrapper = this.repeater.$().find(`.${this.options.viewClass}`);
         var numFrozenColumns = this.options.frozenColumns;
         var self = this;
 
@@ -3393,21 +3324,21 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
         $(`.frozen-thead-wrapper .${this.options.headingClass}`).on('click', function onClickHeading () {
             var index = $(this).parent('th').index();
             index = index + 1;
-            self.repeater.$element.find(`.${this.options.tableWrapperClass} > table thead th:nth-child(` + index + `) .${this.options.headingClass}`)[0].click();
+            self.repeater.$().find(`.${this.options.tableWrapperClass} > table thead th:nth-child(` + index + `) .${this.options.headingClass}`)[0].click();
         });
     },
 
     positionColumns : function listPositionColumns () {
-        var $wrapper = this.repeater.$element.find('.repeater-canvas');
+        var $wrapper = this.repeater.$().find('.repeater-canvas');
         var scrollTop = $wrapper.scrollTop();
         var scrollLeft = $wrapper.scrollLeft();
         var frozenEnabled = this.options.frozenColumns || this.options.selectable === 'multi';
         var actionsEnabled = this.options.actions;
 
-        var canvasWidth = this.repeater.$element.find('.repeater-canvas').outerWidth();
-        var tableWidth = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`).outerWidth();
+        var canvasWidth = this.repeater.$().find('.repeater-canvas').outerWidth();
+        var tableWidth = this.repeater.$().find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`).outerWidth();
 
-        var actionsWidth = this.repeater.$element.find('.table-actions') ? this.repeater.$element.find('.table-actions').outerWidth() : 0;
+        var actionsWidth = this.repeater.$().find('.table-actions') ? this.repeater.$().find('.table-actions').outerWidth() : 0;
 
         var shouldScroll = (tableWidth - (canvasWidth - actionsWidth)) >= scrollLeft;
 
@@ -3443,7 +3374,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
         var actionsHtml = '';
         var self = this;
         var i;
-        var $table = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
+        var $table = this.repeater.$().find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
         var $actionsTable = this.repeater.$canvas.find('.table-actions');
         var len = this.options.actions.items.length;
         if (len == 1) {
@@ -3512,7 +3443,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
         this.sizeActionsTable();
 
         // row level actions click
-        this.repeater.$element.find('.table-actions tbody .action-item').on('click', function onBodyActionItemClick(e) {
+        this.repeater.$().find('.table-actions tbody .action-item').on('click', function onBodyActionItemClick(e) {
             if (!self.isDisabled) {
                 var actionName = $(this).data('action');
                 var row = $(this).data('row');
@@ -3524,7 +3455,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
             }
         });
         // bulk actions click
-        this.repeater.$element.find('.table-actions thead .action-item').on('click', function onHeadActionItemClick(e) {
+        this.repeater.$().find('.table-actions thead .action-item').on('click', function onHeadActionItemClick(e) {
             if (!self.isDisabled) {
                 var actionName = $(this).data('action');
                 var selected = {
@@ -3538,7 +3469,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
                     selector = `.${this.options.tableWrapperClass} > table tr`;
                 }
 
-                self.repeater.$element.find(selector).each(function eachSelector(selectorIndex) {
+                self.repeater.$().find(selector).each(function eachSelector(selectorIndex) {
                     selected.rows.push(selectorIndex + 1);
                 });
 
@@ -3552,7 +3483,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
         var self = this;
         var i;
         var length;
-        var $table = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
+        var $table = this.repeater.$().find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
         var $actionsTable = this.repeater.$canvas.find('.table-actions');
 
         for (i = 0, length = this.options.actions.items.length; i < length; i++) {
@@ -3605,7 +3536,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
         this.sizeActionsTable();
 
         // row level actions click
-        this.repeater.$element.find('.table-actions tbody .action-item').on('click', function onBodyActionItemClick (e) {
+        this.repeater.$().find('.table-actions tbody .action-item').on('click', function onBodyActionItemClick (e) {
             if (!self.isDisabled) {
                 var actionName = $(this).data('action');
                 var row = $(this).data('row');
@@ -3617,7 +3548,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
             }
         });
         // bulk actions click
-        this.repeater.$element.find('.table-actions thead .action-item').on('click', function onHeadActionItemClick (e) {
+        this.repeater.$().find('.table-actions thead .action-item').on('click', function onHeadActionItemClick (e) {
             if (!self.isDisabled) {
                 var actionName = $(this).data('action');
                 var selected = {
@@ -3629,7 +3560,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
                 if ( self.options.selectable === 'action' ) {
                     selector = `.${this.options.tableWrapperClass} > table tr`;
                 }
-                self.repeater.$element.find(selector).each(function eachSelector (selectorIndex) {
+                self.repeater.$().find(selector).each(function eachSelector (selectorIndex) {
                     selected.rows.push(selectorIndex + 1);
                 });
 
@@ -3661,9 +3592,9 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
     },
 
     sizeActionsTable : function listSizeActionsTable () {
-        var $actionsTable = this.repeater.$element.find(`.${this.options.viewClass} table.table-actions`);
+        var $actionsTable = this.repeater.$().find(`.${this.options.viewClass} table.table-actions`);
         var $actionsTableHeader = $actionsTable.find('thead tr th');
-        var $table = this.repeater.$element.find(`.${this.options.tableWrapperClass} > table`);
+        var $table = this.repeater.$().find(`.${this.options.tableWrapperClass} > table`);
 
         $actionsTableHeader.outerHeight($table.find('thead tr th').outerHeight());
         $actionsTableHeader.find(`.${this.options.headingClass}`).outerHeight($actionsTableHeader.outerHeight());
@@ -3673,24 +3604,24 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
     },
 
     sizeFrozenColumns : function listSizeFrozenColumns () {
-        var $table = this.repeater.$element.find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
+        var $table = this.repeater.$().find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
 
-        this.repeater.$element.find(`.${this.options.viewClass} table.table-frozen tr`).each(function eachTR (i) {
+        this.repeater.$().find(`.${this.options.viewClass} table.table-frozen tr`).each(function eachTR (i) {
             $(this).height($table.find('tr:eq(' + i + ')').height());
         });
 
         var columnWidth = $table.find('td:eq(0)').outerWidth();
-        this.repeater.$element.find('.frozen-column-wrapper, .frozen-thead-wrapper').width(columnWidth);
+        this.repeater.$().find('.frozen-column-wrapper, .frozen-thead-wrapper').width(columnWidth);
     },
 
     frozenOptionsInitialize : function listFrozenOptionsInitialize () {
-        var $checkboxes = this.repeater.$element.find('.frozen-column-wrapper .checkbox-inline');
-        var $headerCheckbox = this.repeater.$element.find('.header-checkbox .checkbox-custom');
-        var $everyTable = this.repeater.$element.find(`.${this.options.viewClass} table`);
+        var $checkboxes = this.repeater.$().find('.frozen-column-wrapper .checkbox-inline');
+        var $headerCheckbox = this.repeater.$().find('.header-checkbox .checkbox-custom');
+        var $everyTable = this.repeater.$().find(`.${this.options.viewClass} table`);
         var self = this;
 
         // Make sure if row is hovered that it is shown in frozen column as well
-        this.repeater.$element.find('tr.selectable').on('mouseover mouseleave', function onMouseEvents (e) {
+        this.repeater.$().find('tr.selectable').on('mouseover mouseleave', function onMouseEvents (e) {
             var index = $(this).index();
             index = index + 1;
             if (e.type === 'mouseover') {
@@ -3704,8 +3635,8 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
         $checkboxes.checkbox();
 
         // Row checkboxes
-        var $rowCheckboxes = this.repeater.$element.find('.table-frozen tbody .checkbox-inline');
-        var $checkAll = this.repeater.$element.find('.frozen-thead-wrapper thead .checkbox-inline input');
+        var $rowCheckboxes = this.repeater.$().find('.table-frozen tbody .checkbox-inline');
+        var $checkAll = this.repeater.$().find('.frozen-thead-wrapper thead .checkbox-inline input');
         $rowCheckboxes.on('change', function onChangeRowCheckboxes (e) {
             e.preventDefault();
 
@@ -3715,9 +3646,9 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
                 } else {
                     var row = $(this).attr('data-row');
                     row = parseInt(row, 10) + 1;
-                    self.repeater.$element.find(`.${this.options.tableWrapperClass} > table tbody tr:nth-child(` + row + ')').click();
+                    self.repeater.$().find(`.${this.options.tableWrapperClass} > table tbody tr:nth-child(` + row + ')').click();
 
-                    var numSelected = self.repeater.$element.find('.table-frozen tbody .checkbox-inline.checked').length;
+                    var numSelected = self.repeater.$().find('.table-frozen tbody .checkbox-inline.checked').length;
                     if (numSelected === 0) {
                         $checkAll.prop('checked', false);
                         $checkAll.prop('indeterminate', false);
@@ -3738,11 +3669,11 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
                 if (self.isDisabled) {
                     revertCheckbox($(e.currentTarget));
                 } else if ($(this).is(':checked')) {
-                    self.repeater.$element.find(`.${this.options.tableWrapperClass} > table tbody tr:not(.selected)`).click();
-                    self.repeater.$element.trigger('selected.lark.repeaterList', $checkboxes);
+                    self.repeater.$().find(`.${this.options.tableWrapperClass} > table tbody tr:not(.selected)`).click();
+                    self.repeater.$().trigger('selected', $checkboxes);
                 } else {
-                    self.repeater.$element.find(`.${this.options.tableWrapperClass} > table tbody tr.selected`).click();
-                    self.repeater.$element.trigger('deselected.lark.repeaterList', $checkboxes);
+                    self.repeater.$().find(`.${this.options.tableWrapperClass} > table tbody tr.selected`).click();
+                    self.repeater.$().trigger('deselected', $checkboxes);
                 }
             }
         });
@@ -3787,7 +3718,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
         callback();
     },
     resize: function resize () {
-        sizeColumns.call(this, this.repeater.$element.find(`.${this.options.tableWrapperClass} > table thead tr`));
+        sizeColumns.call(this, this.repeater.$().find(`.${this.options.tableWrapperClass} > table thead tr`));
         if (this.options.actions) {
             this.sizeActionsTable();
         }
@@ -3941,7 +3872,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
         var chevron = '.glyphicon.rlc:first';
         var chevUp = 'glyphicon-chevron-up';
         var $div = $(`<div class="${this.options.headingClass}"><span class="glyphicon rlc"></span></div>`);
-        var checkAllID = (this.repeater.$element.attr('id') + '_' || '') + 'checkall';
+        var checkAllID = (this.repeater.$().attr('id') + '_' || '') + 'checkall';
 
         var checkBoxMarkup = `<div class="${this.options.headingClass} header-checkbox">` +
                 '<label id="' + checkAllID + '" class="checkbox-custom checkbox-inline">' +
@@ -4037,7 +3968,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
     var onClickRowRepeaterList = function onClickRowRepeaterList (repeater) {
         var isMulti = repeater.options.selectable === 'multi';
         var isActions = repeater.options.actions;
-        var $repeater = repeater.$element;
+        var $repeater = repeater.$();
 
         if (!repeater.isDisabled) {
             var $item = $(this);
@@ -4209,7 +4140,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
             if (this.options.selectable === 'multi' && !this.noItems) {
                 // after checkbox column is created need to get width of checkbox column from
                 // its css class
-                var checkboxWidth = this.repeater.$element.find(`.${this.options.tableWrapperClass} .header-checkbox`).outerWidth();
+                var checkboxWidth = this.repeater.$().find(`.${this.options.tableWrapperClass} .header-checkbox`).outerWidth();
                 var selectColumn = $.grep(columns, function grepColumn (column) {
                     return column.property === '@_CHECKBOX_@';
                 })[0];
@@ -4281,7 +4212,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
 
     var toggleActionsHeaderButton = function toggleActionsHeaderButton () {
         var selectedSelector = `.${this.options.tableWrapperClass} > table .selected`;
-        var $actionsColumn = this.repeater.$element.find('.table-actions');
+        var $actionsColumn = this.repeater.$().find('.table-actions');
         var $selected;
 
         if (this.options.selectable === 'action') {
@@ -4298,7 +4229,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
     };
 
 
-     views["table"] = {
+     viewTypeRegistry["table"] = {
         name : "table",
         ctor : TableView
     }; 
@@ -4313,9 +4244,9 @@ define('skylark-domx-plugins-repeaters/views/tile-view',[
     "skylark-domx-noder",
     "skylark-domx-geom",
     "skylark-domx-query",
-    "../views",   
+    "../view-type-registry",   
     "./view-base"
-], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
+], function(langx, browser, eventer, noder, geom, $, viewTypeRegistry, ViewBase) {
 
   var TileView = ViewBase.inherit({
     klassName : "TileView",
@@ -4511,7 +4442,7 @@ define('skylark-domx-plugins-repeaters/views/tile-view',[
   });
 
 
-    views["tile"] = {
+    viewTypeRegistry["tile"] = {
         name : "tile",
         ctor : TileView
     };
@@ -4520,15 +4451,16 @@ define('skylark-domx-plugins-repeaters/views/tile-view',[
     
 });
 define('skylark-domx-plugins-repeaters/main',[
+	"./repeaters",
     "./repeater",
-    "./views",
+    "./view-type-registry",
     "./views/view-base",
     "./views/linear-view",
     "./views/slider-view",
     "./views/table-view",
     "./views/tile-view"
-], function(Repeater) {
-    return Repeater;
+], function(repeaters) {
+    return repeaters;
 });
 define('skylark-domx-plugins-repeaters', ['skylark-domx-plugins-repeaters/main'], function (main) { return main; });
 

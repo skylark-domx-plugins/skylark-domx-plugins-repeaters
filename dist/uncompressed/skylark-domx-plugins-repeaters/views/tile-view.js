@@ -5,9 +5,9 @@ define([
     "skylark-domx-noder",
     "skylark-domx-geom",
     "skylark-domx-query",
-    "../views",   
+    "../view-type-registry",   
     "./view-base"
-], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
+], function(langx, browser, eventer, noder, geom, $, viewTypeRegistry, ViewBase) {
 
   var TileView = ViewBase.inherit({
     klassName : "TileView",
@@ -203,7 +203,7 @@ define([
   });
 
 
-    views["tile"] = {
+    viewTypeRegistry["tile"] = {
         name : "tile",
         ctor : TileView
     };

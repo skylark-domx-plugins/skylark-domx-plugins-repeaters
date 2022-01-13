@@ -5,8 +5,9 @@ define([
   "skylark-domx-noder",
   "skylark-domx-geom",
   "skylark-domx-query",
-  "skylark-domx-plugins-base"
-],function(langx,browser,eventer,noder,geom,$,plugins){
+  "skylark-domx-plugins-base",
+  "./repeaters"
+],function(langx,browser,eventer,noder,geom,$,plugins,repeaters){
 
 
 	// SEARCH CONSTRUCTOR AND PROTOTYPE
@@ -14,7 +15,7 @@ define([
 	var SearchBox = plugins.Plugin.inherit({
 		klassName: "SearchBox",
 
-		pluginName: "lark.fuelux.searchbox",
+		pluginName: "lark.repeaters.searchbox",
 
 		options : {
 			clearOnEmpty: false,
@@ -153,5 +154,5 @@ define([
 
     plugins.register(SearchBox);
 
-	return 	SearchBox;
+	return 	repeaters.SearchBox = SearchBox;
 });

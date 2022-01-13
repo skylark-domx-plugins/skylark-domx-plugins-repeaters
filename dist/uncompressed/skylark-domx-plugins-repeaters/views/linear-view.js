@@ -5,9 +5,9 @@ define([
     "skylark-domx-noder",
     "skylark-domx-geom",
     "skylark-domx-query",
-    "../views",   
+    "../view-type-registry",   
     "./view-base"
-], function(langx, browser, eventer, noder, geom, $, views, ViewBase) {
+], function(langx, browser, eventer, noder, geom, $, viewTypeRegistry, ViewBase) {
 
 
   var LinearView = ViewBase.inherit({
@@ -176,7 +176,7 @@ define([
   });
 
 
-    views["linear"] = {
+    viewTypeRegistry["linear"] = {
         name : "linear",
         ctor : LinearView
     };
