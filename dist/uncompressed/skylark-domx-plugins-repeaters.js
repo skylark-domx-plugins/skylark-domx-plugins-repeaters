@@ -1562,6 +1562,14 @@ define('skylark-domx-plugins-repeaters/views/view-base',[
         return this.options;
       },
 
+    selected: function selected () {
+        var infScroll = this.repeater.options.infiniteScroll;
+        var opts;
+        if (infScroll) {
+            opts = (typeof infScroll === 'object') ? infScroll : {};
+            this.repeater.infiniteScrolling(true, opts);
+        }
+    },
 
 	    close: function () {
       		if (noder.fullScreen() === this.container[0]) {
@@ -1574,10 +1582,6 @@ define('skylark-domx-plugins-repeaters/views/view-base',[
     	},
 
     	cleared : function() {
-
-    	},
-
-    	selected : function() {
 
     	},
 
@@ -3115,7 +3119,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
         columnSizing: true,
         columnSyncing: true,
         highlightSortedColumn: true,
-        infiniteScroll: true,
+        infiniteScroll: false,
         noItemsHTML: 'no items found',
         selectable: true,
         sortClearing: false,
@@ -3718,7 +3722,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
         }
     },
     selected: function selected () {
-        var infScroll = this.options.infiniteScroll;
+        var infScroll = this.repeater.options.infiniteScroll;
         var opts;
 
         this.firstRender = true;

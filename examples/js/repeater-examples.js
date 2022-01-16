@@ -151,15 +151,18 @@ define([
 	});
 
 	$('#myRepeater').plugin("lark.repeaters.repeater",{
+		infiniteScroll : true,
 		dataSource: dataSource
 	});
 
 	$('#myRepeaterList').plugin("lark.repeaters.repeater",{
+		infiniteScroll : true,
 		dataSource: dataSource
 	});
 
 	$('#myRepeaterThumbnail').plugin("lark.repeaters.repeater",{
 		dataSource: dataSource,
+		infiniteScroll : true,
 		thumbnail_template: '<div class="thumbnail repeater-thumbnail" ><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
 	});
 });

@@ -18,7 +18,7 @@ define([
         columnSizing: true,
         columnSyncing: true,
         highlightSortedColumn: true,
-        infiniteScroll: true,
+        infiniteScroll: false,
         noItemsHTML: 'no items found',
         selectable: true,
         sortClearing: false,
@@ -621,7 +621,7 @@ define([
         }
     },
     selected: function selected () {
-        var infScroll = this.options.infiniteScroll;
+        var infScroll = this.repeater.options.infiniteScroll;
         var opts;
 
         this.firstRender = true;

@@ -101,6 +101,14 @@ define([
         return this.options;
       },
 
+    selected: function selected () {
+        var infScroll = this.repeater.options.infiniteScroll;
+        var opts;
+        if (infScroll) {
+            opts = (typeof infScroll === 'object') ? infScroll : {};
+            this.repeater.infiniteScrolling(true, opts);
+        }
+    },
 
 	    close: function () {
       		if (noder.fullScreen() === this.container[0]) {
@@ -113,10 +121,6 @@ define([
     	},
 
     	cleared : function() {
-
-    	},
-
-    	selected : function() {
 
     	},
 
