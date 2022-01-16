@@ -365,12 +365,6 @@ dt:hover .header-anchor{
 	}
 }
 
-@media (min-width: 992px) {
-	.fu-header h1,
-	.fu-header p {
-		margin-right: 380px;
-	}
-}
 
 /*
  * Homepage featurettes

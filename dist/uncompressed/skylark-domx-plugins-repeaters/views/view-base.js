@@ -14,7 +14,29 @@ define([
 		    fullScreen: false
 
 	    },
+      _construct : function (repeater,options) {
+          var that = this,
+            hasControls;
+          this.repeater = repeater;
+          this.initOptions(options);
+          if (this.options.fullScreen) {
+            noder.fullScreen(this.container[0]);
+          }
+          this.repeater.on("item.running",function(e){
+              if (that.container.hasClass(that.options.controlsClass)) {
+                hasControls = true
+                that.container.removeClass(that.options.controlsClass);
+              } else {
+                hasControls = false
+              }
+          });
 
+          this.repeater.on("item.running",function(e){
+              if (hasControls) {
+                that.container.addClass(that.options.controlsClass);
+              }
+          });
+      },
 
     	_create$Item : function (template,itemData) {
         	var invalid = false;
@@ -41,30 +63,6 @@ define([
         	return $(template);
     	},	    
 	    
-  		init : function (repeater,options) {
-  			var that = this,
-  				hasControls;
-  			this.repeater = repeater;
-  			this.initOptions(options);
-  	        if (this.options.fullScreen) {
-  	          noder.fullScreen(this.container[0]);
-  	        }
-  	        this.repeater.on("item.running",function(e){
-  	            if (that.container.hasClass(that.options.controlsClass)) {
-  	              hasControls = true
-  	              that.container.removeClass(that.options.controlsClass);
-  	            } else {
-  	              hasControls = false
-  	            }
-  	        });
-
-  	        this.repeater.on("item.running",function(e){
-  	            if (hasControls) {
-  	              that.container.addClass(that.options.controlsClass);
-  	            }
-  	        });
-  		},
-
 	    //initOptions: function (options) {
 	    //  // Create a copy of the prototype options:
 	    //  this.options = langx.mixin({}, this.options,options);

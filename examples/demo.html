@@ -28,6 +28,19 @@
 
 <link href="./css/javascript.css" rel="stylesheet">
 
+
+    <style>
+
+
+.throb {
+  display: block;
+}
+
+
+    .btns {text-align: center;}
+    p {  position: absolute; top: 50%; left: 50%;transform: translate(-50%, -50%);}
+    </style>
+
 </head>
 <body data-spy="scroll" data-offset="80">
 
@@ -112,9 +125,11 @@
             <label class="btn btn-default">
               <input name="repeaterViews" type="radio" value="tile"><span class="glyphicon glyphicon-th"></span>
             </label>
+            <!--
             <label class="btn btn-default">
               <input name="repeaterViews" type="radio" value="slider"><span class="glyphicon glyphicon-film"></span>
             </label>
+          -->
             <label class="btn btn-default">
               <input name="repeaterViews" type="radio" value="linear"><span class="glyphicon  glyphicon-menu-hamburger"></span>
             </label>
@@ -795,7 +810,7 @@
               <input name="repeaterViews" type="radio" value="tile"><span class="glyphicon glyphicon-th"></span>
             </label>
             <label class="btn btn-default">
-              <input name="repeaterViews" type="radio" value="slider"><span class="glyphicon glyphicon-film"></span>
+              <input name="repeaterViews" type="radio" value="linear"><span class="glyphicon glyphicon-film"></span>
             </label>
            </div>
         </div>
@@ -1104,6 +1119,11 @@
             main: 'main'
          },
          {
+           name : "skylark-langx-scripter",
+           location : "../node_modules/skylark-langx-scripter/dist/uncompressed/skylark-langx-scripter",
+            main: 'main'
+         },
+         {
            name : "skylark-langx-strings",
            location : "../node_modules/skylark-langx-strings/dist/uncompressed/skylark-langx-strings",
             main: 'main'
@@ -1124,6 +1144,16 @@
             main: 'main'
          },
          {
+           name : "skylark-langx-urls",
+           location : "../node_modules/skylark-langx-urls/dist/uncompressed/skylark-langx-urls",
+            main: 'main'
+         },
+         {
+           name : "skylark-domx-animates",
+           location : "../node_modules/skylark-domx-animates/dist/uncompressed/skylark-domx-animates",
+            main: 'main'
+         },
+         {
            name : "skylark-domx-browser",
            location : "../node_modules/skylark-domx-browser/dist/uncompressed/skylark-domx-browser",
             main: 'main'
@@ -1133,11 +1163,7 @@
            location : "../node_modules/skylark-domx-css/dist/uncompressed/skylark-domx-css",
             main: 'main'
          },
-         {
-           name : "skylark-domx-browser",
-           location : "../node_modules/skylark-domx-browser/dist/uncompressed/skylark-domx-browser",
-            main: 'main'
-         },
+
          {
            name : "skylark-domx-data",
            location : "../node_modules/skylark-domx-data/dist/uncompressed/skylark-domx-data",
@@ -1164,6 +1190,16 @@
             main: 'main'
          },
          {
+           name : "skylark-domx-lists",
+           location : "../node_modules/skylark-domx-lists/dist/uncompressed/skylark-domx-lists",
+            main: 'main'
+         },
+         {
+           name : "skylark-domx-iframes",
+           location : "../node_modules/skylark-domx-iframes/dist/uncompressed/skylark-domx-iframes",
+            main: 'main'
+         },
+         {
            name : "skylark-domx-images",
            location : "../node_modules/skylark-domx-images/dist/uncompressed/skylark-domx-images",
             main: 'main'
@@ -1173,32 +1209,13 @@
            location : "../node_modules/skylark-domx-noder/dist/uncompressed/skylark-domx-noder",
             main: 'main'
          },
-         {
-           name : "skylark-domx-plugins-base",
-           location : "../node_modules/skylark-domx-plugins-base/dist/uncompressed/skylark-domx-plugins-base",
-            main: 'main'
-         },
-         {
-           name : "skylark-domx-plugins-popups",
-           location : "../node_modules/skylark-domx-plugins-popups/dist/uncompressed/skylark-domx-plugins-popups",
-            main: 'main'
-         },
+
          {
            name : "skylark-domx-query",
            location : "../node_modules/skylark-domx-query/dist/uncompressed/skylark-domx-query",
             main: 'main'
          },
 
-         {
-           name : "skylark-domx-scripter",
-           location : "../node_modules/skylark-domx-scripter/dist/uncompressed/skylark-domx-scripter",
-            main: 'main'
-         },
-         {
-           name : "skylark-domx-plugins-scrolls",
-           location : "../node_modules/skylark-domx-plugins-scrolls/dist/uncompressed/skylark-domx-plugins-scrolls",
-            main: 'main'
-         },
          {
            name : "skylark-domx-styler",
            location : "../node_modules/skylark-domx-styler/dist/uncompressed/skylark-domx-styler",
@@ -1207,6 +1224,11 @@
          {
            name : "skylark-domx-tables",
            location : "../node_modules/skylark-domx-tables/dist/uncompressed/skylark-domx-tables",
+            main: 'main'
+         },
+         {
+           name : "skylark-domx-transits",
+           location : "../node_modules/skylark-domx-transits/dist/uncompressed/skylark-domx-transits",
             main: 'main'
          },
          {
@@ -1224,6 +1246,31 @@
            location : "../node_modules/skylark-domx-files/dist/uncompressed/skylark-domx-files",
             main: 'main'
          },                  
+         {
+           name : "skylark-domx",
+           location : "../node_modules/skylark-domx/dist/uncompressed/skylark-domx",
+            main: 'main'
+         },                  
+         {
+           name : "skylark-domx-plugins-base",
+           location : "../node_modules/skylark-domx-plugins-base/dist/uncompressed/skylark-domx-plugins-base",
+            main: 'main'
+         },
+         {
+           name : "skylark-domx-plugins-popups",
+           location : "../node_modules/skylark-domx-plugins-popups/dist/uncompressed/skylark-domx-plugins-popups",
+            main: 'main'
+         },
+         {
+           name : "skylark-domx-plugins-scrolls",
+           location : "../node_modules/skylark-domx-plugins-scrolls/dist/uncompressed/skylark-domx-plugins-scrolls",
+            main: 'main'
+         },
+         {
+           name : "skylark-domx-plugins-toggles",
+           location : "../node_modules/skylark-domx-plugins-toggles/dist/uncompressed/skylark-domx-plugins-toggles",
+            main: 'main'
+         },         
          {
            name : "skylark-data-collection" ,
            location : "../node_modules/skylark-data-collection/dist/uncompressed/skylark-data-collection",

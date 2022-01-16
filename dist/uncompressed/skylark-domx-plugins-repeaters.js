@@ -596,10 +596,11 @@ define('skylark-domx-plugins-repeaters/repeater',[
   "skylark-domx-plugins-base",
   "skylark-domx-plugins-popups/select-list",
   "skylark-domx-plugins-popups/combobox",
+  "skylark-domx-plugins-scrolls/infinite-scroll",
   "./repeaters",
   "./searchbox",
   "./view-type-registry"
-],function(skylark,langx,browser,eventer,noder,geom,elmx,$,fx,plugins,SelectList,ComboBox,repeaters,Searchbox,viewTypeRegistry){
+],function(skylark,langx,browser,eventer,noder,geom,elmx,$,fx,plugins,SelectList,ComboBox,InfiniteScroll,repeaters,Searchbox,viewTypeRegistry){
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
@@ -802,7 +803,7 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			langx.scall($el.find('.selectlist').plugin("lark.popups.selectlist"),"destroy");
 			langx.scall($el.find('.search').plugin("lark.repeaters.searchbox"),"destroy");
 			if (this.infiniteScrollingEnabled) {
-				$(this.infiniteScrollingCont).infinitescroll('destroy');
+				$(this.infiniteScrollingCont).plugin("lark.scrolls.infinitescroll",'destroy');
 			}
 
 			$el.remove();
@@ -977,7 +978,10 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			this.currentPage = (page !== undefined) ? page : NaN;
 
 			if (data.end === true || (this.currentPage + 1) >= pages) {
-				this.infiniteScrollingCont.infinitescroll('end', end);
+				var plugin = this.infiniteScrollingCont.plugin("lark.scrolls.infinitescroll","instance");
+				if (plugin) {
+					plugin.end(end);
+				}
 			}
 		},
 
@@ -985,8 +989,8 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			var cont = this.$canvas.find('[data-infinite="true"]:first');
 
 			cont = (cont.length < 1) ? this.$canvas : cont;
-			if (cont.data('lark.infinitescroll')) {
-				cont.infinitescroll('enable');
+			if (cont.data('lark.scrolls.infinitescroll')) {
+				cont.plugin("lark.scrolls.infinitescroll",'enable');
 			} else {
 				var self = this;
 				var opts = langx.mixin({}, this.infiniteScrollingOptions);
@@ -996,7 +1000,7 @@ define('skylark-domx-plugins-repeaters/repeater',[
 						pageIncrement: 1
 					});
 				};
-				cont.infinitescroll(opts);
+				cont.plugin("lark.scrolls.infinitescroll",opts);
 				this.infiniteScrollingCont = cont;
 			}
 		},
@@ -1182,10 +1186,9 @@ define('skylark-domx-plugins-repeaters/repeater',[
 
 			var dataOptions = this.getDataOptions(options);
 
-			var beforeRender = this.options.dataSource;
 			var self = this;
 			var viewTypeObj = this._view;
-			beforeRender(
+			this.options.dataSource(
 				dataOptions,
 				// this serves as a bridge function to pass all required data through to the actual function
 				// that does the rendering for us.
@@ -1225,9 +1228,6 @@ define('skylark-domx-plugins-repeaters/repeater',[
 				currentElementIndex++;
 			}
 
-			//if (this.viewType) {
-			//	viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
-			//}
 
 			if (staticHeight !== undefined && staticHeight !== false && staticHeight !== 'false') {
 				this.$canvas.addClass('scrolling');
@@ -1261,14 +1261,6 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			});
 		},
 
-		// e.g. "Rows" or "Thumbnails"
-		renderItems: function renderItems (viewTypeObj, data, callback) {
-			viewTypeObj.render({
-				container: this.$canvas,
-				data: data
-			}, callback);
-			callback(data);
-		},
 
 		viewChanged: function viewChanged (e) {
 			var $selected = $(e.target);
@@ -1370,14 +1362,13 @@ define('skylark-domx-plugins-repeaters/repeater',[
 			}
 
 			var self = this;
-			this.renderItems(
-				state.viewTypeObj,
-				data,
-				function callAfterRender (d) {
-					state.data = d;
-					self.afterRender(state);
-				}
-			);
+
+			state.viewTypeObj.render({
+				container: this.$canvas,
+				data: data
+			});
+
+			this.afterRender(state);
 		},
 
 		callNextInit : function callNextInit (currentViewType, viewTypes, callback) {
@@ -1484,7 +1475,29 @@ define('skylark-domx-plugins-repeaters/views/view-base',[
 		    fullScreen: false
 
 	    },
+      _construct : function (repeater,options) {
+          var that = this,
+            hasControls;
+          this.repeater = repeater;
+          this.initOptions(options);
+          if (this.options.fullScreen) {
+            noder.fullScreen(this.container[0]);
+          }
+          this.repeater.on("item.running",function(e){
+              if (that.container.hasClass(that.options.controlsClass)) {
+                hasControls = true
+                that.container.removeClass(that.options.controlsClass);
+              } else {
+                hasControls = false
+              }
+          });
 
+          this.repeater.on("item.running",function(e){
+              if (hasControls) {
+                that.container.addClass(that.options.controlsClass);
+              }
+          });
+      },
 
     	_create$Item : function (template,itemData) {
         	var invalid = false;
@@ -1511,30 +1524,6 @@ define('skylark-domx-plugins-repeaters/views/view-base',[
         	return $(template);
     	},	    
 	    
-  		init : function (repeater,options) {
-  			var that = this,
-  				hasControls;
-  			this.repeater = repeater;
-  			this.initOptions(options);
-  	        if (this.options.fullScreen) {
-  	          noder.fullScreen(this.container[0]);
-  	        }
-  	        this.repeater.on("item.running",function(e){
-  	            if (that.container.hasClass(that.options.controlsClass)) {
-  	              hasControls = true
-  	              that.container.removeClass(that.options.controlsClass);
-  	            } else {
-  	              hasControls = false
-  	            }
-  	        });
-
-  	        this.repeater.on("item.running",function(e){
-  	            if (hasControls) {
-  	              that.container.addClass(that.options.controlsClass);
-  	            }
-  	        });
-  		},
-
 	    //initOptions: function (options) {
 	    //  // Create a copy of the prototype options:
 	    //  this.options = langx.mixin({}, this.options,options);
@@ -1690,6 +1679,7 @@ define('skylark-domx-plugins-repeaters/views/linear-view',[
         itemRendered: null,
         noItemsHTML: 'no items found',
         selectable: false,
+        viewClass: "repeater-linear",
 
         template : '<ul class="clearfix repeater-linear" data-container="true" data-infinite="true" data-preserve="shallow"></ul>',
         item : {
@@ -1697,14 +1687,20 @@ define('skylark-domx-plugins-repeaters/views/linear-view',[
         },
     },
 
+     _construct : function (repeater,options) {
+        ViewBase.prototype._construct.call(this,repeater,options);
+        
+
+    },
+
     //ADDITIONAL METHODS
     clearSelectedItems : function() {
-        this.repeater.$canvas.find('.repeater-linear .selectable.selected').removeClass('selected');
+        this.$el.find('.selectable.selected').removeClass('selected');
     },
 
     getSelectedItems : function() {
         var selected = [];
-        this.repeater.$canvas.find('.repeater-linear .selectable.selected').each(function() {
+        this.$el.find('.selectable.selected').each(function() {
             selected.push($(this));
         });
         return selected;
@@ -1762,34 +1758,26 @@ define('skylark-domx-plugins-repeaters/views/linear-view',[
             if (items[i].index !== undefined) {
                 $item = $();
                 n = 0;
-                this.repeater.$canvas.find('.repeater-linear .selectable').each(compareItemIndex);
+                this.$el.find('.selectable').each(compareItemIndex);
                 if ($item.length > 0) {
                     selectItem($item, items[i].selected);
                 }
 
             } else if (items[i].selector) {
-                this.repeater.$canvas.find('.repeater-linear .selectable').each(compareItemSelector);
+                this.$el.find('.selectable').each(compareItemSelector);
             }
         }
     },
 
-    selected: function() {
-        var infScroll = this.options.infiniteScroll;
-        var opts;
-        if (infScroll) {
-            opts = (typeof infScroll === 'object') ? infScroll : {};
-            this.infiniteScrolling(true, opts);
-        }
-    },
     before: function(helpers) {
         var alignment = this.options.alignment;
-        var $cont = this.repeater.$canvas.find('.repeater-linear');
+        var $cont = this.$el = this.repeater.$canvas.find(`.${this.options.viewClass}`);
         var data = helpers.data;
         var response = {};
         var $empty, validAlignments;
 
         if ($cont.length < 1) {
-            $cont = $(this.options.template);
+            $cont = this.$el = $(this.options.template);
 
             response.item = $cont;
         } else {
@@ -1817,21 +1805,20 @@ define('skylark-domx-plugins-repeaters/views/linear-view',[
                         self.repeater.$canvas.find('.repeater-linear .selectable.selected').each(function() {
                             var $itm = $(this);
                             $itm.removeClass(selected);
-                            self.repeater.$element.trigger('deselected.lark.repeaterList', $itm);
+                            self.repeater.$().trigger('deselected.lark.repeaterList', $itm);
                         });
                     }
 
                     $item.addClass(selected);
-                    self.repeater.$element.trigger('selected.lark.repeaterList', $item);
+                    self.repeater.$().trigger('selected.lark.repeaterList', $item);
                 } else {
                     $item.removeClass(selected);
-                    self.repeater.$element.trigger('deselected.lark.repeaterList', $item);
+                    self.repeater.$().trigger('deselected.lark.repeaterList', $item);
                 }
             });
         }
 
         helpers.container.append($item);
-
 
         if (this.options.itemRendered) {
             this.options.itemRendered({
@@ -3115,9 +3102,10 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
     "skylark-domx-noder",
     "skylark-domx-geom",
     "skylark-domx-query",
+    "skylark-domx-plugins-toggles/checkbox",
     "../view-type-registry",   
     "./view-base"
-], function(langx, browser, eventer, noder, geom, $, viewTypeRegistry, ViewBase) {
+], function(langx, browser, eventer, noder, geom, $, Checkbox,viewTypeRegistry, ViewBase) {
 
   var TableView = ViewBase.inherit({
     klassName : "TableView",
@@ -3127,9 +3115,9 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
         columnSizing: true,
         columnSyncing: true,
         highlightSortedColumn: true,
-        infiniteScroll: false,
+        infiniteScroll: true,
         noItemsHTML: 'no items found',
-        selectable: false,
+        selectable: true,
         sortClearing: false,
         rowRendered: null,
         frozenColumns: 0,
@@ -3631,8 +3619,8 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
             }
         });
 
-        $headerCheckbox.checkbox();
-        $checkboxes.checkbox();
+        $headerCheckbox.plugin("lark.toggles.checkbox");
+        $checkboxes.plugin("lark.toggles.checkbox");
 
         // Row checkboxes
         var $rowCheckboxes = this.repeater.$().find('.table-frozen tbody .checkbox-inline');
@@ -3914,6 +3902,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
             $both.addClass(className);
         }
 
+
         sortable = columns[index].sortable;
         if (sortable) {
             $both.addClass('sortable');
@@ -3934,7 +3923,7 @@ define('skylark-domx-plugins-repeaters/views/table-view',[
                             self.sortProperty = null;
                         }
                     } else {
-                        $tr.find(`th, .${this.options.headingClass}`).removeClass('sorted');
+                        $tr.find(`th, .${self.options.headingClass}`).removeClass('sorted');
                         $spans.removeClass(chevDown).addClass(chevUp);
                         self.sortDirection = 'asc';
                         $both.addClass('sorted');
@@ -4256,7 +4245,7 @@ define('skylark-domx-plugins-repeaters/views/tile-view',[
         infiniteScroll: false,
         itemRendered: null,
         noItemsHTML: 'no items found',
-        selectable: false,
+        selectable: true,
         viewClass: "repeater-tile",
         template : '<div class="clearfix repeater-tile" data-container="true" data-infinite="true" data-preserve="shallow"></div>',
         item : {
@@ -4265,14 +4254,18 @@ define('skylark-domx-plugins-repeaters/views/tile-view',[
         renderItem : null
     },
 
+    _construct : function (repeater,options) {
+        ViewBase.prototype._construct.call(this,repeater,options);
+    },
+
     //ADDITIONAL METHODS
     clearSelectedItems : function() {
-        this.repeater.$canvas.find(`.${this.options.viewClass} .selectable.selected`).removeClass('selected');
+        this.$el.find(`.selectable.selected`).removeClass('selected');
     },
 
     getSelectedItems : function() {
         var selected = [];
-        this.repeater.$canvas.find(`.${this.options.viewClass} .selectable.selected`).each(function() {
+        this.$el.find(`.selectable.selected`).each(function() {
             selected.push($(this));
         });
         return selected;
@@ -4330,34 +4323,26 @@ define('skylark-domx-plugins-repeaters/views/tile-view',[
             if (items[i].index !== undefined) {
                 $item = $();
                 n = 0;
-                this.repeater.$canvas.find(`.${this.options.viewClass} .selectable`).each(compareItemIndex);
+                this.$el.find(`.selectable`).each(compareItemIndex);
                 if ($item.length > 0) {
                     selectItem($item, items[i].selected);
                 }
 
             } else if (items[i].selector) {
-                this.repeater.$canvas.find(`.${this.options.viewClass} .selectable`).each(compareItemSelector);
+                this.$el.find(`.selectable`).each(compareItemSelector);
             }
         }
     },
 
-    selected: function() {
-        var infScroll = this.options.infiniteScroll;
-        var opts;
-        if (infScroll) {
-            opts = (typeof infScroll === 'object') ? infScroll : {};
-            this.infiniteScrolling(true, opts);
-        }
-    },
     before: function(helpers) {
         var alignment = this.options.alignment;
-        var $cont = this.repeater.$canvas.find(`.${this.options.viewClass}`);
+        var $cont =   this.$el = this.repeater.$canvas.find(`.${this.options.viewClass}`);
         var data = helpers.data;
         var response = {};
         var $empty, validAlignments;
 
         if ($cont.length < 1) {
-            $cont = $(this.options.template);
+            $cont = this.$el = $(this.options.template);
             $cont.addClass(this.options.viewClass);
             if (alignment && alignment !== 'none') {
                 validAlignments = {
@@ -4407,18 +4392,18 @@ define('skylark-domx-plugins-repeaters/views/tile-view',[
 
                 if (!$thumbnail.hasClass(selected)) {
                     if (selectable !== 'multi') {
-                        self.repeater.$canvas.find(`.${this.options.viewClass} .selectable.selected`).each(function() {
+                        self.$el.find(`.selectable.selected`).each(function() {
                             var $itm = $(this);
                             $itm.removeClass(selected);
-                            self.repeater.$element.trigger('deselected.lark.repeaterThumbnail', $itm);
+                            self.repeater.$().trigger('deselected', $itm);
                         });
                     }
 
                     $thumbnail.addClass(selected);
-                    self.repeater.$element.trigger('selected.lark.repeaterThumbnail', $thumbnail);
+                    self.repeater.$().trigger('selected.lark.repeaterThumbnail', $thumbnail);
                 } else {
                     $thumbnail.removeClass(selected);
-                    self.repeater.$element.trigger('deselected.lark.repeaterThumbnail', $thumbnail);
+                    self.repeater.$().trigger('deselected.lark.repeaterThumbnail', $thumbnail);
                 }
             });
         }

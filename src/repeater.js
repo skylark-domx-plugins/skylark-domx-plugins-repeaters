@@ -11,10 +11,11 @@ define([
   "skylark-domx-plugins-base",
   "skylark-domx-plugins-popups/select-list",
   "skylark-domx-plugins-popups/combobox",
+  "skylark-domx-plugins-scrolls/infinite-scroll",
   "./repeaters",
   "./searchbox",
   "./view-type-registry"
-],function(skylark,langx,browser,eventer,noder,geom,elmx,$,fx,plugins,SelectList,ComboBox,repeaters,Searchbox,viewTypeRegistry){
+],function(skylark,langx,browser,eventer,noder,geom,elmx,$,fx,plugins,SelectList,ComboBox,InfiniteScroll,repeaters,Searchbox,viewTypeRegistry){
 
 	// REPEATER CONSTRUCTOR AND PROTOTYPE
 
@@ -217,7 +218,7 @@ define([
 			langx.scall($el.find('.selectlist').plugin("lark.popups.selectlist"),"destroy");
 			langx.scall($el.find('.search').plugin("lark.repeaters.searchbox"),"destroy");
 			if (this.infiniteScrollingEnabled) {
-				$(this.infiniteScrollingCont).infinitescroll('destroy');
+				$(this.infiniteScrollingCont).plugin("lark.scrolls.infinitescroll",'destroy');
 			}
 
 			$el.remove();
@@ -392,7 +393,10 @@ define([
 			this.currentPage = (page !== undefined) ? page : NaN;
 
 			if (data.end === true || (this.currentPage + 1) >= pages) {
-				this.infiniteScrollingCont.infinitescroll('end', end);
+				var plugin = this.infiniteScrollingCont.plugin("lark.scrolls.infinitescroll","instance");
+				if (plugin) {
+					plugin.end(end);
+				}
 			}
 		},
 
@@ -400,8 +404,8 @@ define([
 			var cont = this.$canvas.find('[data-infinite="true"]:first');
 
 			cont = (cont.length < 1) ? this.$canvas : cont;
-			if (cont.data('lark.infinitescroll')) {
-				cont.infinitescroll('enable');
+			if (cont.data('lark.scrolls.infinitescroll')) {
+				cont.plugin("lark.scrolls.infinitescroll",'enable');
 			} else {
 				var self = this;
 				var opts = langx.mixin({}, this.infiniteScrollingOptions);
@@ -411,7 +415,7 @@ define([
 						pageIncrement: 1
 					});
 				};
-				cont.infinitescroll(opts);
+				cont.plugin("lark.scrolls.infinitescroll",opts);
 				this.infiniteScrollingCont = cont;
 			}
 		},
@@ -597,7 +601,6 @@ define([
 
 			var dataOptions = this.getDataOptions(options);
 
-			var beforeRender = this.options.dataSource;
 			var self = this;
 			var viewTypeObj = this._view;
 			this.options.dataSource(
@@ -640,9 +643,6 @@ define([
 				currentElementIndex++;
 			}
 
-			//if (this.viewType) {
-			//	viewTypeObj = $.fn.repeater.viewTypes[this.viewType] || {};
-			//}
 
 			if (staticHeight !== undefined && staticHeight !== false && staticHeight !== 'false') {
 				this.$canvas.addClass('scrolling');
@@ -676,14 +676,6 @@ define([
 			});
 		},
 
-		// e.g. "Rows" or "Thumbnails"
-		renderItems: function renderItems (viewTypeObj, data, callback) {
-			viewTypeObj.render({
-				container: this.$canvas,
-				data: data
-			}, callback);
-			callback(data);
-		},
 
 		viewChanged: function viewChanged (e) {
 			var $selected = $(e.target);
@@ -785,14 +777,13 @@ define([
 			}
 
 			var self = this;
-			this.renderItems(
-				state.viewTypeObj,
-				data,
-				function callAfterRender (d) {
-					state.data = d;
-					self.afterRender(state);
-				}
-			);
+
+			state.viewTypeObj.render({
+				container: this.$canvas,
+				data: data
+			});
+
+			this.afterRender(state);
 		},
 
 		callNextInit : function callNextInit (currentViewType, viewTypes, callback) {

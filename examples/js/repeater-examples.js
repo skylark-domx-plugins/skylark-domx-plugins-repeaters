@@ -139,7 +139,7 @@ define([
 				"table" : {},
 				"tile" : {
 					item : {
-						template: '<div class="thumbnail repeater-thumbnail" style="background: {{color}};"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
+						template: '<div class="thumbnail repeater-thumbnail"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
 					}
 				},
 				"slider" : {},
@@ -160,6 +160,6 @@ define([
 
 	$('#myRepeaterThumbnail').plugin("lark.repeaters.repeater",{
 		dataSource: dataSource,
-		thumbnail_template: '<div class="thumbnail repeater-thumbnail" style="background: {{color}};"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
+		thumbnail_template: '<div class="thumbnail repeater-thumbnail" ><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
 	});
 });

@@ -17,7 +17,7 @@ define([
         infiniteScroll: false,
         itemRendered: null,
         noItemsHTML: 'no items found',
-        selectable: false,
+        selectable: true,
         viewClass: "repeater-tile",
         template : '<div class="clearfix repeater-tile" data-container="true" data-infinite="true" data-preserve="shallow"></div>',
         item : {
@@ -26,14 +26,18 @@ define([
         renderItem : null
     },
 
+    _construct : function (repeater,options) {
+        ViewBase.prototype._construct.call(this,repeater,options);
+    },
+
     //ADDITIONAL METHODS
     clearSelectedItems : function() {
-        this.repeater.$canvas.find(`.${this.options.viewClass} .selectable.selected`).removeClass('selected');
+        this.$el.find(`.selectable.selected`).removeClass('selected');
     },
 
     getSelectedItems : function() {
         var selected = [];
-        this.repeater.$canvas.find(`.${this.options.viewClass} .selectable.selected`).each(function() {
+        this.$el.find(`.selectable.selected`).each(function() {
             selected.push($(this));
         });
         return selected;
@@ -91,34 +95,26 @@ define([
             if (items[i].index !== undefined) {
                 $item = $();
                 n = 0;
-                this.repeater.$canvas.find(`.${this.options.viewClass} .selectable`).each(compareItemIndex);
+                this.$el.find(`.selectable`).each(compareItemIndex);
                 if ($item.length > 0) {
                     selectItem($item, items[i].selected);
                 }
 
             } else if (items[i].selector) {
-                this.repeater.$canvas.find(`.${this.options.viewClass} .selectable`).each(compareItemSelector);
+                this.$el.find(`.selectable`).each(compareItemSelector);
             }
         }
     },
 
-    selected: function() {
-        var infScroll = this.options.infiniteScroll;
-        var opts;
-        if (infScroll) {
-            opts = (typeof infScroll === 'object') ? infScroll : {};
-            this.infiniteScrolling(true, opts);
-        }
-    },
     before: function(helpers) {
         var alignment = this.options.alignment;
-        var $cont = this.repeater.$canvas.find(`.${this.options.viewClass}`);
+        var $cont =   this.$el = this.repeater.$canvas.find(`.${this.options.viewClass}`);
         var data = helpers.data;
         var response = {};
         var $empty, validAlignments;
 
         if ($cont.length < 1) {
-            $cont = $(this.options.template);
+            $cont = this.$el = $(this.options.template);
             $cont.addClass(this.options.viewClass);
             if (alignment && alignment !== 'none') {
                 validAlignments = {
@@ -168,18 +164,18 @@ define([
 
                 if (!$thumbnail.hasClass(selected)) {
                     if (selectable !== 'multi') {
-                        self.repeater.$canvas.find(`.${this.options.viewClass} .selectable.selected`).each(function() {
+                        self.$el.find(`.selectable.selected`).each(function() {
                             var $itm = $(this);
                             $itm.removeClass(selected);
-                            self.repeater.$element.trigger('deselected.lark.repeaterThumbnail', $itm);
+                            self.repeater.$().trigger('deselected', $itm);
                         });
                     }
 
                     $thumbnail.addClass(selected);
-                    self.repeater.$element.trigger('selected.lark.repeaterThumbnail', $thumbnail);
+                    self.repeater.$().trigger('selected.lark.repeaterThumbnail', $thumbnail);
                 } else {
                     $thumbnail.removeClass(selected);
-                    self.repeater.$element.trigger('deselected.lark.repeaterThumbnail', $thumbnail);
+                    self.repeater.$().trigger('deselected.lark.repeaterThumbnail', $thumbnail);
                 }
             });
         }

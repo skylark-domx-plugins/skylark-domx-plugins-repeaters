@@ -5,9 +5,10 @@ define([
     "skylark-domx-noder",
     "skylark-domx-geom",
     "skylark-domx-query",
+    "skylark-domx-plugins-toggles/checkbox",
     "../view-type-registry",   
     "./view-base"
-], function(langx, browser, eventer, noder, geom, $, viewTypeRegistry, ViewBase) {
+], function(langx, browser, eventer, noder, geom, $, Checkbox,viewTypeRegistry, ViewBase) {
 
   var TableView = ViewBase.inherit({
     klassName : "TableView",
@@ -17,9 +18,9 @@ define([
         columnSizing: true,
         columnSyncing: true,
         highlightSortedColumn: true,
-        infiniteScroll: false,
+        infiniteScroll: true,
         noItemsHTML: 'no items found',
-        selectable: false,
+        selectable: true,
         sortClearing: false,
         rowRendered: null,
         frozenColumns: 0,
@@ -521,8 +522,8 @@ define([
             }
         });
 
-        $headerCheckbox.checkbox();
-        $checkboxes.checkbox();
+        $headerCheckbox.plugin("lark.toggles.checkbox");
+        $checkboxes.plugin("lark.toggles.checkbox");
 
         // Row checkboxes
         var $rowCheckboxes = this.repeater.$().find('.table-frozen tbody .checkbox-inline');
@@ -804,6 +805,7 @@ define([
             $both.addClass(className);
         }
 
+
         sortable = columns[index].sortable;
         if (sortable) {
             $both.addClass('sortable');
@@ -824,7 +826,7 @@ define([
                             self.sortProperty = null;
                         }
                     } else {
-                        $tr.find(`th, .${this.options.headingClass}`).removeClass('sorted');
+                        $tr.find(`th, .${self.options.headingClass}`).removeClass('sorted');
                         $spans.removeClass(chevDown).addClass(chevUp);
                         self.sortDirection = 'asc';
                         $both.addClass('sorted');
