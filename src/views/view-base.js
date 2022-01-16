@@ -102,7 +102,7 @@ define([
       },
 
     selected: function selected () {
-        var infScroll = this.repeater.options.infiniteScroll;
+        var infScroll = this.options.infiniteScroll;
         var opts;
         if (infScroll) {
             opts = (typeof infScroll === 'object') ? infScroll : {};

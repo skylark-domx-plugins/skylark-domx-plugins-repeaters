@@ -54,7 +54,7 @@ define([
 	var dataFilter = function dataFilter(options) {
 		var items = langx.clone(pokemon);
 
-		var filterValue = new RegExp(options.filter, 'i');//Explicitly make a regex object instead of just using String.search() to avoid confusion with FuelUX search() and options.search
+		var filterValue = new RegExp(options.filter.value, 'i');//Explicitly make a regex object instead of just using String.search() to avoid confusion with FuelUX search() and options.search
 		if (!filterValue.test('all')) {
 			items = langx.filter(items, function (item) {
 				var isFilterMatch = filterValue.test(item.type);
@@ -77,11 +77,11 @@ define([
 		}
 
 		if (options.sortProperty) {
-			items = items.sort(function (item) {
+			items = items.sort(function (item1,item2) {
 				if (options.sortProperty === 'id' || options.sortProperty === 'height' || options.sortProperty === 'weight') {
-					return parseFloat(item[options.sortProperty]);
+					return parseFloat(item1[options.sortProperty]) - parseFloat(item2[options.sortProperty]);
 				} else {
-					return item[options.sortProperty];
+					return item1[options.sortProperty].localeCompare(item2[options.sortProperty]);
 				}
 			});
 			if (options.sortDirection === 'desc') {
@@ -118,7 +118,16 @@ define([
 				});
 			}
 		} else {//default to 'list'
-			responseData.columns = columns;
+			responseData.columns = langx.clone(columns);
+			if (options.sortProperty) {
+				for (var i =0;i< responseData.columns.length;i++) {
+					var column = responseData.columns[i];
+					if (column.property == options.sortProperty) {
+						column.sortDirection = options.sortDirection;
+						break;
+					}
+				}
+			}
 			for (var i = firstItem; i < lastItem; i++) {
 				responseData.items.push(items[i]);
 			}
@@ -136,8 +145,12 @@ define([
 		dataSource: dataSource,
 		addons : {
 			views : {
-				"table" : {},
+				"table" : {
+					infiniteScroll : false
+				},
 				"tile" : {
+					infiniteScroll : false,
+
 					item : {
 						template: '<div class="thumbnail repeater-thumbnail"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
 					}
@@ -151,18 +164,25 @@ define([
 	});
 
 	$('#myRepeater').plugin("lark.repeaters.repeater",{
-		infiniteScroll : true,
-		dataSource: dataSource
-	});
-
-	$('#myRepeaterList').plugin("lark.repeaters.repeater",{
-		infiniteScroll : true,
-		dataSource: dataSource
-	});
-
-	$('#myRepeaterThumbnail').plugin("lark.repeaters.repeater",{
 		dataSource: dataSource,
-		infiniteScroll : true,
-		thumbnail_template: '<div class="thumbnail repeater-thumbnail" ><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
+		addons : {
+			views : {
+				"table" : {
+					infiniteScroll : true
+				},
+				"tile" : {
+					infiniteScroll : true,
+
+					item : {
+						template: '<div class="thumbnail repeater-thumbnail"><img height="75" src="{{src}}" width="65"><span>{{name}}</span></div>'
+					}
+				},
+				"slider" : {},
+				"linear" : {
+
+				}
+			}
+		}		
 	});
+
 });

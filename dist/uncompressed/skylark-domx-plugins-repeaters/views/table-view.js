@@ -368,97 +368,6 @@ define([
             }
         });
     },
-    createItemActions_1: function  () {
-
-        var actionsHtml = '';
-        var self = this;
-        var i;
-        var length;
-        var $table = this.repeater.$().find(`.${this.options.viewClass} .${this.options.tableWrapperClass} > table`);
-        var $actionsTable = this.repeater.$canvas.find('.table-actions');
-
-        for (i = 0, length = this.options.actions.items.length; i < length; i++) {
-            var action = this.options.actions.items[i];
-            var html = action.html;
-
-            actionsHtml += '<li><a href="#" data-action="' + action.name + '" class="action-item"> ' + html + '</a></li>';
-        }
-
-        var actionsDropdown = '<div class="btn-group">' +
-            '<button type="button" class="btn btn-xs btn-default dropdown-toggle repeater-actions-button" data-toggle="dropdown" data-flip="auto" aria-expanded="false">' +
-            '<span class="caret"></span>' +
-            '</button>' +
-            '<ul class="dropdown-menu dropdown-menu-right" role="menu">' +
-            actionsHtml +
-            '</ul></div>';
-
-        if ($actionsTable.length < 1) {
-            var $actionsColumnWrapper = $('<div class="actions-column-wrapper" style="width: ' + this.actions_width + 'px"></div>').insertBefore($table);
-            var $actionsColumn = $table.clone().addClass('table-actions');
-            $actionsColumn.find('th:not(:last-child)').remove();
-            $actionsColumn.find('tr td:not(:last-child)').remove();
-
-            // Dont show actions dropdown in header if not multi select
-            if (this.options.selectable === 'multi' || this.options.selectable === 'action') {
-                $actionsColumn.find('thead tr').html(`<th><div class="${this.options.headingClass}">` + actionsDropdown + '</div></th>');
-
-                if (this.options.selectable !== 'action') {
-                    // disable the header dropdown until an item is selected
-                    $actionsColumn.find('thead .btn').attr('disabled', 'disabled');
-                }
-            } else {
-                var label = this.options.actions.label || '<span class="actions-hidden">a</span>';
-                $actionsColumn.find('thead tr').addClass('empty-heading').html('<th>' + label + `<div class="${this.options.headingClass}">` + label + '</div></th>');
-            }
-
-            // Create Actions dropdown for each cell in actions table
-            var $actionsCells = $actionsColumn.find('td');
-
-            $actionsCells.each(function addActionsDropdown (rowNumber) {
-                $(this).html(actionsDropdown);
-                $(this).find('a').attr('data-row', rowNumber + 1);
-            });
-
-            $actionsColumnWrapper.append($actionsColumn);
-
-            this.repeater.$canvas.addClass('actions-enabled');
-        }
-
-        this.sizeActionsTable();
-
-        // row level actions click
-        this.repeater.$().find('.table-actions tbody .action-item').on('click', function onBodyActionItemClick (e) {
-            if (!self.isDisabled) {
-                var actionName = $(this).data('action');
-                var row = $(this).data('row');
-                var selected = {
-                    actionName: actionName,
-                    rows: [row]
-                };
-                self.getActionItems(selected, e);
-            }
-        });
-        // bulk actions click
-        this.repeater.$().find('.table-actions thead .action-item').on('click', function onHeadActionItemClick (e) {
-            if (!self.isDisabled) {
-                var actionName = $(this).data('action');
-                var selected = {
-                    actionName: actionName,
-                    rows: []
-                };
-                var selector = `.${this.options.tableWrapperClass} > table .selected`;
-
-                if ( self.options.selectable === 'action' ) {
-                    selector = `.${this.options.tableWrapperClass} > table tr`;
-                }
-                self.repeater.$().find(selector).each(function eachSelector (selectorIndex) {
-                    selected.rows.push(selectorIndex + 1);
-                });
-
-                self.getActionItems(selected, e);
-            }
-        });
-    },
 
     getActionItems : function listGetActionItems (selected, e) {
         var selectedObj = [];
@@ -596,20 +505,20 @@ define([
                 this.repeater.$canvas.find('.repeater-actions-button').attr('disabled', 'disabled');
             } else {
                 this.repeater.$canvas.find('.repeater-actions-button').removeAttr('disabled');
-                toggleActionsHeaderButton.call(this);
+                this.toggleActionsHeaderButton();
             }
         }
     },
     initialize: function initialize (helpers, callback) {
         this.sortDirection = null;
         this.sortProperty = null;
-        this.specialBrowserClass = specialBrowserClass();
+        this.specialBrowserClass = this.specialBrowserClass();
         this.actions_width = (this.options.actions.width !== undefined) ? this.options.actions.width : 37;
         this.noItems = false;
         callback();
     },
     resize: function resize () {
-        sizeColumns.call(this, this.repeater.$().find(`.${this.options.tableWrapperClass} > table thead tr`));
+        this.sizeColumns(this.repeater.$().find(`.${this.options.tableWrapperClass} > table thead tr`));
         if (this.options.actions) {
             this.sizeActionsTable();
         }
@@ -621,7 +530,7 @@ define([
         }
     },
     selected: function selected () {
-        var infScroll = this.repeater.options.infiniteScroll;
+        var infScroll = this.options.infiniteScroll;
         var opts;
 
         this.firstRender = true;
@@ -645,7 +554,7 @@ define([
         }
 
         if ($listContainer.length < 1) {
-            $listContainer = $(`<div class="${this.options.viewClass} ` + this.specialBrowserClass + `" data-preserve="shallow"><div class="${this.options.tableWrapperClass}" data-infinite="true" data-preserve="shallow"><table aria-readonly="true" class="table" data-preserve="shallow" role="grid"></table></div></div>`);
+            $listContainer = $(`<div class="${this.options.viewClass} ` + this.specialBrowserClass() + `" data-preserve="shallow"><div class="${this.options.tableWrapperClass}" data-infinite="true" data-preserve="shallow"><table aria-readonly="true" class="table" data-preserve="shallow" role="grid"></table></div></div>`);
             $listContainer.find(`.${this.options.tableWrapperClass}`).on('scroll.lark.repeaterList', function onScrollRepeaterList () {
                 if (self.options.columnSyncing) {
                     self.positionHeadings();
@@ -662,13 +571,13 @@ define([
         helpers.container.removeClass('actions-enabled actions-enabled multi-select-enabled');
 
         $table = $listContainer.find('table');
-        renderThead.call(this, $table, helpers.data);
-        renderTbody.call(this, $table, helpers.data);
+        this.renderThead($table, helpers.data);
+        this.renderTbody($table, helpers.data);
 
         return false;
     },
     renderItem: function renderItem (helpers) {
-        renderRow.call(this, helpers.container, helpers.subset, helpers.index);
+        this.renderRow(helpers.container, helpers.subset, helpers.index);
         return false;
     },
     after: function after () {
@@ -699,15 +608,12 @@ define([
         }
 
         return false;
-    }
-
-
-  });
+    },
 
 
 
     // ADDITIONAL METHODS
-    var areDifferentColumns = function areDifferentColumns (oldCols, newCols) {
+    areDifferentColumns : function areDifferentColumns (oldCols, newCols) {
         if (!newCols) {
             return false;
         }
@@ -726,9 +632,9 @@ define([
             }
         }
         return false;
-    };
+    },
 
-    var renderColumn = function renderColumn ($row, rows, rowIndex, columns, columnIndex) {
+    renderColumn : function renderColumn ($row, rows, rowIndex, columns, columnIndex) {
         var className = columns[columnIndex].className;
         var content = rows[rowIndex][columns[columnIndex].property];
         var $col = $('<td></td>');
@@ -756,9 +662,9 @@ define([
         }
 
         return $col;
-    };
+    },
 
-    var renderHeader = function renderHeader ($tr, columns, index) {
+    renderHeader : function renderHeader ($tr, columns, index) {
         var chevDown = 'glyphicon-chevron-down';
         var chevron = '.glyphicon.rlc:first';
         var chevUp = 'glyphicon-chevron-up';
@@ -855,59 +761,61 @@ define([
         }
 
         $tr.append($header);
-    };
+    },
 
-    var onClickRowRepeaterList = function onClickRowRepeaterList (repeater) {
-        var isMulti = repeater.options.selectable === 'multi';
-        var isActions = repeater.options.actions;
-        var $repeater = repeater.$();
 
-        if (!repeater.isDisabled) {
-            var $item = $(this);
-            var index = $(this).index() + 1;
-            var $frozenRow = $repeater.find('.frozen-column-wrapper tr:nth-child(' + index + ')');
-            var $actionsRow = $repeater.find('.actions-column-wrapper tr:nth-child(' + index + ')');
-            var $checkBox = $repeater.find('.frozen-column-wrapper tr:nth-child(' + index + ') .checkbox-inline');
+    renderRow : function renderRow ($tbody, rows, index) {
 
-            if ($item.is('.selected')) {
-                $item.removeClass('selected');
-                if (isMulti) {
-                    $checkBox.click();
-                    $frozenRow.removeClass('selected');
-                    if (isActions) {
-                        $actionsRow.removeClass('selected');
+        function onClickRowRepeaterList (repeater) {
+            var isMulti = repeater.options.selectable === 'multi';
+            var isActions = repeater.options.actions;
+            var $repeater = repeater.$();
+
+            if (!repeater.isDisabled) {
+                var $item = $(this);
+                var index = $(this).index() + 1;
+                var $frozenRow = $repeater.find('.frozen-column-wrapper tr:nth-child(' + index + ')');
+                var $actionsRow = $repeater.find('.actions-column-wrapper tr:nth-child(' + index + ')');
+                var $checkBox = $repeater.find('.frozen-column-wrapper tr:nth-child(' + index + ') .checkbox-inline');
+
+                if ($item.is('.selected')) {
+                    $item.removeClass('selected');
+                    if (isMulti) {
+                        $checkBox.click();
+                        $frozenRow.removeClass('selected');
+                        if (isActions) {
+                            $actionsRow.removeClass('selected');
+                        }
+                    } else {
+                        $item.find(`.${this.options.checkClass}`).remove();
                     }
+
+                    $repeater.trigger('deselected.lark.repeaterList', $item);
                 } else {
-                    $item.find(`.${this.options.checkClass}`).remove();
+                    if (!isMulti) {
+                        repeater.$canvas.find(`.${this.options.checkClass}`).remove();
+                        repeater.$canvas.find(`.${this.options.viewClass} tbody tr.selected`).each(function deslectRow () {
+                            $(this).removeClass('selected');
+                            $repeater.trigger('deselected.lark.repeaterList', $(this));
+                        });
+                        $item.find('td:first').prepend(`<div class="${this.options.checkClass}"><span class="glyphicon glyphicon-ok"></span></div>`);
+                        $item.addClass('selected');
+                        $frozenRow.addClass('selected');
+                    } else {
+                        $checkBox.click();
+                        $item.addClass('selected');
+                        $frozenRow.addClass('selected');
+                        if (isActions) {
+                            $actionsRow.addClass('selected');
+                        }
+                    }
+                    $repeater.trigger('selected.lark.repeaterList', $item);
                 }
 
-                $repeater.trigger('deselected.lark.repeaterList', $item);
-            } else {
-                if (!isMulti) {
-                    repeater.$canvas.find(`.${this.options.checkClass}`).remove();
-                    repeater.$canvas.find(`.${this.options.viewClass} tbody tr.selected`).each(function deslectRow () {
-                        $(this).removeClass('selected');
-                        $repeater.trigger('deselected.lark.repeaterList', $(this));
-                    });
-                    $item.find('td:first').prepend(`<div class="${this.options.checkClass}"><span class="glyphicon glyphicon-ok"></span></div>`);
-                    $item.addClass('selected');
-                    $frozenRow.addClass('selected');
-                } else {
-                    $checkBox.click();
-                    $item.addClass('selected');
-                    $frozenRow.addClass('selected');
-                    if (isActions) {
-                        $actionsRow.addClass('selected');
-                    }
-                }
-                $repeater.trigger('selected.lark.repeaterList', $item);
+                this.toggleActionsHeaderButton(repeater);
             }
-
-            toggleActionsHeaderButton.call(repeater);
         }
-    };
 
-    var renderRow = function renderRow ($tbody, rows, index) {
         var $row = $('<tr></tr>');
 
         if (this.options.selectable) {
@@ -938,7 +846,7 @@ define([
 
         var columns = [];
         for (var i = 0, length = this.columns.length; i < length; i++) {
-            columns.push(renderColumn.call(this, $row, rows, index, this.columns, i));
+            columns.push(this.renderColumn($row, rows, index, this.columns, i));
         }
 
         $tbody.append($row);
@@ -963,9 +871,9 @@ define([
                 rowData: rows[index]
             }, function noop () {});
         }
-    };
+    },
 
-    var renderTbody = function renderTbody ($table, data) {
+    renderTbody : function renderTbody ($table, data) {
         var $tbody = $table.find('tbody');
         var $empty;
 
@@ -983,16 +891,16 @@ define([
             $empty.find('td').append(this.options.noItemsHTML);
             $tbody.append($empty);
         }
-    };
+    },
 
-    var renderThead = function renderThead ($table, data) {
+    renderThead : function renderThead ($table, data) {
         var columns = data.columns || [];
         var $thead = $table.find('thead');
         var i;
         var length;
         var $tr;
 
-        if (this.firstRender || areDifferentColumns(this.columns, columns) || $thead.length === 0) {
+        if (this.firstRender || this.areDifferentColumns(this.columns, columns) || $thead.length === 0) {
             $thead.remove();
 
             // noItems is set in `before` method
@@ -1025,7 +933,7 @@ define([
             $thead = $('<thead data-preserve="deep"><tr></tr></thead>');
             $tr = $thead.find('tr');
             for (i = 0, length = columns.length; i < length; i++) {
-                renderHeader.call(this, $tr, columns, i);
+                this.renderHeader($tr, columns, i);
             }
             $table.prepend($thead);
 
@@ -1038,11 +946,11 @@ define([
                 })[0];
                 selectColumn.width = checkboxWidth;
             }
-            sizeColumns.call(this, $tr);
+            this.sizeColumns($tr);
         }
-    };
+    },
 
-    var sizeColumns = function sizeColumns ($tr) {
+    sizeColumns : function sizeColumns ($tr) {
         var automaticallyGeneratedWidths = [];
         var self = this;
         var i;
@@ -1086,9 +994,9 @@ define([
                 }
             }
         }
-    };
+    },
 
-    var specialBrowserClass = function specialBrowserClass () {
+    specialBrowserClass : function specialBrowserClass () {
         var ua = window.navigator.userAgent;
         var msie = ua.indexOf('MSIE ');
         var firefox = ua.indexOf('Firefox');
@@ -1100,9 +1008,9 @@ define([
         }
 
         return '';
-    };
+    },
 
-    var toggleActionsHeaderButton = function toggleActionsHeaderButton () {
+    toggleActionsHeaderButton : function toggleActionsHeaderButton () {
         var selectedSelector = `.${this.options.tableWrapperClass} > table .selected`;
         var $actionsColumn = this.repeater.$().find('.table-actions');
         var $selected;
@@ -1118,7 +1026,12 @@ define([
         } else {
             $actionsColumn.find('thead .btn').attr('disabled', 'disabled');
         }
-    };
+    }
+
+
+  });
+
+
 
 
      viewTypeRegistry["table"] = {
