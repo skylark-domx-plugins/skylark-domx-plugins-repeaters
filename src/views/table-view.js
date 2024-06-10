@@ -766,7 +766,8 @@ define([
 
     renderRow : function renderRow ($tbody, rows, index) {
 
-        function onClickRowRepeaterList (repeater) {
+        function onClickRowRepeaterList (view) {
+            var repeater = view.repeater;
             var isMulti = repeater.options.selectable === 'multi';
             var isActions = repeater.options.actions;
             var $repeater = repeater.$();
@@ -787,18 +788,18 @@ define([
                             $actionsRow.removeClass('selected');
                         }
                     } else {
-                        $item.find(`.${this.options.checkClass}`).remove();
+                        $item.find(`.${view.options.checkClass}`).remove();
                     }
 
                     $repeater.trigger('deselected.lark.repeaterList', $item);
                 } else {
                     if (!isMulti) {
-                        repeater.$canvas.find(`.${this.options.checkClass}`).remove();
-                        repeater.$canvas.find(`.${this.options.viewClass} tbody tr.selected`).each(function deslectRow () {
+                        repeater.$canvas.find(`.${view.options.checkClass}`).remove();
+                        repeater.$canvas.find(`.${view.options.viewClass} tbody tr.selected`).each(function deslectRow () {
                             $(this).removeClass('selected');
                             $repeater.trigger('deselected.lark.repeaterList', $(this));
                         });
-                        $item.find('td:first').prepend(`<div class="${this.options.checkClass}"><span class="glyphicon glyphicon-ok"></span></div>`);
+                        $item.find('td:first').prepend(`<div class="${view.options.checkClass}"><span class="glyphicon glyphicon-ok"></span></div>`);
                         $item.addClass('selected');
                         $frozenRow.addClass('selected');
                     } else {
@@ -812,9 +813,10 @@ define([
                     $repeater.trigger('selected.lark.repeaterList', $item);
                 }
 
-                this.toggleActionsHeaderButton(repeater);
+                view.toggleActionsHeaderButton(repeater);
             }
         }
+
 
         var $row = $('<tr></tr>');
 
